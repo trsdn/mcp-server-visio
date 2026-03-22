@@ -1,0 +1,9 @@
+{
+	"inputs": [],
+	"servers": {
+		"visio-mcp": {
+			"type": "stdio",
+			"command": "${workspaceFolder}/src/VisioMcp.McpServer/bin/Release/net9.0-windows/VisioMcp.McpServer.exe"
+		}
+	}
+}

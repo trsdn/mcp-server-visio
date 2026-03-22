@@ -1,0 +1,166 @@
+using System.Reflection;
+using System.Text.Json;
+using VisioMcp.CLI.Commands;
+using VisioMcp.Generated;
+using Spectre.Console.Cli;
+using Xunit;
+
+namespace VisioMcp.CLI.Tests.Unit;
+
+[Trait("Layer", "CLI")]
+[Trait("Category", "Unit")]
+[Trait("Feature", "ActionValidation")]
+[Trait("Speed", "Fast")]
+public sealed class ActionValidatorTests
+{
+    public static IEnumerable<object[]> ActionEnumTypes =>
+    [
+        [typeof(PageAction), typeof(ServiceRegistry.Page)],
+        [typeof(ShapeAction), typeof(ServiceRegistry.Shape)],
+        [typeof(TextAction), typeof(ServiceRegistry.Text)],
+        [typeof(CellAction), typeof(ServiceRegistry.Cell)],
+        [typeof(WindowAction), typeof(ServiceRegistry.Window)]
+    ];
+
+    private static readonly string[] ExpectedCommands =
+    [
+        "session",
+        "cell",
+        "docproperty",
+        "export",
+        "file",
+        "hyperlink",
+        "master",
+        "page",
+        "shape",
+        "shapealign",
+        "stencil",
+        "text",
+        "window"
+    ];
+
+    private static readonly string[] HiddenLegacyCommands =
+    [
+        "accessibility",
+        "animation",
+        "background",
+        "chart",
+        "comment",
+        "customshow",
+        "design",
+        "headerfooter",
+        "image",
+        "media",
+        "notes",
+        "pagesetup",
+        "placeholder",
+        "printoptions",
+        "proofing",
+        "section",
+        "slide",
+        "slideimport",
+        "slideshow",
+        "slidetable",
+        "smartart",
+        "tag",
+        "transition",
+        "vba"
+    ];
+
+    [Theory]
+    [MemberData(nameof(ActionEnumTypes))]
+    public void GetValidActions_ReturnsAllActionStrings(Type enumType, Type registryType)
+    {
+        var expected = GetExpectedActions(enumType, registryType);
+        var actual = GetActualActions(registryType);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void ListActionsCommand_AllCommands_ReturnsExpectedKeys()
+    {
+        var command = new ListActionsCommand();
+        var settings = new ListActionsCommand.Settings();
+
+        var context = new CommandContext(
+            Array.Empty<string>(),
+            new FakeRemainingArguments(),
+            "actions",
+            null);
+        var output = CaptureOutput(() => command.Execute(context, settings, CancellationToken.None));
+        using var document = JsonDocument.Parse(output);
+
+        Assert.True(document.RootElement.GetProperty("success").GetBoolean());
+        var commands = document.RootElement.GetProperty("commands");
+
+        foreach (var expected in ExpectedCommands)
+        {
+            Assert.True(commands.TryGetProperty(expected, out _), $"Missing command '{expected}'.");
+        }
+
+        foreach (var hidden in HiddenLegacyCommands)
+        {
+            Assert.False(commands.TryGetProperty(hidden, out _), $"Legacy command '{hidden}' should be quarantined.");
+        }
+    }
+
+    private static string[] GetExpectedActions(Type enumType, Type registryType)
+    {
+        // Find ToActionString method in the ServiceRegistry nested type (e.g., ServiceRegistry.Range.ToActionString)
+        var actionMethod = registryType
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .First(m => m.Name == "ToActionString" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == enumType);
+
+        var values = Enum.GetValues(enumType);
+        var results = new List<string>(values.Length);
+
+        foreach (var value in values)
+        {
+            var action = actionMethod.Invoke(null, [value]) as string;
+            results.Add(action ?? string.Empty);
+        }
+
+        return results.OrderBy(action => action, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static string[] GetActualActions(Type registryType)
+    {
+        // Get ValidActions field from the ServiceRegistry nested type (e.g., ServiceRegistry.Range.ValidActions)
+        var validActionsField = registryType
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .First(f => f.Name == "ValidActions");
+
+        var actions = (string[])validActionsField.GetValue(null)!;
+        return actions.OrderBy(action => action, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static string CaptureOutput(Func<int> action)
+    {
+        var original = Console.Out;
+        using var writer = new StringWriter();
+        try
+        {
+            Console.SetOut(writer);
+            action();
+            return writer.ToString().Trim();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
+    private sealed class FakeRemainingArguments : IRemainingArguments
+    {
+        private static readonly ILookup<string, string?> EmptyLookup =
+            Array.Empty<string>().ToLookup(_ => string.Empty, _ => (string?)null);
+
+        public ILookup<string, string?> Parsed { get; } = EmptyLookup;
+        public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
+    }
+}
+
+
+
+

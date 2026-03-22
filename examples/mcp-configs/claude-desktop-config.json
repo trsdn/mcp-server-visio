@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "visio-mcp": {
+      "command": "mcp-visio",
+      "args": [],
+      "env": {}
+    }
+  }
+}

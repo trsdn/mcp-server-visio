@@ -1,0 +1,38 @@
+{
+  "name": "visio-mcp-skill",
+  "version": "1.7.0",
+  "description": "Agent Skill for automating Microsoft Visio via MCP Server — pages, shapes, text, ShapeSheet cells, and stencil workflows",
+  "keywords": [
+    "agent-skill",
+    "visio",
+    "mcp",
+    "mcp-server",
+    "diagram",
+    "pages",
+    "shapes",
+    "shapesheet",
+    "stencils"
+  ],
+  "homepage": "https://github.com/trsdn/mcp-server-visio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trsdn/mcp-server-visio.git",
+    "directory": "packages/visio-mcp-skill"
+  },
+  "bugs": {
+    "url": "https://github.com/trsdn/mcp-server-visio/issues"
+  },
+  "author": "trsdn",
+  "license": "MIT",
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {},
+  "skillpm": {
+    "mcpServers": [
+      "trsdn/mcp-server-visio"
+    ]
+  }
+}

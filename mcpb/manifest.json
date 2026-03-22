@@ -1,0 +1,49 @@
+{
+  "manifest_version": "0.3",
+  "name": "visio-mcp",
+  "display_name": "Visio (Windows)",
+  "version": "1.7.0",
+  "description": "Manage Visio files, pages, shapes, text, ShapeSheet cells, and stencil masters on Windows.",
+  "long_description": "Windows-only MCP server for Microsoft Visio automation. The current public Visio MVP focuses on sessions, pages, shapes, text, ShapeSheet cells, and stencil workflows.",
+  "author": {
+    "name": "Stefan Broenner",
+    "url": "https://github.com/trsdn"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trsdn/mcp-server-visio"
+  },
+  "homepage": "https://VisioMcpserver.dev/",
+  "documentation": "https://VisioMcpserver.dev/",
+  "support": "https://github.com/trsdn/mcp-server-visio/issues",
+  "icon": "icon-512.png",
+  "license": "MIT",
+  "privacy_policies": ["https://VisioMcpserver.dev/privacy/"],
+  "keywords": [
+    "visio",
+    "diagram",
+    "pages",
+    "shapes",
+    "automation",
+    "stencil",
+    "shapesheet",
+    "connectors",
+    "vsdx",
+    "office"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/visio-mcp-server",
+    "mcp_config": {
+      "command": "${__dirname}/server/visio-mcp-server",
+      "args": [],
+      "env": {}
+    }
+  },
+  "tools_generated": true,
+  "prompts_generated": true,
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["win32"]
+  }
+}

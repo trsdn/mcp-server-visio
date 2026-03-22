@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.trsdn/mcp-server-visio",
+  "title": "MCP Server for Visio",
+  "description": "Visio automation for AI - Pages, Shapes, Text, Connectors and more. Windows only.",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "VisioMcp.McpServer",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [],
+      "environmentVariables": []
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/trsdn/mcp-server-visio",
+    "source": "github"
+  }
+}

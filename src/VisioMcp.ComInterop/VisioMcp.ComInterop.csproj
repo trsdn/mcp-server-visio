@@ -1,0 +1,75 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyName>VisioMcp.ComInterop</AssemblyName>
+    <RootNamespace>VisioMcp.ComInterop</RootNamespace>
+
+    <!-- Suppress CA1848 - LoggerMessage delegates not needed for low-frequency diagnostics -->
+    <NoWarn>$(NoWarn);CA1848</NoWarn>
+
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <PackageId>VisioMcp.ComInterop</PackageId>
+    <Title>VisioMcp COM Interop Library</Title>
+    <Description>COM interop utilities for Visio automation. Provides low-level COM object lifecycle management, STA threading, OLE message filtering, and Visio session management. Foundation library for robust Visio COM automation.</Description>
+    <PackageTags>visio;automation;com;interop;ole;sta;threading;windows</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>See https://github.com/trsdn/mcp-server-visio/releases for release notes</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- Package Validation -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VisioMcp.ComInterop.Tests" />
+    <InternalsVisibleTo Include="VisioMcp.Core.Tests" />
+  </ItemGroup>
+
+  <!-- Release Build Optimizations -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Disable debug symbols in Release builds -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+
+    <!-- Additional optimization flags -->
+    <Optimize>true</Optimize>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+  </PropertyGroup>
+
+  <!-- Remove PDB files from Release output (keep XML docs for NuGet IntelliSense) -->
+  <Target Name="RemoveDebugFilesFromRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <PdbFilesToDelete Include="$(OutputPath)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(PdbFilesToDelete)" />
+  </Target>
+
+  <ItemGroup>
+    <!-- Include README and LICENSE in package -->
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+
+</Project>

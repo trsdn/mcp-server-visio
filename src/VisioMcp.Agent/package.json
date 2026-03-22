@@ -1,0 +1,45 @@
+{
+  "name": "visio-mcp-agent",
+  "version": "0.1.0",
+  "description": "Official source-side Copilot SDK orchestrator for building Visio diagrams through mcp-server-visio",
+  "type": "module",
+  "bin": {
+    "visio-mcp-agent": "./src/cli.mjs"
+  },
+  "scripts": {
+    "postinstall": "node patch-deps.cjs",
+    "run": "node ./src/cli.mjs",
+    "check": "node --check ./src/cli.mjs && node --check ./src/constants.mjs && node --check ./src/orchestrator.mjs && node --check ./src/planner.mjs && node --check ./src/runtime.mjs && node --check ./src/validation.mjs",
+    "test": "node --test ./tests/planner.test.mjs ./tests/validation.test.mjs"
+  },
+  "keywords": [
+    "visio",
+    "mcp",
+    "copilot-sdk",
+    "agent",
+    "orchestrator",
+    "diagram",
+    "pages",
+    "shapesheet",
+    "stencil"
+  ],
+  "homepage": "https://VisioMcpserver.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trsdn/mcp-server-visio.git",
+    "directory": "src/VisioMcp.Agent"
+  },
+  "bugs": {
+    "url": "https://github.com/trsdn/mcp-server-visio/issues"
+  },
+  "author": "trsdn",
+  "license": "MIT",
+  "files": [
+    "src",
+    "patch-deps.cjs",
+    "README.md"
+  ],
+  "dependencies": {
+    "@github/copilot-sdk": "^0.1.32"
+  }
+}

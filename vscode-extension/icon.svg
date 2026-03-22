@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3955A3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1F2F6B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="32" fill="url(#bg)"/>
+
+  <g fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="42" y="54" width="70" height="42" rx="10" fill="#FFFFFF" opacity="0.95"/>
+    <rect x="144" y="54" width="70" height="42" rx="10" fill="#FFFFFF" opacity="0.95"/>
+    <rect x="93" y="132" width="70" height="42" rx="10" fill="#FFFFFF" opacity="0.95"/>
+
+    <path d="M112 75 L144 75" opacity="0.9"/>
+    <path d="M77 96 L128 132" opacity="0.9"/>
+    <path d="M179 96 L128 132" opacity="0.9"/>
+  </g>
+
+  <g fill="#2B3F86">
+    <rect x="58" y="67" width="38" height="4" rx="2"/>
+    <rect x="58" y="77" width="28" height="4" rx="2"/>
+
+    <rect x="160" y="67" width="38" height="4" rx="2"/>
+    <rect x="160" y="77" width="28" height="4" rx="2"/>
+
+    <rect x="109" y="145" width="38" height="4" rx="2"/>
+    <rect x="109" y="155" width="28" height="4" rx="2"/>
+  </g>
+
+  <text x="128" y="222" font-family="Segoe UI, Arial, sans-serif"
+        font-size="24" font-weight="700" fill="#FFFFFF"
+        text-anchor="middle" opacity="0.95">Visio MCP</text>
+</svg>
