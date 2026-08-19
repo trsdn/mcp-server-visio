@@ -116,6 +116,75 @@ public sealed class ShapeConnectorCommandTests(ITestOutputHelper output)
         }
     }
 
+    [Fact]
+    public async Task ShapeListConnections_RoundTripsShapeAndConnectorTopology()
+    {
+        var filePath = Path.Join(Path.GetTempPath(), $"CliShapeConnectionListTests_{Guid.NewGuid():N}.vsdx");
+        string? sessionId = null;
+
+        try
+        {
+            (sessionId, _) = await CreateSessionAsync(filePath);
+
+            var startShape = await AddRectangleShapeAsync(sessionId, 72, 72, 144, 72);
+            var endShape = await AddRectangleShapeAsync(sessionId, 288, 72, 144, 72);
+
+            var (_, addConnectorJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape add-connector --session {sessionId} --page-index 1 --connector-type 1 --start-shape-name \"{startShape}\" --end-shape-name \"{endShape}\"");
+            Assert.True(addConnectorJson.RootElement.GetProperty("success").GetBoolean());
+
+            var connectorName = await FindConnectorNameAsync(sessionId, startShape, endShape);
+
+            var (_, startConnectionsJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape list-connections --session {sessionId} --page-index 1 --shape-name \"{startShape}\"");
+            Assert.True(startConnectionsJson.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(startShape, startConnectionsJson.RootElement.GetProperty("shapeName").GetString());
+
+            var startConnection = startConnectionsJson.RootElement.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal(connectorName, startConnection.GetProperty("connectorName").GetString());
+            Assert.Equal("start", startConnection.GetProperty("connectorEnd").GetString());
+            Assert.Equal(endShape, GetOptionalString(startConnection, "connectedShapeName"));
+
+            var (_, connectorConnectionsJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape list-connections --session {sessionId} --page-index 1 --shape-name \"{connectorName}\"");
+            Assert.True(connectorConnectionsJson.RootElement.GetProperty("success").GetBoolean());
+            Assert.Equal(connectorName, connectorConnectionsJson.RootElement.GetProperty("shapeName").GetString());
+
+            var connectorConnections = connectorConnectionsJson.RootElement.GetProperty("connections").EnumerateArray().ToList();
+            Assert.Equal(2, connectorConnections.Count);
+            Assert.Contains(connectorConnections, item =>
+                string.Equals(item.GetProperty("connectorEnd").GetString(), "start", StringComparison.Ordinal)
+                && string.Equals(GetOptionalString(item, "connectedShapeName"), startShape, StringComparison.Ordinal));
+            Assert.Contains(connectorConnections, item =>
+                string.Equals(item.GetProperty("connectorEnd").GetString(), "end", StringComparison.Ordinal)
+                && string.Equals(GetOptionalString(item, "connectedShapeName"), endShape, StringComparison.Ordinal));
+
+            var (_, disconnectEndJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape disconnect-connector --session {sessionId} --page-index 1 --shape-name \"{connectorName}\" --connector-end end");
+            Assert.True(disconnectEndJson.RootElement.GetProperty("success").GetBoolean());
+
+            var (_, startAfterDisconnectJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape list-connections --session {sessionId} --page-index 1 --shape-name \"{startShape}\"");
+            Assert.True(startAfterDisconnectJson.RootElement.GetProperty("success").GetBoolean());
+
+            var danglingConnection = startAfterDisconnectJson.RootElement.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal(connectorName, danglingConnection.GetProperty("connectorName").GetString());
+            Assert.Equal("start", danglingConnection.GetProperty("connectorEnd").GetString());
+            Assert.Null(GetOptionalString(danglingConnection, "connectedShapeName"));
+
+            var (_, connectorAfterDisconnectJson) = await CliProcessHelper.RunJsonAsync(
+                $"shape list-connections --session {sessionId} --page-index 1 --shape-name \"{connectorName}\"");
+            Assert.True(connectorAfterDisconnectJson.RootElement.GetProperty("success").GetBoolean());
+            var remainingConnection = connectorAfterDisconnectJson.RootElement.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal("start", remainingConnection.GetProperty("connectorEnd").GetString());
+            Assert.Equal(startShape, GetOptionalString(remainingConnection, "connectedShapeName"));
+        }
+        finally
+        {
+            await CloseSessionAsync(sessionId, filePath);
+        }
+    }
+
     private static async Task<(string SessionId, JsonElement Root)> CreateSessionAsync(string filePath)
     {
         var (result, json) = await CliProcessHelper.RunJsonAsync($"session create \"{filePath}\"", timeoutMs: 120000);

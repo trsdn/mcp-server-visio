@@ -111,6 +111,12 @@ public interface IShapeCommands
     ConnectorDetailResult ReadConnector(IVisioBatch batch, int pageIndex, string shapeName);
 
     /// <summary>
+    /// List connection records for a shape or connector using real Visio topology.
+    /// </summary>
+    [ServiceAction("list-connections")]
+    ShapeConnectionListResult ListConnections(IVisioBatch batch, int pageIndex, string shapeName);
+
+    /// <summary>
     /// Disconnect one endpoint of a connector while keeping the connector shape on the page.
     /// </summary>
     /// <param name="batch">Batch context</param>

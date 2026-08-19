@@ -346,6 +346,128 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
         }
     }
 
+    [Fact]
+    public void ShapeListConnections_ReturnJsonSuccess()
+    {
+        var tempPath = Path.Join(Path.GetTempPath(), $"PptShapeConnectionListToolTest_{Guid.NewGuid():N}.vsdx");
+        string? sessionId = null;
+
+        try
+        {
+            sessionId = CreateSession(tempPath);
+            var startShape = AddBasicShape(sessionId, 72f, 72f, 144f, 72f);
+            var endShape = AddBasicShape(sessionId, 288f, 72f, 144f, 72f);
+
+            var addConnectorResult = VisioShapeTool.VisioShape(
+                action: ShapeAction.AddConnector,
+                session_id: sessionId,
+                page_index: 1,
+                shape_name: null,
+                left: null,
+                top: null,
+                width: null,
+                height: null,
+                text: null,
+                auto_shape_type: 0,
+                z_order_cmd: 0,
+                color_hex: null,
+                line_width: null,
+                degrees: null,
+                shape_names: null,
+                alt_text: null,
+                target_slide_index: 0,
+                visible: false,
+                offset_x: null,
+                offset_y: null,
+                connector_type: 1,
+                start_shape_name: startShape,
+                end_shape_name: endShape,
+                merge_type: 0,
+                flip_type: 0,
+                margin_left: null,
+                margin_right: null,
+                margin_top: null,
+                margin_bottom: null,
+                word_wrap: null,
+                auto_size: null,
+                color1: null,
+                color2: null,
+                gradient_style: 0,
+                radius: null,
+                reflection_type: 0,
+                opacity: null,
+                shape_type: 0,
+                source_shape_name: null,
+                target_shape_name: null,
+                action_type: 0,
+                hyperlink_address: null,
+                scale_x: null,
+                scale_y: null,
+                locked: false,
+                preset_effect: 0,
+                font_name: null,
+                font_size: null,
+                rotation_x: null,
+                rotation_y: null,
+                rotation_z: null,
+                bevel_type: null,
+                bevel_depth: null,
+                property_name: null,
+                property_value: null,
+                connector_end: null);
+            Assert.True(JsonDocument.Parse(addConnectorResult).RootElement.GetProperty("success").GetBoolean());
+
+            var connectorName = FindConnectorName(sessionId, startShape, endShape);
+
+            var startConnectionsJson = JsonDocument.Parse(InvokeShape(ShapeAction.ListConnections, sessionId, startShape)).RootElement;
+            Assert.True(startConnectionsJson.GetProperty("success").GetBoolean());
+            Assert.Equal(startShape, startConnectionsJson.GetProperty("shapeName").GetString());
+
+            var startConnection = startConnectionsJson.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal(connectorName, startConnection.GetProperty("connectorName").GetString());
+            Assert.Equal("start", startConnection.GetProperty("connectorEnd").GetString());
+            Assert.Equal(endShape, GetOptionalString(startConnection, "connectedShapeName"));
+
+            var connectorConnectionsJson = JsonDocument.Parse(InvokeShape(ShapeAction.ListConnections, sessionId, connectorName)).RootElement;
+            Assert.True(connectorConnectionsJson.GetProperty("success").GetBoolean());
+            Assert.Equal(connectorName, connectorConnectionsJson.GetProperty("shapeName").GetString());
+
+            var connectorConnections = connectorConnectionsJson.GetProperty("connections").EnumerateArray().ToList();
+            Assert.Equal(2, connectorConnections.Count);
+            Assert.Contains(connectorConnections, item =>
+                string.Equals(item.GetProperty("connectorEnd").GetString(), "start", StringComparison.Ordinal)
+                && string.Equals(GetOptionalString(item, "connectedShapeName"), startShape, StringComparison.Ordinal));
+            Assert.Contains(connectorConnections, item =>
+                string.Equals(item.GetProperty("connectorEnd").GetString(), "end", StringComparison.Ordinal)
+                && string.Equals(GetOptionalString(item, "connectedShapeName"), endShape, StringComparison.Ordinal));
+
+            var disconnectEndJson = JsonDocument.Parse(InvokeShape(
+                ShapeAction.DisconnectConnector,
+                sessionId,
+                connectorName,
+                connectorEnd: "end")).RootElement;
+            Assert.True(disconnectEndJson.GetProperty("success").GetBoolean());
+
+            var startAfterDisconnectJson = JsonDocument.Parse(InvokeShape(ShapeAction.ListConnections, sessionId, startShape)).RootElement;
+            Assert.True(startAfterDisconnectJson.GetProperty("success").GetBoolean());
+            var danglingConnection = startAfterDisconnectJson.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal(connectorName, danglingConnection.GetProperty("connectorName").GetString());
+            Assert.Equal("start", danglingConnection.GetProperty("connectorEnd").GetString());
+            Assert.Null(GetOptionalString(danglingConnection, "connectedShapeName"));
+
+            var connectorAfterDisconnectJson = JsonDocument.Parse(InvokeShape(ShapeAction.ListConnections, sessionId, connectorName)).RootElement;
+            Assert.True(connectorAfterDisconnectJson.GetProperty("success").GetBoolean());
+            var remainingConnection = connectorAfterDisconnectJson.GetProperty("connections").EnumerateArray().Single();
+            Assert.Equal("start", remainingConnection.GetProperty("connectorEnd").GetString());
+            Assert.Equal(startShape, GetOptionalString(remainingConnection, "connectedShapeName"));
+        }
+        finally
+        {
+            CloseSession(sessionId);
+            DeleteFile(tempPath);
+        }
+    }
+
     private static string CreateSession(string path)
     {
         var result = VisioFileTool.VisioFile(

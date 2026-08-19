@@ -186,12 +186,12 @@ Visio page lifecycle, guides, and routing commands.
 
 Shape management: list, read, create, move, resize, delete, z-order.
 
-**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-slide`, `set-shadow`, `add-connector`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `set-action-settings`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
+**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `list-connections`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-slide`, `set-shadow`, `add-connector`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `set-action-settings`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
 
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | (required) |
-| `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-slide, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, set-action-settings, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
+| `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, list-connections, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-slide, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, set-action-settings, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
 | `--shape-names` | (required for: select-shapes, add-to-selection, remove-from-selection, group, merge) |
 | `--property-name` |  |
 | `--property-value` |  |

@@ -268,6 +268,31 @@ public class ConnectorDetailResult : ResultBase
     public ConnectorInfo? Connector { get; set; }
 }
 
+public class ShapeConnectionInfo
+{
+    public int ConnectorShapeId { get; set; }
+    public string ConnectorName { get; set; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ConnectorEnd { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ConnectorConnectionCell { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ShapeConnectionCell { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ConnectedShapeName { get; set; }
+}
+
+public class ShapeConnectionListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public List<ShapeConnectionInfo> Connections { get; set; } = [];
+}
+
 // ── Cell / ShapeSheet ───────────────────────────────────────
 
 public class CellInfo

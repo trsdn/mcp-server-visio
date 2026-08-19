@@ -518,6 +518,33 @@ public class ShapeCommands : IShapeCommands
         });
     }
 
+    public ShapeConnectionListResult ListConnections(IVisioBatch batch, int pageIndex, string shapeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                return new ShapeConnectionListResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shapeName,
+                    Connections = ReadShapeConnections(page, shape)
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
     public ConnectorDetailResult DisconnectConnector(IVisioBatch batch, int pageIndex, string shapeName, string connectorEnd)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
@@ -1691,6 +1718,155 @@ public class ShapeCommands : IShapeCommands
         return info;
     }
 
+    private static List<ShapeConnectionInfo> ReadShapeConnections(dynamic page, dynamic shape)
+    {
+        if (IsConnectorShape(shape))
+        {
+            return ReadConnectorConnections(shape);
+        }
+
+        dynamic? connects = null;
+        int targetShapeId = Convert.ToInt32(shape.ID);
+        var connections = new List<ShapeConnectionInfo>();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            connects = page.Connects;
+            int count = Convert.ToInt32(connects.Count);
+
+            for (int i = 1; i <= count; i++)
+            {
+                dynamic? connect = null;
+                dynamic? fromCell = null;
+                dynamic? fromSheet = null;
+                dynamic? toCell = null;
+                dynamic? toSheet = null;
+                try
+                {
+                    connect = connects.Item(i);
+                    fromSheet = TryGetConnectObject(connect, "FromSheet");
+                    toSheet = TryGetConnectObject(connect, "ToSheet");
+
+                    if (toSheet is null || fromSheet is null)
+                    {
+                        continue;
+                    }
+
+                    if (Convert.ToInt32(toSheet.ID) != targetShapeId || !IsConnectorShape(fromSheet))
+                    {
+                        continue;
+                    }
+
+                    fromCell = TryGetConnectObject(connect, "FromCell");
+                    string fromCellName = TryGetComObjectName(fromCell) ?? string.Empty;
+                    string? connectorEnd = GetConnectorEndpointSide(connect, fromCellName);
+                    if (connectorEnd is null)
+                    {
+                        continue;
+                    }
+
+                    toCell = TryGetConnectObject(connect, "ToCell");
+                    string? shapeConnectionCell = GetTargetConnectionCellName(connect, toCell);
+                    ConnectorInfo connectorInfo = ReadConnectorInfo(fromSheet);
+                    string? connectedShapeName = connectorEnd == "start"
+                        ? connectorInfo.EndShapeName
+                        : connectorInfo.StartShapeName;
+
+                    AddShapeConnection(
+                        connections,
+                        seenKeys,
+                        new ShapeConnectionInfo
+                        {
+                            ConnectorShapeId = connectorInfo.ShapeId,
+                            ConnectorName = connectorInfo.Name,
+                            ConnectorEnd = connectorEnd,
+                            ConnectorConnectionCell = connectorEnd == "start" ? "BeginX" : "EndX",
+                            ShapeConnectionCell = shapeConnectionCell,
+                            ConnectedShapeName = NormalizeOptionalString(connectedShapeName)
+                        });
+                }
+                finally
+                {
+                    if (toSheet != null) ComUtilities.Release(ref toSheet!);
+                    if (toCell != null) ComUtilities.Release(ref toCell!);
+                    if (fromSheet != null) ComUtilities.Release(ref fromSheet!);
+                    if (fromCell != null) ComUtilities.Release(ref fromCell!);
+                    if (connect != null) ComUtilities.Release(ref connect!);
+                }
+            }
+        }
+        finally
+        {
+            if (connects != null) ComUtilities.Release(ref connects!);
+        }
+
+        return connections
+            .OrderBy(connection => connection.ConnectorName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(connection => connection.ConnectorEnd, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<ShapeConnectionInfo> ReadConnectorConnections(dynamic connector)
+    {
+        ConnectorInfo connectorInfo = ReadConnectorInfo(connector);
+        var connections = new List<ShapeConnectionInfo>();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        AddShapeConnection(
+            connections,
+            seenKeys,
+            new ShapeConnectionInfo
+            {
+                ConnectorShapeId = connectorInfo.ShapeId,
+                ConnectorName = connectorInfo.Name,
+                ConnectorEnd = "start",
+                ConnectorConnectionCell = "BeginX",
+                ShapeConnectionCell = NormalizeOptionalString(connectorInfo.StartConnectionCell),
+                ConnectedShapeName = NormalizeOptionalString(connectorInfo.StartShapeName)
+            });
+
+        AddShapeConnection(
+            connections,
+            seenKeys,
+            new ShapeConnectionInfo
+            {
+                ConnectorShapeId = connectorInfo.ShapeId,
+                ConnectorName = connectorInfo.Name,
+                ConnectorEnd = "end",
+                ConnectorConnectionCell = "EndX",
+                ShapeConnectionCell = NormalizeOptionalString(connectorInfo.EndConnectionCell),
+                ConnectedShapeName = NormalizeOptionalString(connectorInfo.EndShapeName)
+            });
+
+        return connections
+            .OrderBy(connection => connection.ConnectorEnd, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AddShapeConnection(List<ShapeConnectionInfo> connections, HashSet<string> seenKeys, ShapeConnectionInfo connection)
+    {
+        if (string.IsNullOrWhiteSpace(connection.ConnectedShapeName)
+            && string.IsNullOrWhiteSpace(connection.ShapeConnectionCell))
+        {
+            return;
+        }
+
+        string key = string.Join(
+            "|",
+            connection.ConnectorShapeId,
+            connection.ConnectorEnd ?? string.Empty,
+            connection.ShapeConnectionCell ?? string.Empty,
+            connection.ConnectedShapeName ?? string.Empty);
+
+        if (!seenKeys.Add(key))
+        {
+            return;
+        }
+
+        connections.Add(connection);
+    }
+
     private static bool IsConnectorShape(dynamic shape)
     {
         try
@@ -1819,7 +1995,7 @@ public class ShapeCommands : IShapeCommands
                 }
 
                 fromCell = TryGetConnectObject(connect, "FromCell");
-                string fromCellName = fromCell?.NameU?.ToString() ?? fromCell?.Name?.ToString() ?? string.Empty;
+                string fromCellName = TryGetComObjectName(fromCell) ?? string.Empty;
                 string? endpointSide = GetConnectorEndpointSide(connect, fromCellName);
                 if (endpointSide is null)
                 {
@@ -1910,7 +2086,7 @@ public class ShapeCommands : IShapeCommands
 
     private static string? GetTargetConnectionCellName(dynamic connect, dynamic? toCell)
     {
-        string? targetCellName = toCell?.NameU?.ToString() ?? toCell?.Name?.ToString();
+        string? targetCellName = TryGetComObjectName(toCell);
         if (!string.IsNullOrWhiteSpace(targetCellName))
         {
             return targetCellName;
@@ -1925,6 +2101,31 @@ public class ShapeCommands : IShapeCommands
                 >= 100 => $"ConnectionPoint{toPart - 99}",
                 _ => null
             };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryGetComObjectName(dynamic? comObject)
+    {
+        if (comObject is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return comObject.NameU?.ToString();
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            return comObject.Name?.ToString();
         }
         catch
         {
@@ -2099,6 +2300,11 @@ public class ShapeCommands : IShapeCommands
             "end" => "end",
             _ => throw new ArgumentOutOfRangeException(nameof(connectorEnd), "connectorEnd must be 'start' or 'end'.")
         };
+    }
+
+    private static string? NormalizeOptionalString(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static void SetConnectorEndpointMetadata(dynamic connector, string connectorEnd, string? targetShapeName)
