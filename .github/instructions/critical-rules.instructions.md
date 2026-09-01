@@ -88,7 +88,7 @@ Discovered while debugging a slide shape that referenced an embedded object
 | Rule | Action | Why Critical |
 |------|--------|--------------|
 | 29. TDD | Write test FIRST → RED → implement → GREEN | Proves tests catch real bugs |
-| 30. Integration tests | NEVER write unit tests — integration tests only | Unit tests prove nothing for COM interop |
+| 30. Never mock COM | Integration tests for COM; unit tests only for COM-free logic | Mocked COM asserts the mock, not Visio |
 | 22. COM cleanup | ALWAYS use try-finally, NEVER swallow exceptions | Prevents leaks and silent failures |
 | 7. COM API | Use PowerPoint COM first, validate docs | Prevents wrong dependencies |
 | 9. GitHub search | Search OTHER repos for VBA/COM examples FIRST | Learn from working code |
@@ -100,7 +100,7 @@ Discovered while debugging a slide shape that referenced an embedded object
 | Rule | Action | Why Critical |
 |------|--------|--------------|
 | 2. Tests | Fail loudly, never silent | Silent failures waste hours |
-| 30. Integration tests | NEVER write unit tests — integration tests only | Unit tests prove nothing for COM interop |
+| 30. Never mock COM | Integration tests for COM; unit tests only for COM-free logic | Mocked COM asserts the mock, not Visio |
 | 15. No Save | Remove unless testing persistence | Makes tests 50% faster |
 | 11. Test debugging | Run tests one by one | Isolates actual failure |
 | 13. Test compliance | Pass checklist before PR submission | Prevents test pollution |
@@ -476,7 +476,7 @@ Delete commented-out code (use git history). Exception: Documentation files only
 | 24. Post-change sync | Verify ALL sync points (CLI, SKILLs, READMEs, counts) before commit | 5-10 min |
 | 28. COM API naming | Match COM param names when clear in flat schema | Always |
 | 29. TDD | Write test FIRST → RED → implement → GREEN | Always |
-| 30. Integration tests | NEVER write unit tests — integration tests only | Always |
+| 30. Never mock COM | Integration tests for COM; unit tests only for COM-free logic | Always |
 
 
 
@@ -1075,55 +1075,69 @@ public void ProgressAdapter_Maps_Current_To_Progress()
 
 ---
 
-## Rule 30: Integration Tests Over Unit Tests (CRITICAL)
+## Rule 30: Never Mock COM — Integration Tests for COM, Unit Tests for Pure Logic (CRITICAL)
 
-**NEVER write unit tests. Unit tests that mock COM objects, fake contexts, or test adapter mappings in isolation prove NOTHING. Write integration tests that exercise real PowerPoint COM automation.**
+**Anything that touches Visio COM MUST be an integration test against a real Visio instance. NEVER mock a COM object, `IVisioBatch` or `VisioContext`. Pure logic with no COM dependency MAY be unit tested.**
 
-**Why Critical:** VisioMcp is a COM interop project. The bugs that matter — STA threading deadlocks, COM object leaks, OleMessageFilter re-entrancy, type conversion failures (`double` vs `int`), shape persistence — **only manifest when real PowerPoint is running**. A unit test that verifies an adapter maps field A to field B catches zero real bugs. An integration test that opens a presentation, adds a shape, and verifies the result catches ALL of them.
+**The test to apply:** *Would this test still be meaningful with Visio uninstalled?*
+- **Yes** → it tests pure logic. Unit test it. Put it in `Unit/`.
+- **No** → it must actually run Visio. A test that needs Visio but does not use it tests nothing.
+
+**Why Critical:** VisioMcp is a COM interop project. The bugs that matter — STA threading deadlocks, COM object leaks, OleMessageFilter re-entrancy, type conversion failures (`double` vs `int`), shape persistence — **only manifest when real Visio is running**. A mocked test asserts that the mock returns what you told it to.
 
 ```csharp
-// ❌ WRONG: Unit test that proves nothing
+// ❌ WRONG: mocked COM proves nothing
 [Fact]
-[Trait("Category", "Unit")]
-public void Adapter_Maps_Field_A_To_Field_B()
+public void AddShape_Succeeds()
 {
-    var adapter = new SomeAdapter(mockProgress);
-    adapter.Report(new Info { Current = 0.5f });
-    Assert.Equal(0.5f, captured.Progress);  // So what? This never fails in production.
+    var batch = new Mock<IVisioBatch>();          // cannot mock dynamic COM meaningfully
+    var result = _commands.AddShape(batch.Object, 1, "Rectangle");
+    Assert.True(result.Success);                  // asserts the mock, not Visio
 }
 
-// ✅ CORRECT: Integration test that catches real bugs
+// ✅ CORRECT: integration test against real Visio
 [Fact]
 [Trait("Category", "Integration")]
-[Trait("Feature", "Slide")]
-public void AddShape_ReportsProgress_DuringExecution()
+[Trait("Feature", "Shape")]
+public void AddShape_PersistsShapeOnPage()
 {
-    using var batch = PptSession.BeginBatch(_testFile);
-    var progress = new List<ProgressInfo>();
-    var result = _commands.AddShape(batch, 1, "Rectangle",
-        new Progress<ProgressInfo>(p => progress.Add(p)));
+    using var batch = VisioSession.BeginBatch(_testFile);
+    var result = _commands.AddShape(batch, 1, "Rectangle", 1.0f, 1.0f, 2.0f, 1.0f);
     Assert.True(result.Success);
-    Assert.NotEmpty(progress);  // Real PowerPoint, real shape creation, real progress
+    Assert.Contains("Rectangle", _commands.List(batch, 1).Shapes.Select(s => s.Name));
+}
+
+// ✅ ALSO CORRECT: genuinely COM-free logic, unit tested
+[Fact]
+public void ToActionString_CoversEveryEnumValue()
+{
+    foreach (ShapeAction action in Enum.GetValues<ShapeAction>())
+        Assert.False(string.IsNullOrEmpty(action.ToActionString()));
 }
 ```
 
-**What Counts as Integration:**
-- ✅ Opens a real PowerPoint presentation via COM
-- ✅ Exercises real batch.Execute() on STA thread
-- ✅ Verifies real data flows through the full pipeline
-- ✅ Catches COM threading, type conversion, and persistence bugs
+**Integration test REQUIRED for:**
+- Any code path reaching a Visio COM object
+- Session, batch, STA threading, COM lifetime, timeout, disposal
+- Anything whose correctness depends on how Visio actually behaves
 
-**What Does NOT Count:**
-- ❌ Mocking IProgress, IPptBatch, or any COM interface
-- ❌ Testing adapter/mapper classes in isolation
-- ❌ Verifying AsyncLocal behavior without COM context
-- ❌ Any test that passes without PowerPoint.exe running
+**Unit test ACCEPTABLE for:**
+- Parameter validation and argument-shape assertions
+- Result serialisation and DTO mapping
+- Enum completeness and action-name mapping
+- String, path and formula helpers
+
+**NEVER acceptable:**
+- Mocking a Visio COM object — this is the practice the rule exists to forbid
+- Faking `IVisioBatch` / `VisioContext` to assert a command "worked"
+- Any test that passes without Visio while claiming to verify COM behaviour
 
 **Enforcement:**
-- Code review MUST reject unit tests for COM-dependent features
-- All new tests MUST have `[Trait("Category", "Integration")]`
-- If a test doesn't require PowerPoint, question whether it tests anything meaningful
-- The only acceptable non-integration tests are for pure algorithmic utilities with zero COM dependency (e.g., string parsing, enum mapping validation)
+- Code review MUST reject mocked-COM tests
+- COM-dependent tests MUST carry `[Trait("Category", "Integration")]`
+- Unit tests MUST have no COM dependency — verify by asking whether they would run with Visio uninstalled
 
-**Historical Lesson:** 10 unit tests were written for the MCP progress feature (McpProgressAdapter mapping, ProgressContext AsyncLocal). All 10 passed. Zero of them would have caught the real bugs: STA thread affinity issues, COM callback re-entrancy during shape operations, or progress notifications not flowing through the generated code pipeline. The unit tests tested the unit tests.
+**Historical Lesson:** 10 unit tests were written for the MCP progress feature (adapter mapping, AsyncLocal context). All 10 passed. Zero would have caught the real bugs: STA thread affinity, COM callback re-entrancy during shape operations, or progress notifications not flowing through the generated pipeline. The unit tests tested the unit tests.
+
+**Correction (2026-09-01, #31):** this rule previously read *"NEVER write unit tests — integration tests only"*. That forbade `VisioMcp.Core.Tests`, which is entirely unit tests and the largest block of passing tests in the repository. The rule now forbids what actually causes harm — mocking COM — rather than all unit testing. See `docs/ADR-001-TESTING-STRATEGY.md`.
 

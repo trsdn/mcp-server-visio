@@ -111,6 +111,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **ADR-001 and Rule 30 rewritten to state the policy the repository actually follows** (#31).
+  Both previously forbade unit tests outright — ADR-001 said *"We do NOT write traditional unit
+  tests"* and *"❌ Write unit tests for business logic"*, Rule 30 said *"NEVER write unit tests"* —
+  while `VisioMcp.Core.Tests` is entirely unit tests and the largest block of passing tests in the
+  suite. As written the policy forbade the majority of existing coverage, so either every
+  contributor was violating it or it was wrong. Contributors and coding agents are told these
+  documents are binding.
+  The rule is now: **anything touching Visio COM must be an integration test; never mock a COM
+  object; logic with no COM dependency may be unit tested**. The defensible half of the original
+  argument is kept and is now the actual rule.
+  `docs/ADR-001-NO-UNIT-TESTS.md` is renamed to `docs/ADR-001-TESTING-STRATEGY.md`, since the old
+  filename asserted the position being corrected, and its PowerPoint-era examples (`IPptBatch`,
+  `CreateSlide`, `ctx.Presentation.Slides`) are rewritten for Visio. References updated in
+  `docs/DEVELOPMENT.md`, `tests/README.md` and `.github/instructions/`.
+
 - **`IVisioBatch.PowerPointProcessId` renamed to `VisioProcessId`, and `IsPowerPointProcessAlive()`
   to `IsVisioProcessAlive()`** (#25). Both implementations were already Visio-correct —
   `VisioBatch` captures the PID via `Process.GetProcessesByName("VISIO")` — only the names were

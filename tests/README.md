@@ -1,6 +1,6 @@
 # VisioMcp Tests
 
-> **⚠️ No Traditional Unit Tests**: VisioMcp has no unit tests. Integration tests ARE our unit tests because PowerPoint COM cannot be meaningfully mocked. See [`docs/ADR-001-NO-UNIT-TESTS.md`](../docs/ADR-001-NO-UNIT-TESTS.md) for full architectural rationale.
+> **⚠️ Never mock COM**: anything that touches Visio COM must be an integration test against a real Visio instance — mocking a COM object only asserts that the mock returns what you told it to. Logic with no COM dependency (parameter validation, result shapes, enum mappings) may be unit tested, and is. See [`docs/ADR-001-TESTING-STRATEGY.md`](../docs/ADR-001-TESTING-STRATEGY.md) for the full rationale.
 
 ## Quick Start
 
