@@ -8,8 +8,8 @@ Real PowerPoint COM automation requires a Windows machine with Microsoft PowerPo
 
 The integration workflow is therefore present in the repository but only becomes active when:
 
-- repository variable `ENABLE_POWERPOINT_INTEGRATION_CI` is set to `true`
-- a self-hosted Windows runner with the label `powerpoint` is available
+- repository variable `ENABLE_VISIO_INTEGRATION_CI` is set to `true`
+- a self-hosted Windows runner with the label `visio` is available
 
 Until then, the workflow exits with a status message instead of pretending that PowerPoint integration is covered in CI.
 
@@ -20,7 +20,7 @@ Until then, the workflow exits with a status message instead of pretending that 
 - .NET SDK `9.0.x`
 - `uv` available on PATH for `llm-tests/`
 - Stable disk space for build outputs and test artifacts
-- Runner labels: `self-hosted`, `windows`, `powerpoint`
+- Runner labels: `self-hosted`, `windows`, `visio`
 
 ## Desktop Session Requirement
 
@@ -40,7 +40,7 @@ Recommended practice:
 4. Install `uv`.
 5. Register the GitHub Actions runner for this repository.
 6. Add the `powerpoint` label to that runner.
-7. Set repository variable `ENABLE_POWERPOINT_INTEGRATION_CI=true`.
+7. Set repository variable `ENABLE_VISIO_INTEGRATION_CI=true`.
 8. Optionally add secret `AZURE_OPENAI_ENDPOINT` if you want workflow-dispatch LLM gate runs.
 
 ## Validation Checklist
@@ -54,7 +54,7 @@ dotnet build src\VisioMcp.McpServer\VisioMcp.McpServer.csproj -c Release
 dotnet test tests\VisioMcp.McpServer.Tests\VisioMcp.McpServer.Tests.csproj --filter "FullyQualifiedName~McpServerIntegrationTests.SmokeTest_AllTools_E2EWorkflow"
 ```
 
-If those pass locally on the runner host, enable `ENABLE_POWERPOINT_INTEGRATION_CI` and trigger `integration-tests.yml` with `workflow_dispatch`.
+If those pass locally on the runner host, enable `ENABLE_VISIO_INTEGRATION_CI` and trigger `integration-tests.yml` with `workflow_dispatch`.
 
 ## Optional LLM Regression Gate
 

@@ -19,6 +19,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CI now runs the test suite** (#14). No registered workflow executed `dotnet test` at all: the
+  only real invocation lived in `integration-tests.yml`, which was both unregistered (#12) and
+  gated off by default, so the only job that could run was a stub that **reported a green check
+  having executed zero tests**. The 13 public tools had no automated regression protection.
+  A `unit-tests` job in `build-cli.yml` now runs `dotnet test --filter "Category!=Integration"` —
+  **646 tests** — on `windows-latest`, needing neither Visio nor a self-hosted runner, and uploads
+  per-project `.trx` results. Verified that a red test makes the command exit 1.
+  The false-green stub is deleted: with it gone, the integration job reports as **skipped** when the
+  gate variable is unset, which cannot be mistaken for a pass.
+  `integration-tests.yml` is renamed *Visio Integration Tests*, its gate variable
+  `ENABLE_POWERPOINT_INTEGRATION_CI` → `ENABLE_VISIO_INTEGRATION_CI`, its job
+  `powerpoint-integration` → `visio-integration`, and its runner label `powerpoint` → `visio`.
+  `build-cli.yml`'s *"Test CLI (requires PowerPoint)"* step — which only printed a note telling the
+  developer to run tests locally — is removed, since the real job now exists.
+
 - **Git hooks are now installable in one command** (#17). `.git/hooks` contained only the stock
   `*.sample` files, so despite being documented, **no check ran on commit anywhere** — which,
   combined with the failing gates (#16) and the dormant workflows (#12), meant nothing ran on
