@@ -3,6 +3,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Pipelines;
+using System.Text.Json;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -98,7 +99,12 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         "customshow",
         "design",
         "headerfooter",
+        // hyperlink and master are PowerPoint-implemented and threw RuntimeBinderException on
+        // every call against a .vsdx. Suppressed in #19; they rejoin the public set when
+        // reimplemented against Shape.Hyperlinks (#35) and Document.Masters (#34).
+        "hyperlink",
         "image",
+        "master",
         "media",
         "notes",
         "pagesetup",
@@ -394,6 +400,112 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         output.WriteLine($"✓ ListChanged: {capabilities.Tools?.ListChanged}");
 
         output.WriteLine("\n✓ Server capabilities correctly exposed");
+    }
+
+    /// <summary>
+    /// REGRESSION (#19): no publicly listed tool may fail with <c>RuntimeBinderException</c>
+    /// against a valid <c>.vsdx</c> session.
+    ///
+    /// That exception means the tool called a COM member the object does not have — in practice,
+    /// PowerPoint-era code reaching for <c>Slides</c> or <c>SlideMasters</c> on a Visio Document.
+    /// It is an opaque failure for an LLM: the tool was advertised with a confident description,
+    /// selected in good faith, and returned an error naming a .NET binder type.
+    ///
+    /// The assertion is deliberately narrow. A tool returning a *validation* error ("page_index is
+    /// required") is fine — the surface is honest about what it needs. A tool that binds against
+    /// the wrong object model is not.
+    /// </summary>
+    [Fact]
+    public async Task AllPublicTools_DoNotThrowRuntimeBinderException_AgainstVsdx()
+    {
+        output.WriteLine("=== RUNTIME BINDER REGRESSION SWEEP ===\n");
+
+        var tempPath = Path.Join(Path.GetTempPath(), $"BinderSweep_{Guid.NewGuid():N}.vsdx");
+        string? sessionId = null;
+
+        try
+        {
+            var createResponse = await CallToolTextAsync("file", new Dictionary<string, object?>
+            {
+                ["action"] = "create",
+                ["path"] = tempPath,
+                ["show"] = false
+            });
+
+            using (var createDoc = JsonDocument.Parse(createResponse))
+            {
+                Assert.True(
+                    createDoc.RootElement.TryGetProperty("session_id", out var sid),
+                    $"Could not create a session for the sweep. Response: {createResponse}");
+                sessionId = sid.GetString();
+            }
+
+            Assert.False(string.IsNullOrWhiteSpace(sessionId));
+
+            var tools = await _client!.ListToolsAsync(cancellationToken: _cts.Token);
+            var offenders = new List<string>();
+
+            foreach (var tool in tools.OrderBy(t => t.Name))
+            {
+                // 'file' is the session tool itself and was already exercised above.
+                if (tool.Name == "file")
+                {
+                    continue;
+                }
+
+                // A read-only enumeration is the cheapest action that still forces the tool to
+                // bind against the document object model.
+                var response = await CallToolTextAsync(tool.Name, new Dictionary<string, object?>
+                {
+                    ["action"] = "list",
+                    ["session_id"] = sessionId,
+                    ["page_index"] = 1
+                });
+
+                if (response.Contains("RuntimeBinderException", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{tool.Name}: {response}");
+                    output.WriteLine($"  ✗ {tool.Name}");
+                }
+                else
+                {
+                    var preview = response.Length > 90 ? response[..90] + "..." : response;
+                    output.WriteLine($"  ✓ {tool.Name}: {preview}");
+                }
+            }
+
+            Assert.True(
+                offenders.Count == 0,
+                "Publicly listed tools failed with RuntimeBinderException against a valid .vsdx:\n"
+                + string.Join("\n", offenders));
+
+            output.WriteLine($"\n✓ All {tools.Count - 1} non-session tools bound successfully");
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                await CallToolTextAsync("file", new Dictionary<string, object?>
+                {
+                    ["action"] = "close",
+                    ["session_id"] = sessionId,
+                    ["save"] = false
+                });
+            }
+
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    /// <summary>Calls a tool over the MCP protocol and returns its text payload.</summary>
+    private async Task<string> CallToolTextAsync(string toolName, Dictionary<string, object?> arguments)
+    {
+        var result = await _client!.CallToolAsync(toolName, arguments, cancellationToken: _cts.Token);
+        var textBlock = result.Content.OfType<TextContentBlock>().FirstOrDefault();
+        return textBlock?.Text ?? string.Empty;
     }
 }
 

@@ -5,13 +5,19 @@ using VisioMcp.Core.Models;
 namespace VisioMcp.Core.Commands.Hyperlink;
 
 /// <summary>
-/// Hyperlink management: add, remove, and get hyperlinks on shapes and text.
+/// Legacy PowerPoint hyperlink operations.
+///
+/// SUPPRESSED (#19): every action is implemented against PowerPoint COM (<c>Slides</c>,
+/// <c>ActionSettings</c>, <c>ppActionHyperlink</c>) and throws <c>RuntimeBinderException</c> on a
+/// Visio Document. Visio models hyperlinks as rows in a shape's Hyperlink ShapeSheet section, and
+/// one shape can carry several. Kept off the public surface until reimplemented against
+/// <c>Shape.Hyperlinks</c> (#35).
 /// </summary>
 [ServiceCategory("hyperlink")]
 [McpTool("hyperlink", Title = "Hyperlink Operations", Destructive = true, Category = "content",
-    Description = "Add, read, remove hyperlinks on shapes. For URL links: set address='https://...'. "
-    + "For internal slide links: set address='' and sub_address='3' (slide number). "
-    + "Use 'list' for all hyperlinks in presentation. Use 'validate' to find broken links.")]
+    PublicSurface = false,
+    Description = "Legacy PowerPoint hyperlink operations. Not exposed: throws on Visio documents. "
+    + "Pending reimplementation against Shape.Hyperlinks (#35).")]
 public interface IHyperlinkCommands
 {
     /// <summary>
