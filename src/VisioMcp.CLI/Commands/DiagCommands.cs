@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 namespace VisioMcp.CLI.Commands;
 
 // ============================================================================
-// DIAG COMMANDS - Diagnostic/infrastructure commands (no PowerPoint required)
+// DIAG COMMANDS - Diagnostic/infrastructure commands (no Visio required)
 // ============================================================================
 
 internal sealed class DiagPingCommand : AsyncCommand

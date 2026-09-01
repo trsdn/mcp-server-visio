@@ -30,7 +30,7 @@ internal sealed class CliServiceTray : IDisposable
 
         // Sessions submenu (Alt+S mnemonic)
         _sessionsMenu = new ToolStripMenuItem("&Sessions (0)");
-        _sessionsMenu.AccessibleDescription = "Lists active PowerPoint sessions";
+        _sessionsMenu.AccessibleDescription = "Lists active Visio sessions";
         _sessionsMenu.DropDownItems.Add(new ToolStripMenuItem("No active sessions") { Enabled = false });
         _contextMenu.Items.Add(_sessionsMenu);
 
@@ -150,7 +150,7 @@ internal sealed class CliServiceTray : IDisposable
                     var fileName = Path.GetFileName(session.FilePath);
                     var sessionMenu = new ToolStripMenuItem(fileName);
                     sessionMenu.AccessibleName = $"Session: {fileName}";
-                    sessionMenu.AccessibleDescription = $"PowerPoint session for {session.FilePath}";
+                    sessionMenu.AccessibleDescription = $"Visio session for {session.FilePath}";
                     sessionMenu.ToolTipText = $"Session: {session.SessionId}\nPath: {session.FilePath}";
 
                     // Close session with save prompt
@@ -317,10 +317,10 @@ internal sealed class CliServiceTray : IDisposable
 
         var descLabel = new Label
         {
-            Text = "PowerPoint automation for coding agents.",
+            Text = "Visio automation for coding agents.",
             AutoSize = true,
             Location = new Point(70, 75),
-            AccessibleName = "PowerPoint automation for coding agents",
+            AccessibleName = "Visio automation for coding agents",
             AccessibleRole = AccessibleRole.StaticText
         };
 

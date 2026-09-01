@@ -16,7 +16,8 @@ namespace VisioMcp.Core.Commands.Text;
     + "bullet_type: 0=None, 1=Unnumbered (bullets), 2=Numbered. indent_level: 0-4. "
     + "change_case case_type: 1=Sentence, 2=Lower, 3=Upper, 4=Title, 5=Toggle. "
     + "color_hex: '#RRGGBB'. Combine multiple properties in one format call for efficiency. "
-    + "Legacy note: empty-placeholder-audit, insert-datetime, and insert-slide-number are presentation-era carryovers and are not Visio-native.")]
+    + "insert-slide-number and insert-datetime append literal text, not a live field, so they do not update when pages are reordered. "
+    + "empty-placeholder-audit and insert-link are not supported: Visio pages have no layout placeholders, and Visio links whole shapes rather than text runs.")]
 public interface ITextCommands
 {
     /// <summary>
@@ -98,7 +99,7 @@ public interface ITextCommands
     OperationResult AltTextAudit(IVisioBatch batch, int pageIndex);
 
     /// <summary>
-    /// Legacy presentation-era placeholder audit retained from the bootstrap template.
+    /// Not supported: Visio pages have no layout placeholders to audit. Throws NotSupportedException.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">0 for all pages, or a specific 1-based page index</param>
@@ -184,17 +185,17 @@ public interface ITextCommands
     OperationResult InsertSymbol(IVisioBatch batch, int pageIndex, string shapeName, string fontName, int charNumber);
 
     /// <summary>
-    /// Legacy presentation-era date/time field insertion retained from the bootstrap template.
+    /// Append the current date and time to a shape as literal text. Visio has no live date field reachable through a single cell write, so the value does not update.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeName">Shape name</param>
-    /// <param name="dateTimeFormat">Legacy presentation date/time format value (1-13)</param>
+    /// <param name="dateTimeFormat">Date/time format selector (1-13)</param>
     [ServiceAction("insert-datetime")]
     OperationResult InsertDateTime(IVisioBatch batch, int pageIndex, string shapeName, int dateTimeFormat);
 
     /// <summary>
-    /// Legacy presentation-era slide number field insertion retained from the bootstrap template.
+    /// Append the current page number to a shape as literal text. Not a live field, so it does not update when pages are reordered.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
