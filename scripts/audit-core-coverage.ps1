@@ -1,704 +1,252 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Audit script to verify Core Commands coverage in MCP Server
+    Audits that every Core command action reaches the generated dispatch and MCP surfaces.
 
 .DESCRIPTION
-    Counts Core interface methods vs MCP Server enum values to detect gaps.
-    Run quarterly or before major releases to ensure 100% coverage is maintained.
+    VisioMcp's public surface is attribute-driven source generation:
+
+      [ServiceCategory("layer")] on an interface     -> a routed domain
+      [McpTool(..., PublicSurface = false)]          -> hidden from MCP/CLI/skill surfaces
+      [ServiceAction("add-shape")] on a method       -> overrides the derived action name
+
+    From those, the generators emit:
+
+      ServiceRegistry.<Category>.g.cs           the action enum and ToActionString
+      ServiceRegistry.<Category>.Dispatch.g.cs  the RouteAction switch
+      McpTool.<Category>.g.cs                   the public MCP tool (public surface only)
+
+    This script compares the declared Core surface against what was actually generated and
+    reports any action that does not reach dispatch, any public category that produced no MCP
+    tool, and any suppressed category that leaked onto the public surface.
+
+    It requires a prior build, because it reads generated output. If the generated files are
+    absent, or if discovery finds nothing, it FAILS rather than reporting success.
+
+.PARAMETER FailOnGaps
+    Exit non-zero when gaps are found. On by default; pass -FailOnGaps:$false to report only.
+
+.PARAMETER ShowDetail
+    Print the per-category breakdown.
 
 .EXAMPLE
-    .\audit-core-coverage.ps1
+    dotnet build VisioMcp.sln -c Debug
+    .\scripts\audit-core-coverage.ps1
 
 .NOTES
-    Author: VisioMcp Team
-    Created: 2025-01-28
-    Purpose: Prevent Core Commands from being added without MCP Server exposure
+    Rewritten 2026-09-01 (#15). The previous version parsed a hand-written ToolActions.cs /
+    ActionExtensions.cs model that no longer exists. It found zero methods and printed
+    "No gaps detected - 100% coverage maintained!" with exit code 0 - a gate that reported
+    success on an empty dataset, which is worse than no gate at all.
 #>
 
 param(
-    [switch]$Verbose,
-    [switch]$FailOnGaps,
-    [switch]$CheckNaming
+    [switch]$FailOnGaps = $true,
+    [switch]$ShowDetail
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 $rootDir = Split-Path -Parent $PSScriptRoot
 
-Write-Host "Core Commands Coverage Audit" -ForegroundColor Cyan
-Write-Host "=================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host 'Core Commands Coverage Audit' -ForegroundColor Cyan
+Write-Host '============================' -ForegroundColor Cyan
+Write-Host ''
 
-# Function to count unique async method names in Core interface files (handles overloads)
-function Get-CoreMethodMatches {
-    param([string]$InterfacePath)
+function Get-DeclaredCategories {
+    <#
+        Reads src/VisioMcp.Core/Commands/**/I*Commands.cs and returns, per interface:
+        category name, public-surface flag and the declared method names.
+    #>
+    param([string]$CommandsRoot)
 
-    if (-not (Test-Path $InterfacePath)) {
-        return @()
-    }
+    $results = @()
 
-    $content = Get-Content $InterfacePath -Raw
+    foreach ($file in Get-ChildItem -Path $CommandsRoot -Recurse -Filter 'I*Commands.cs' -File) {
+        $content = Get-Content $file.FullName -Raw
 
-    # Match interface method signatures, e.g., "OperationResult Create(...)" or "Task<OperationResult> CreateAsync(...)"
-    $pattern = '^[\s\t]*(?:[\w<>,\[\]\? ]+)\s+(?<name>\w+)\s*\([^;]*\)\s*;'
-    $methodMatches = [regex]::Matches($content, $pattern, [System.Text.RegularExpressions.RegexOptions]::Multiline)
+        $categoryMatch = [regex]::Match($content, '\[ServiceCategory\(\s*"(?<name>[^"]+)"')
+        if (-not $categoryMatch.Success) { continue }
 
-    $methodNames = @()
-    foreach ($match in $methodMatches) {
-        $name = $match.Groups['name'].Value
-        if ($methodNames -notcontains $name) {
-            $methodNames += $name
+        # PublicSurface defaults to true; only an explicit "false" hides the domain.
+        $isPublic = -not [regex]::IsMatch($content, 'PublicSurface\s*=\s*false')
+
+        # Strip comments so signatures quoted inside XML docs are not counted as methods.
+        $stripped = [regex]::Replace($content, '(?m)^\s*///.*$', '')
+        $stripped = [regex]::Replace($stripped, '(?s)/\*.*?\*/', '')
+
+        $actions = @()
+        # An interface method is a signature terminated by ';' with no body.
+        $methodPattern = '(?m)^[\s\t]*(?:\[[^\]]+\]\s*)*(?:[\w<>,\[\]\?\. ]+?)\s+(?<name>\w+)\s*\([^;]*?\)\s*;'
+        foreach ($m in [regex]::Matches($stripped, $methodPattern)) {
+            $methodName = $m.Groups['name'].Value
+            if ($actions -notcontains $methodName) { $actions += $methodName }
+        }
+
+        $results += [pscustomobject]@{
+            Category  = $categoryMatch.Groups['name'].Value
+            Interface = $file.BaseName
+            IsPublic  = $isPublic
+            Actions   = $actions
         }
     }
 
-    return $methodNames
+    return $results
 }
 
-function Count-CoreMethods {
-    param([string]$InterfacePath, [string]$InterfaceName)
+function Get-GeneratedFiles {
+    param([string]$SearchRoot, [string]$Filter)
 
-    if (-not (Test-Path $InterfacePath)) {
-        Write-Warning "Interface file not found: $InterfacePath"
-        return 0
-    }
-
-    $methodNames = Get-CoreMethodMatches -InterfacePath $InterfacePath
-    return $methodNames.Count
+    if (-not (Test-Path $SearchRoot)) { return @() }
+    return @(Get-ChildItem -Path $SearchRoot -Recurse -Filter $Filter -File -ErrorAction SilentlyContinue)
 }
 
-# Function to count enum values
-function Count-EnumValues {
-    param([string]$EnumName, [string]$ToolActionsPath)
-
-    if (-not (Test-Path $ToolActionsPath)) {
-        Write-Warning "ToolActions.cs not found: $ToolActionsPath"
-        return 0
-    }
-
-    $content = Get-Content $ToolActionsPath -Raw
-    # Find the enum definition
-    $enumPattern = "public\s+enum\s+$EnumName\s*\{([^}]+)\}"
-    if ($content -match $enumPattern) {
-        $enumBody = $Matches[1]
-        # Count non-empty, non-comment lines
-        $lines = $enumBody -split "`n" | Where-Object {
-            $_ -match '\S' -and $_ -notmatch '^\s*//'
-        }
-        return $lines.Count
-    }
-
-    return 0
-}
-
-# Function to count enum values for a specific interface (handles cross-interface enum splits)
-function Count-EnumValuesForInterface {
-    param(
-        [string]$EnumName,
-        [string]$InterfaceName,
-        [string]$ToolActionsPath
-    )
-
-    # Check if this enum has a cross-interface split defined
-    if ($Script:crossInterfaceEnumSplits -and $Script:crossInterfaceEnumSplits.ContainsKey($EnumName)) {
-        $splits = $Script:crossInterfaceEnumSplits[$EnumName]
-        if ($splits.ContainsKey($InterfaceName)) {
-            # Return count of values specific to this interface
-            return $splits[$InterfaceName].Count
-        }
-    }
-
-    # No split defined - return full enum count
-    return Count-EnumValues -EnumName $EnumName -ToolActionsPath $ToolActionsPath
-}
-
-# Function to extract unique method names from Core interface (without "Async" suffix, handles overloads)
-function Get-CoreMethodNames {
-    param([string]$InterfacePath)
-
-    return Get-CoreMethodMatches -InterfacePath $InterfacePath
-}
-
-# Function to extract enum value names
-function Get-EnumValueNames {
-    param([string]$EnumName, [string]$ToolActionsPath)
-
-    if (-not (Test-Path $ToolActionsPath)) {
-        return @()
-    }
-
-    $content = Get-Content $ToolActionsPath -Raw
-    $enumPattern = "public\s+enum\s+$EnumName\s*\{([^}]+)\}"
-    if ($content -match $enumPattern) {
-        $enumBody = $Matches[1]
-        $enumValues = @()
-        $lines = $enumBody -split "`n" | Where-Object {
-            $_ -match '^\s*(\w+)' -and $_ -notmatch '^\s*//'
-        }
-        foreach ($line in $lines) {
-            if ($line -match '^\s*(\w+)') {
-                $enumValues += $Matches[1]
-            }
-        }
-        return $enumValues
-    }
-
-    return @()
-}
-
-# Function to check naming consistency
-function Check-NamingConsistency {
-    param(
-        [string]$InterfaceName,
-        [string]$InterfacePath,
-        [string]$EnumName,
-        [string]$ToolActionsPath
-    )
-
-    $methodNames = Get-CoreMethodNames -InterfacePath $InterfacePath
-    $enumValues = Get-EnumValueNames -EnumName $EnumName -ToolActionsPath $ToolActionsPath
-
-    $mismatches = @()
-
-    # Check each method has matching enum
-    foreach ($method in $methodNames) {
-        if ($enumValues -notcontains $method) {
-            $mismatches += "Method '$method' has no matching enum value"
-        }
-    }
-
-    # Check each enum has matching method
-    foreach ($enum in $enumValues) {
-        if ($methodNames -notcontains $enum) {
-            $mismatches += "Enum '$enum' has no matching method"
-        }
-    }
-
-    return $mismatches
-}
-
-# Discover all enum types from ToolActions.cs
-function Get-AllEnumTypes {
-    param([string]$ToolActionsPath)
-
-    if (-not (Test-Path $ToolActionsPath)) {
-        return @()
-    }
-
-    $content = Get-Content $ToolActionsPath -Raw
-    $enumPattern = "public\s+enum\s+(\w+Action)\s*\{"
-    $enumMatches = [regex]::Matches($content, $enumPattern)
-
-    $enumTypes = @()
-    foreach ($match in $enumMatches) {
-        $enumTypes += $match.Groups[1].Value
-    }
-
-    return $enumTypes
-}
-
-# Discover interface files dynamically
-function Find-InterfaceForEnum {
-    param(
-        [string]$EnumType,
-        [string]$CommandsPath
-    )
-
-    # Map enum type to expected interface name
-    # Pattern: PowerQueryAction -> IPowerQueryCommands
-    # Special cases and sub-tool mappings
-
-    $enumToInterface = @{
-        # Known naming exceptions
-        "WorksheetAction" = "ISheetCommands"
-        "ConditionalFormatAction" = "IConditionalFormattingCommands"
-
-        # Sub-tool enums that map to parent interfaces
-        # Range sub-tools (all map to IRangeCommands)
-        "RangeEditAction" = "IRangeCommands"
-        "RangeFormatAction" = "IRangeCommands"
-        "RangeLinkAction" = "IRangeCommands"
-
-        # Worksheet sub-tools (all map to ISheetCommands)
-        "WorksheetStyleAction" = "ISheetCommands"
-
-        # DataModel sub-tools (all map to IDataModelCommands)
-        "DataModelRelAction" = "IDataModelCommands"
-
-        # Table sub-tools (all map to ITableCommands)
-        "TableColumnAction" = "ITableCommands"
-
-        # PivotTable sub-tools (all map to IPivotTableCommands)
-        "PivotTableFieldAction" = "IPivotTableCommands"
-        "PivotTableCalcAction" = "IPivotTableCommands"
-
-        # Cross-interface enums (cover methods from multiple interfaces)
-        # SlicerAction covers methods from BOTH IPivotTableCommands AND ITableCommands
-        # We map to IPivotTableCommands as primary, and add ITableCommands below in additionalEnumMappings
-        "SlicerAction" = "IPivotTableCommands"
-
-        # Chart sub-tools (all map to IChartCommands)
-        "ChartConfigAction" = "IChartCommands"
-    }
-
-    # Additional interface mappings for cross-interface enums
-    # These enums have methods implemented in multiple Core interfaces
-    # Format: "InterfaceName" = @("EnumName1", "EnumName2", ...)
-    $Script:additionalEnumMappings = @{
-        "ITableCommands" = @("SlicerAction")  # Table slicer methods exposed via SlicerAction
-    }
-
-    # Cross-interface enum value splits
-    # When an enum covers methods from MULTIPLE interfaces, specify which values belong to each
-    # Format: "EnumName" = @{ "InterfaceName" = @("Value1", "Value2", ...) }
-    $Script:crossInterfaceEnumSplits = @{
-        "SlicerAction" = @{
-            # PivotTable slicer actions (4 values)
-            "IPivotTableCommands" = @("CreateSlicer", "ListSlicers", "SetSlicerSelection", "DeleteSlicer")
-            # Table slicer actions (4 values)
-            "ITableCommands" = @("CreateTableSlicer", "ListTableSlicers", "SetTableSlicerSelection", "DeleteTableSlicer")
-        }
-    }
-
-    if ($enumToInterface.ContainsKey($EnumType)) {
-        $interfaceName = $enumToInterface[$EnumType]
-    } else {
-        # Standard pattern: {Name}Action -> I{Name}Commands
-        $baseName = $EnumType -replace 'Action$', ''
-        $interfaceName = "I${baseName}Commands"
-    }
-
-    # Search recursively for interface file
-    $interfaceFiles = Get-ChildItem -Path $CommandsPath -Recurse -Filter "$interfaceName.cs"
-
-    if ($interfaceFiles.Count -eq 0) {
-        return $null
-    }
-
-    # Return the first match (should be only one)
-    return @{
-        Name = $interfaceName
-        Path = $interfaceFiles[0].FullName
-        Enum = $EnumType
-    }
-}
-
-$toolActionsPath = "$rootDir/src/VisioMcp.Core/Models/Actions/ToolActions.cs"
-
-# Dynamically discover all interfaces to check
-$commandsPath = Join-Path $rootDir "src\VisioMcp.Core\Commands"
-$enumTypes = Get-AllEnumTypes -ToolActionsPath $toolActionsPath
-
-$interfaces = @()
-foreach ($enumType in $enumTypes) {
-    $interface = Find-InterfaceForEnum -EnumType $enumType -CommandsPath $commandsPath
-    if ($interface) {
-        $interfaces += $interface
-    } else {
-        Write-Warning "No interface found for enum type: $enumType"
-    }
-}
-
-# Group interfaces by interface name (multiple enums can map to same interface)
-$groupedInterfaces = @{}
-foreach ($interface in $interfaces) {
-    $key = $interface.Name
-    if (-not $groupedInterfaces.ContainsKey($key)) {
-        $groupedInterfaces[$key] = @{
-            Name = $interface.Name
-            Path = $interface.Path
-            Enums = @()
-        }
-    }
-    $groupedInterfaces[$key].Enums += $interface.Enum
-}
-
-# Add additional enum mappings for cross-interface enums
-# This handles cases like SlicerAction which covers methods from both IPivotTableCommands and ITableCommands
-if ($Script:additionalEnumMappings) {
-    foreach ($interfaceName in $Script:additionalEnumMappings.Keys) {
-        if ($groupedInterfaces.ContainsKey($interfaceName)) {
-            $additionalEnums = $Script:additionalEnumMappings[$interfaceName]
-            foreach ($enumName in $additionalEnums) {
-                if ($groupedInterfaces[$interfaceName].Enums -notcontains $enumName) {
-                    $groupedInterfaces[$interfaceName].Enums += $enumName
-                }
-            }
-        }
-    }
-}
-
-# Track results
-$results = @()
-$totalCoreMethods = 0
-$totalEnumValues = 0
-$hasGaps = $false
-
-# Audit each interface (aggregating all related enums)
-foreach ($key in $groupedInterfaces.Keys) {
-    $interfaceGroup = $groupedInterfaces[$key]
-    $coreMethods = Count-CoreMethods -InterfacePath $interfaceGroup.Path -InterfaceName $interfaceGroup.Name
-
-    # Sum enum values across ALL enums that map to this interface
-    $totalEnumValuesForInterface = 0
-    $enumNames = @()
-    foreach ($enumName in $interfaceGroup.Enums) {
-        # Use interface-aware counting for cross-interface enums (e.g., SlicerAction)
-        $enumCount = Count-EnumValuesForInterface -EnumName $enumName -InterfaceName $interfaceGroup.Name -ToolActionsPath $toolActionsPath
-        $totalEnumValuesForInterface += $enumCount
-        $enumNames += "$enumName($enumCount)"
-    }
-
-    $totalCoreMethods += $coreMethods
-    $totalEnumValues += $totalEnumValuesForInterface
-
-    $statusText = "OK"
-
-    if ($totalEnumValuesForInterface -lt $coreMethods) {
-        $statusText = "GAP"
-        $hasGaps = $true
-    } elseif ($totalEnumValuesForInterface -gt $coreMethods) {
-        $statusText = "EXTRA"
-    }
-
-    $result = [PSCustomObject]@{
-        Interface = $interfaceGroup.Name
-        CoreMethods = $coreMethods
-        EnumValues = $totalEnumValuesForInterface
-        Enums = ($interfaceGroup.Enums -join ", ")
-        Gap = $coreMethods - $totalEnumValuesForInterface
-        Status = $statusText
-    }
-
-    $results += $result
-
-    if ($Verbose) {
-        Write-Host "Checking $($interfaceGroup.Name)..." -ForegroundColor Gray
-        Write-Host "  Core Methods: $coreMethods" -ForegroundColor Gray
-        Write-Host "  Enum Values: $totalEnumValuesForInterface (from: $($enumNames -join ', '))" -ForegroundColor Gray
-        Write-Host "  Status: $statusText" -ForegroundColor $(if ($statusText -eq "OK") { "Green" } elseif ($statusText -eq "GAP") { "Red" } else { "Yellow" })
-        Write-Host ""
-    }
-}
-
-# Display results table
-Write-Host ""
-Write-Host "Audit Results:" -ForegroundColor Cyan
-Write-Host ""
-$results | Format-Table -Property Interface, CoreMethods, EnumValues, Enums, Gap, Status -AutoSize
-
-# Summary
-Write-Host ""
-Write-Host "Summary:" -ForegroundColor Cyan
-Write-Host "--------" -ForegroundColor Cyan
-Write-Host "Total Core Methods: $totalCoreMethods" -ForegroundColor White
-Write-Host "Total Enum Values:  $totalEnumValues" -ForegroundColor White
-
-if ($totalCoreMethods -eq 0) {
-    Write-Host "Coverage:           N/A (no core methods detected)" -ForegroundColor Yellow
-} elseif ($totalEnumValues -eq $totalCoreMethods) {
-    Write-Host "Coverage:           100% " -ForegroundColor Green
-} else {
-    $coverage = [math]::Round(($totalEnumValues / $totalCoreMethods) * 100, 1)
-    Write-Host "Coverage:           $coverage%" -ForegroundColor $(if ($coverage -ge 95) { "Yellow" } else { "Red" })
-}
-
-# Gaps detection
-if ($hasGaps) {
-    Write-Host ""
-    Write-Host "GAPS DETECTED!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "The following interfaces have fewer enum values than Core methods:" -ForegroundColor Red
-    $results | Where-Object { $_.Gap -gt 0 } | ForEach-Object {
-        Write-Host "  - $($_.Interface): Missing $($_.Gap) enum values" -ForegroundColor Red
-    }
-    Write-Host ""
-    Write-Host "Action Required:" -ForegroundColor Yellow
-    Write-Host "  1. Review Core interface for new methods" -ForegroundColor Yellow
-    Write-Host "  2. Add missing enum values to ToolActions.cs" -ForegroundColor Yellow
-    Write-Host "  3. Add ToActionString mappings to ActionExtensions.cs" -ForegroundColor Yellow
-    Write-Host "  4. Add switch cases to appropriate MCP Tools" -ForegroundColor Yellow
-    Write-Host "  5. See .github/instructions/coverage-prevention-strategy.instructions.md" -ForegroundColor Yellow
-
-    if ($FailOnGaps) {
-        exit 1
-    }
-} else {
-    Write-Host ""
-    Write-Host "No gaps detected - 100% coverage maintained!" -ForegroundColor Green
-}
-
-# Extra enum values warning
-$extraEnums = $results | Where-Object { $_.Gap -lt 0 }
-if ($extraEnums.Count -gt 0) {
-    Write-Host ""
-    Write-Host "Note: Some enums have more values than Core methods" -ForegroundColor Yellow
-    Write-Host "This might be intentional (MCP-specific actions like 'close-workbook')" -ForegroundColor Gray
-    $extraEnums | ForEach-Object {
-        Write-Host "  - $($_.Interface): $([math]::Abs($_.Gap)) extra enum values" -ForegroundColor Yellow
-    }
-}
-
-Write-Host ""
-Write-Host "Audit completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
-
-# Explicitly exit with success code (no gaps detected)
-if ($FailOnGaps -and $hasGaps) {
+$commandsRoot = Join-Path $rootDir 'src\VisioMcp.Core\Commands'
+if (-not (Test-Path $commandsRoot)) {
+    Write-Host "FAIL: Core commands directory not found: $commandsRoot" -ForegroundColor Red
     exit 1
 }
 
-# Naming consistency check (if requested)
-if ($CheckNaming) {
-    Write-Host ""
-    Write-Host "Naming Consistency Check" -ForegroundColor Cyan
-    Write-Host "===========================" -ForegroundColor Cyan
-    Write-Host ""
+$categories = @(Get-DeclaredCategories -CommandsRoot $commandsRoot)
 
-    # Sub-tool enums are intentionally subsets of parent interface - skip naming check
-    # These enums only contain a subset of the parent interface methods by design
-    $subToolEnums = @(
-        "RangeEditAction", "RangeFormatAction", "RangeLinkAction",  # IRangeCommands sub-tools
-        "WorksheetStyleAction",  # ISheetCommands sub-tools
-        "DataModelRelAction",  # IDataModelCommands sub-tools
-        "TableColumnAction",  # ITableCommands sub-tools
-        "PivotTableFieldAction", "PivotTableCalcAction", "SlicerAction",  # IPivotTableCommands sub-tools
-        "ChartConfigAction"  # IChartCommands sub-tools
-    )
+$coreObjRoot = Join-Path $rootDir 'src\VisioMcp.Core\obj'
+$mcpObjRoot = Join-Path $rootDir 'src\VisioMcp.McpServer\obj'
 
-    # Known intentional exceptions (documented in CORE-METHOD-RENAMING-SUMMARY.md)
-    # Also includes methods that moved to sub-tool enums
-    $knownExceptions = @{
-        "TableAction" = @("ApplyFilterValues", "SortMulti", "ApplyFilter", "ClearFilters", "GetFilters",
-                          "AddColumn", "RemoveColumn", "RenameColumn", "GetStructuredReference", "Sort",
-                          "GetColumnNumberFormat", "SetColumnNumberFormat",
-                          # Table slicer methods exposed via SlicerAction (cross-interface enum)
-                          "CreateTableSlicer", "ListTableSlicers", "SetTableSlicerSelection", "DeleteTableSlicer")
-        "FileAction" = @("CloseWorkbook", "Open", "Save", "Close", "List", "Create")  # MCP-specific session actions
-        "RangeAction" = @("SetNumberFormatCustom", "InsertCells", "DeleteCells", "InsertRows", "DeleteRows",
-                          "InsertColumns", "DeleteColumns", "Find", "Replace", "Sort",
-                          "AddHyperlink", "RemoveHyperlink", "ListHyperlinks", "GetHyperlink",
-                          "SetStyle", "GetStyle", "FormatRange", "ValidateRange", "GetValidation", "RemoveValidation",
-                          "AutoFitColumns", "AutoFitRows", "MergeCells", "UnmergeCells", "GetMergeInfo",
-                          "SetCellLock", "GetCellLock")  # Methods moved to RangeEdit/RangeFormat/RangeLink tools
-        "WorksheetAction" = @("SetTabColor", "GetTabColor", "ClearTabColor", "SetVisibility", "GetVisibility",
-                              "Show", "Hide", "VeryHide")  # Methods moved to WorksheetStyleAction
-        "DataModelAction" = @("ListRelationships", "ReadRelationship", "DeleteRelationship",
-                              "CreateRelationship", "UpdateRelationship")  # Methods moved to DataModelRelAction
-        "PivotTableAction" = @("ListFields", "AddRowField", "AddColumnField", "AddValueField", "AddFilterField",
-                               "RemoveField", "SetFieldFunction", "SetFieldName", "SetFieldFormat", "GetData",
-                               "SetFieldFilter", "SortField", "GroupByDate", "GroupByNumeric",
-                               "CreateCalculatedField", "ListCalculatedFields", "DeleteCalculatedField",
-                               "SetLayout", "SetSubtotals", "SetGrandTotals",
-                               "ListCalculatedMembers", "CreateCalculatedMember", "DeleteCalculatedMember",
-                               "CreateSlicer", "ListSlicers", "SetSlicerSelection", "DeleteSlicer")  # Methods moved to PivotTableField/PivotTableCalc/Slicer
-        "ChartAction" = @("SetSourceRange", "AddSeries", "RemoveSeries", "SetChartType", "SetTitle",
-                          "SetAxisTitle", "GetAxisNumberFormat", "SetAxisNumberFormat", "ShowLegend", "SetStyle",
-                          "SetDataLabels", "GetAxisScale", "SetAxisScale", "GetGridlines", "SetGridlines", "SetSeriesFormat",
-                          "ListTrendlines", "AddTrendline", "DeleteTrendline", "SetTrendline", "SetPlacement")  # Methods moved to ChartConfigAction
-    }
+$dispatchFiles = Get-GeneratedFiles -SearchRoot $coreObjRoot -Filter 'ServiceRegistry.*.Dispatch.g.cs'
+$mcpToolFiles = Get-GeneratedFiles -SearchRoot $mcpObjRoot -Filter 'McpTool.*.g.cs'
 
-    $hasNamingIssues = $false
-
-    foreach ($interface in $interfaces) {
-        # Skip sub-tool enums - they are intentionally subsets
-        if ($subToolEnums -contains $interface.Enum) {
-            Write-Host "$($interface.Name) -> $($interface.Enum): Skipped (sub-tool enum)" -ForegroundColor Gray
-            continue
+# Not every public tool is generated. `file` is implemented by hand in VisioFileTool.cs because
+# session lifecycle cannot be expressed as a batch-scoped Core command. Discover hand-written
+# [McpServerToolType] classes so they are not reported as missing.
+$handWrittenToolNames = @()
+$handWrittenToolsRoot = Join-Path $rootDir 'src\VisioMcp.McpServer\Tools'
+if (Test-Path $handWrittenToolsRoot) {
+    foreach ($file in Get-ChildItem -Path $handWrittenToolsRoot -Recurse -Filter '*.cs' -File) {
+        $toolContent = Get-Content $file.FullName -Raw
+        foreach ($m in [regex]::Matches($toolContent, '\[McpServerTool\(\s*Name\s*=\s*"(?<name>[^"]+)"')) {
+            $handWrittenToolNames += $m.Groups['name'].Value
         }
-
-        $mismatches = Check-NamingConsistency `
-            -InterfaceName $interface.Name `
-            -InterfacePath $interface.Path `
-            -EnumName $interface.Enum `
-            -ToolActionsPath $toolActionsPath
-
-        # Filter out known exceptions
-        if ($knownExceptions.ContainsKey($interface.Enum)) {
-            $exceptions = $knownExceptions[$interface.Enum]
-            $mismatches = $mismatches | Where-Object {
-                $mismatch = $_
-                # Match both "Method 'X' has no matching..." and "Enum 'X' has no matching..."
-                -not ($exceptions | Where-Object { $mismatch -like "*'$_'*" })
-            }
-        }
-
-        if ($mismatches.Count -gt 0) {
-            $hasNamingIssues = $true
-            Write-Host "$($interface.Name) -> $($interface.Enum):" -ForegroundColor Red
-            foreach ($mismatch in $mismatches) {
-                Write-Host "   $mismatch" -ForegroundColor Yellow
-            }
-            Write-Host ""
-        } else {
-            Write-Host "$($interface.Name) -> $($interface.Enum): All names match" -ForegroundColor Green
-        }
-    }
-
-    # Report known exceptions
-    $totalExceptions = 0
-    foreach ($enumName in $knownExceptions.Keys) {
-        $totalExceptions += $knownExceptions[$enumName].Count
-    }
-
-    if ($totalExceptions -gt 0) {
-        Write-Host ""
-        Write-Host "Known Intentional Exceptions: $totalExceptions" -ForegroundColor Gray
-        foreach ($enumName in $knownExceptions.Keys) {
-            Write-Host "   $enumName`: " -NoNewline -ForegroundColor Gray
-            Write-Host ($knownExceptions[$enumName] -join ", ") -ForegroundColor Gray
-        }
-        Write-Host "   (Documented in CORE-METHOD-RENAMING-SUMMARY.md)" -ForegroundColor Gray
-    }
-
-    if ($hasNamingIssues) {
-        Write-Host ""
-        Write-Host "NAMING MISMATCHES DETECTED!" -ForegroundColor Red
-        Write-Host ""
-        Write-Host "Action Required:" -ForegroundColor Yellow
-        Write-Host "  1. Review naming mismatches above" -ForegroundColor Yellow
-        Write-Host "  2. Decide: Rename Core methods OR rename enum values" -ForegroundColor Yellow
-        Write-Host "  3. Update all references (implementations, tools, tests, CLI)" -ForegroundColor Yellow
-        Write-Host "  4. Run 'dotnet build' to verify" -ForegroundColor Yellow
-        Write-Host "  5. If intentional, add to knownExceptions in audit script" -ForegroundColor Yellow
-        Write-Host ""
-
-        if ($FailOnGaps) {
-            exit 1
-        }
-    } else {
-        Write-Host ""
-        Write-Host "All naming consistent - enum values match Core method names!" -ForegroundColor Green
-        Write-Host "   (Excluding $totalExceptions documented intentional exceptions)" -ForegroundColor Gray
     }
 }
+$handWrittenToolNames = @($handWrittenToolNames | Sort-Object -Unique)
 
-# Switch statement completeness check
-Write-Host ""
-Write-Host "Switch Statement Completeness Check" -ForegroundColor Cyan
-Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host ""
+# ---------------------------------------------------------------------------
+# Empty-discovery guards.
+#
+# This is the entire point of the rewrite. A parser that finds nothing must fail
+# loudly rather than declare full coverage over an empty set.
+# ---------------------------------------------------------------------------
 
-# Function to extract handled enum values from switch statements
-function Get-HandledEnumValues {
-    param(
-        [string]$ToolFilePath,
-        [string]$EnumTypeName
-    )
+$fatal = @()
 
-    if (-not (Test-Path $ToolFilePath)) {
-        return @()
-    }
-
-    $content = Get-Content $ToolFilePath -Raw
-
-    # Find switch statement on the enum type
-    # Pattern: "action switch" or "return action switch" where action is the enum parameter
-    # Match until we find the default case "_"
-    $switchPattern = "(?s)return\s+action\s+switch\s*\{(.*?)\s+_\s*=>"
-
-    if ($content -match $switchPattern) {
-        $switchBody = $Matches[1]
-        $handledValues = @()
-
-        # Extract all case patterns: EnumType.Value =>
-        $casePattern = "$EnumTypeName\.(\w+)\s*=>"
-        $caseMatches = [regex]::Matches($switchBody, $casePattern)
-
-        foreach ($match in $caseMatches) {
-            $enumValue = $match.Groups[1].Value
-            if ($handledValues -notcontains $enumValue) {
-                $handledValues += $enumValue
-            }
-        }
-
-        return $handledValues
-    }
-
-    return @()
+if ($categories.Count -eq 0) {
+    $fatal += "Discovered 0 [ServiceCategory] interfaces under $commandsRoot - the parser is broken or the layout changed."
 }
 
-# Check switch completeness for each tool
-$toolsPath = Join-Path $rootDir "src\VisioMcp.McpServer\Tools"
-$switchIssues = @()
-$hasSwitchIssues = $false
+$totalActions = 0
+foreach ($c in $categories) { $totalActions += $c.Actions.Count }
 
-# Use the same discovered interfaces (already has Interface Name and EnumType)
-$enumMappings = $interfaces
+if ($categories.Count -gt 0 -and $totalActions -eq 0) {
+    $fatal += 'Discovered 0 interface methods across all categories - the method parser is broken.'
+}
 
-foreach ($mapping in $enumMappings) {
-    $enumValues = Get-EnumValueNames -EnumName $mapping.Enum -ToolActionsPath $toolActionsPath
+if ($dispatchFiles.Count -eq 0) {
+    $fatal += "Discovered 0 ServiceRegistry.*.Dispatch.g.cs files under $coreObjRoot - run 'dotnet build VisioMcp.sln' first, this audit reads generated output."
+}
 
-    # Dynamically find the tool file that uses this enum type as the first 'action' parameter
-    # Look for: EnumType action, (as first parameter after method name)
-    # This avoids false positives from references to other enum types in the same file
-    $toolFiles = Get-ChildItem -Path $toolsPath -Filter "*.cs" | Where-Object {
-        $content = Get-Content $_.FullName -Raw
-        # Match the enum type as 'action' parameter in a method signature
-        # Simplified pattern: look for the enum type followed by 'action' parameter
-        # The method signature may span multiple lines and include 'partial' keyword
-        $content -match "(?s)\b$($mapping.Enum)\s+action\s*,"
-    }
+if ($mcpToolFiles.Count -eq 0) {
+    $fatal += "Discovered 0 McpTool.*.g.cs files under $mcpObjRoot - run 'dotnet build VisioMcp.sln' first."
+}
 
-    if ($toolFiles.Count -eq 0) {
-        Write-Host "No tool file found for $($mapping.Enum)" -ForegroundColor Yellow
+if ($fatal.Count -gt 0) {
+    Write-Host 'FAIL: discovery returned nothing.' -ForegroundColor Red
+    Write-Host ''
+    foreach ($f in $fatal) { Write-Host "  - $f" -ForegroundColor Red }
+    Write-Host ''
+    Write-Host 'Refusing to report coverage on an empty dataset.' -ForegroundColor Red
+    exit 1
+}
+
+# Deduplicate generated files across Debug/Release output directories.
+$dispatchCategories = @($dispatchFiles |
+        ForEach-Object { ($_.Name -replace '^ServiceRegistry\.', '') -replace '\.Dispatch\.g\.cs$', '' } |
+        Sort-Object -Unique)
+
+$mcpCategories = @($mcpToolFiles |
+        ForEach-Object { ($_.Name -replace '^McpTool\.', '') -replace '\.g\.cs$', '' } |
+        Sort-Object -Unique)
+
+# ---------------------------------------------------------------------------
+# Comparison
+# ---------------------------------------------------------------------------
+
+$gaps = @()
+
+foreach ($cat in $categories | Sort-Object Category) {
+    $pascal = (Get-Culture).TextInfo.ToTitleCase($cat.Category)
+
+    $hasDispatch = $dispatchCategories -contains $pascal
+    $hasMcpTool = $mcpCategories -contains $pascal
+    $hasHandWrittenTool = $handWrittenToolNames -contains $cat.Category
+
+    if (-not $hasDispatch) {
+        $gaps += "[$($cat.Category)] declared by $($cat.Interface) but no ServiceRegistry.$pascal.Dispatch.g.cs was generated"
         continue
     }
 
-    if ($toolFiles.Count -gt 1) {
-        # Multiple files use this enum - pick the one with matching name pattern
-        # e.g., RangeAction -> RangeTool.cs or PptRangeTool.cs
-        $enumBase = $mapping.Enum -replace 'Action$', ''
-        $primaryTool = $toolFiles | Where-Object {
-            $_.Name -match "$enumBase`Tool\.cs"
-        } | Select-Object -First 1
-
-        if (-not $primaryTool) {
-            # Fallback to first file
-            $primaryTool = $toolFiles[0]
-        }
-        $toolFile = $primaryTool
-    } else {
-        $toolFile = $toolFiles[0]
+    if ($cat.IsPublic -and -not $hasMcpTool -and -not $hasHandWrittenTool) {
+        $gaps += "[$($cat.Category)] is PublicSurface but has neither a generated McpTool.$pascal.g.cs nor a hand-written [McpServerTool(Name = `"$($cat.Category)`")] - the tool is invisible to MCP clients"
     }
 
-    $handledValues = Get-HandledEnumValues -ToolFilePath $toolFile.FullName -EnumTypeName $mapping.Enum
+    if (-not $cat.IsPublic -and ($hasMcpTool -or $hasHandWrittenTool)) {
+        $gaps += "[$($cat.Category)] is PublicSurface = false but an MCP tool exists - a suppressed domain leaked onto the public surface"
+    }
 
-    # Find unhandled enum values
-    $unhandled = $enumValues | Where-Object { $handledValues -notcontains $_ }
+    # Every declared interface method must appear in the dispatch switch.
+    $dispatchFile = $dispatchFiles | Where-Object { $_.Name -eq "ServiceRegistry.$pascal.Dispatch.g.cs" } | Select-Object -First 1
+    $dispatchContent = Get-Content $dispatchFile.FullName -Raw
 
-    if ($unhandled.Count -gt 0) {
-        $hasSwitchIssues = $true
-        Write-Host "$($toolFile.Name) ($($mapping.Enum)):" -ForegroundColor Red
-        foreach ($value in $unhandled) {
-            Write-Host "   Missing case: $($mapping.Enum).$value" -ForegroundColor Yellow
-            $switchIssues += "Missing case: $($mapping.Enum).$value in $($toolFile.Name)"
+    foreach ($action in $cat.Actions) {
+        if ($dispatchContent -notmatch "\b$([regex]::Escape($action))\b") {
+            $gaps += "[$($cat.Category)] method '$action' has no dispatch case in ServiceRegistry.$pascal.Dispatch.g.cs"
         }
-        Write-Host ""
-    } else {
-        Write-Host "$($toolFile.Name): All $($enumValues.Count) enum values handled" -ForegroundColor Green
     }
 }
 
-if ($hasSwitchIssues) {
-    Write-Host ""
-    Write-Host "UNHANDLED ENUM VALUES DETECTED!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Action Required:" -ForegroundColor Yellow
-    Write-Host "  1. Review missing case statements above" -ForegroundColor Yellow
-    Write-Host "  2. Add missing cases to switch statements in tool files" -ForegroundColor Yellow
-    Write-Host "  3. Implement the corresponding private methods" -ForegroundColor Yellow
-    Write-Host "  4. Run 'dotnet build' to verify compilation" -ForegroundColor Yellow
-    Write-Host "  5. Test the new actions work correctly" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Example fix for PowerQueryAction.LoadTo:" -ForegroundColor Gray
-    Write-Host "  PowerQueryAction.LoadTo => await LoadToPowerQueryAsync(...)" -ForegroundColor Gray
-    Write-Host ""
+# ---------------------------------------------------------------------------
+# Report
+# ---------------------------------------------------------------------------
 
-    if ($FailOnGaps) {
-        exit 1
+$publicCount = @($categories | Where-Object { $_.IsPublic }).Count
+$hiddenCount = $categories.Count - $publicCount
+
+Write-Host 'Summary' -ForegroundColor Cyan
+Write-Host '-------'
+Write-Host ("  Categories discovered : {0} ({1} public, {2} suppressed)" -f $categories.Count, $publicCount, $hiddenCount)
+Write-Host ("  Interface methods     : {0}" -f $totalActions)
+Write-Host ("  Dispatch files        : {0}" -f $dispatchCategories.Count)
+Write-Host ("  Generated MCP tools   : {0}" -f $mcpCategories.Count)
+Write-Host ("  Hand-written MCP tools: {0}{1}" -f $handWrittenToolNames.Count, $(if ($handWrittenToolNames.Count) { " ($($handWrittenToolNames -join ', '))" } else { '' }))
+Write-Host ''
+
+if ($ShowDetail) {
+    Write-Host 'Categories' -ForegroundColor Cyan
+    Write-Host '----------'
+    foreach ($cat in $categories | Sort-Object Category) {
+        $flag = if ($cat.IsPublic) { 'public    ' } else { 'suppressed' }
+        Write-Host ("  {0,-16} {1}  {2,3} methods" -f $cat.Category, $flag, $cat.Actions.Count)
     }
-} else {
-    Write-Host ""
-    Write-Host "All switch statements complete - every enum value is handled!" -ForegroundColor Green
+    Write-Host ''
 }
 
+if ($gaps.Count -eq 0) {
+    Write-Host "No gaps detected across $($categories.Count) categories and $totalActions methods." -ForegroundColor Green
+    exit 0
+}
+
+Write-Host "$($gaps.Count) gap(s) detected:" -ForegroundColor Red
+Write-Host ''
+foreach ($gap in $gaps) { Write-Host "  - $gap" -ForegroundColor Red }
+Write-Host ''
+
+if ($FailOnGaps) { exit 1 }
 exit 0

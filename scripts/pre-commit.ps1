@@ -94,21 +94,21 @@ catch {
 }
 
 Write-Host ""
-Write-Host "Checking Core Commands coverage and naming..." -ForegroundColor Cyan
+Write-Host "Checking Core Commands coverage..." -ForegroundColor Cyan
 
 try {
     $auditScript = Join-Path $rootDir "scripts\audit-core-coverage.ps1"
-    & $auditScript -CheckNaming -FailOnGaps
+    & $auditScript -FailOnGaps
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
-        Write-Host "Coverage or naming issues detected!" -ForegroundColor Red
-        Write-Host "   All Core methods must be exposed via MCP Server with matching names." -ForegroundColor Red
-        Write-Host "   Fix the issues before committing (add/rename enum values and mappings)." -ForegroundColor Red
+        Write-Host "Coverage gaps detected!" -ForegroundColor Red
+        Write-Host "   Every Core command action must reach the generated dispatch, and every" -ForegroundColor Red
+        Write-Host "   PublicSurface category must produce an MCP tool. Fix before committing." -ForegroundColor Red
         exit 1
     }
 
-    Write-Host "Coverage and naming checks passed - 100% coverage with consistent names" -ForegroundColor Green
+    Write-Host "Coverage audit passed" -ForegroundColor Green
 }
 catch {
     Write-Host ""

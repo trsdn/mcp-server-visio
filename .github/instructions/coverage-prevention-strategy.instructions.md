@@ -131,41 +131,59 @@ git commit --no-verify -m "Message"
 
 ## Manual Coverage Check
 
-**Run anytime** to verify coverage:
+**Requires a prior build** — the audit reads generated output (`ServiceRegistry.*.Dispatch.g.cs`,
+`McpTool.*.g.cs`), so run `dotnet build VisioMcp.sln` first. If the generated files are missing,
+the script fails rather than reporting coverage over an empty set.
 
 ```powershell
-# Check coverage (shows gaps if any)
+# Check coverage (fails on gaps by default)
 .\scripts\audit-core-coverage.ps1
 
-# Check coverage and fail if gaps found (useful in CI/CD)
-.\scripts\audit-core-coverage.ps1 -FailOnGaps
+# Report gaps without failing
+.\scripts\audit-core-coverage.ps1 -FailOnGaps:$false
 
-# Verbose output with detailed counts
-.\scripts\audit-core-coverage.ps1 -Verbose
+# Show the per-category breakdown
+.\scripts\audit-core-coverage.ps1 -ShowDetail
 ```
 
-**Expected output when 100% coverage**:
+**Expected output when there are no gaps**:
 ```
-Interface           CoreMethods EnumValues Gap Status
----------           ----------- ---------- --- ------
-ISlideCommands               15         15   0 ✅
-IShapeCommands               20         20   0 ✅
-ITableCommands               12         12   0 ✅
-IChartCommands               18         18   0 ✅
+Core Commands Coverage Audit
+============================
 
-Summary: 100% coverage ✅ (65 Core methods, 65 enum values)
-```
+Summary
+-------
+  Categories discovered : 37 (13 public, 24 suppressed)
+  Interface methods     : 281
+  Dispatch files        : 37
+  Generated MCP tools   : 12
+  Hand-written MCP tools: 1 (file)
 
-**When gaps detected**:
-```
-Interface           CoreMethods EnumValues Gap Status
----------           ----------- ---------- --- ------
-IRangeCommands               42         40   2 ❌
-
-Summary: 98.7% coverage (65 Core methods, 63 enum values, 2 gaps)
+No gaps detected across 37 categories and 281 methods.
 ```
 
-**Fix**: Follow 8-step workflow.
+**When gaps are detected**:
+```
+3 gap(s) detected:
+
+  - [layer] method 'SetOpacity' has no dispatch case in ServiceRegistry.Layer.Dispatch.g.cs
+  - [connector] is PublicSurface but has neither a generated McpTool.Connector.g.cs nor a
+    hand-written [McpServerTool(Name = "connector")] - the tool is invisible to MCP clients
+  - [vba] is PublicSurface = false but an MCP tool exists - a suppressed domain leaked onto
+    the public surface
+```
+
+**When the tree has not been built**:
+```
+FAIL: discovery returned nothing.
+
+  - Discovered 0 ServiceRegistry.*.Dispatch.g.cs files under ...\src\VisioMcp.Core\obj -
+    run 'dotnet build VisioMcp.sln' first, this audit reads generated output.
+
+Refusing to report coverage on an empty dataset.
+```
+
+**Fix**: Follow the 8-step workflow.
 
 ---
 

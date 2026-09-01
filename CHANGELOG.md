@@ -19,6 +19,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`audit-core-coverage.ps1` no longer reports "100% coverage" on zero discovered methods** (#15).
+  Pre-commit gate #3 parsed a hand-written `ToolActions.cs` / `ActionExtensions.cs` model that no
+  longer exists, so it found **0 methods and 0 enum values**, printed *"No gaps detected — 100%
+  coverage maintained!"* and exited **0**. A gate that reports success on an empty dataset is worse
+  than no gate, because it manufactures confidence.
+  Rewritten against the real source of truth — `[ServiceCategory]` / `[McpTool(PublicSurface)]`
+  attributes compared against the generated `ServiceRegistry.*.Dispatch.g.cs` and
+  `McpTool.*.g.cs`. It now discovers **37 categories (13 public, 24 suppressed) and 281 interface
+  methods**, and detects three classes of gap: an action missing from dispatch, a public category
+  with no MCP tool, and a suppressed category that leaked onto the public surface.
+  **Discovery returning nothing is now a hard failure**, including when the tree has not been built.
+  Verified in all three states: green on real data, red on an induced gap, red on empty discovery.
+  Hand-written tools (`VisioFileTool`) are recognised so `file` is not a false positive.
+  Callers updated: `pre-commit.ps1` (the `-CheckNaming` switch no longer exists — action names are
+  now derived from method names by the generator, so they cannot drift) and the usage docs in
+  `.github/instructions/coverage-prevention-strategy.instructions.md`, whose sample output
+  described tables and PivotTables from the Excel ancestor.
+
 - **All 14 OnDemand session/batch tests now pass** (#25). They created `.pptx` files, which
   `SessionManager` correctly rejects, so the suite that Rule 3 makes mandatory before touching
   session or batch code had **zero** working coverage of STA threading, COM lifetime, timeout
