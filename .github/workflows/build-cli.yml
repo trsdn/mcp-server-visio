@@ -30,6 +30,9 @@ on:
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
       - '.github/workflows/build-cli.yml'
+  # Manual trigger. Also the mechanism by which a dormant workflow can be registered with, and
+  # verified against, GitHub Actions - see #12.
+  workflow_dispatch:
 
 jobs:
   build-cli:

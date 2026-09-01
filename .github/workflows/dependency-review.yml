@@ -6,6 +6,9 @@ name: 'Dependency Review'
 on: 
   pull_request:
     branches: [ "main", "develop" ]
+  # Manual trigger. Also the mechanism by which a dormant workflow can be registered with, and
+  # verified against, GitHub Actions - see #12.
+  workflow_dispatch:
 
 permissions:
   contents: read
