@@ -10,7 +10,7 @@ applyTo: "src/VisioMcp.McpServer/Prompts/**/*.md"
 
 **Write FOR expert LLMs (GitHub Copilot, Claude), not ABOUT the system.**
 
-LLMs already know PowerPoint, JSON, and MCP protocol. They need server-specific patterns only.
+LLMs already know Visio, JSON, and MCP protocol. They need server-specific patterns only.
 
 ## What to Include
 
@@ -24,7 +24,7 @@ LLMs already know PowerPoint, JSON, and MCP protocol. They need server-specific 
 
 **3. Tool Selection:**
 - When to use this tool vs other tools
-- Example: "Use shape for content, slide for lifecycle"
+- Example: "Use shape for drawing and connectivity, page for lifecycle"
 
 **4. Server-Specific Behavior:**
 - Quirks of THIS implementation
@@ -42,7 +42,7 @@ LLMs already know PowerPoint, JSON, and MCP protocol. They need server-specific 
 ## What to Exclude
 
 **❌ DON'T explain:**
-- PowerPoint concepts (slides, shapes, animations)
+- General Visio concepts (pages, shapes, stencils, connectors)
 - JSON syntax
 - Programming basics (arrays, null, types)
 - MCP protocol syntax
@@ -76,14 +76,14 @@ LLMs already know PowerPoint, JSON, and MCP protocol. They need server-specific 
 - ✅ One markdown file per tool
 - ✅ 50-150 lines total per tool
 - ✅ Focus on disambiguation, not explanation
-- ❌ Don't write PowerPoint tutorials
+- ❌ Don't write Visio tutorials
 - ❌ Don't explain JSON syntax
 
 ## Format Guidelines
 
 **All MCP prompts are auto-generated from `skills/shared/*.md`:**
 - Source of truth: `skills/shared/*.md` — edit these files
-- Auto-embedded and auto-generated `PptSkillPrompts.g.cs` at build time
+- Auto-embedded and auto-generated `VisioSkillPrompts.g.cs` at build time
 - NEVER create hand-crafted prompt files — add `.md` to `skills/shared/` instead
 - To add a new prompt: add `.md` to `skills/shared/`, add description override in `GenerateSkillPromptsClass` task in `McpServer.csproj`, rebuild
 
@@ -125,7 +125,7 @@ LLMs already know PowerPoint, JSON, and MCP protocol. They need server-specific 
 - After LIST operations: Suggest actions based on count
 - After UPDATE operations: Suggest verification
 - After FAILURE: Suggest troubleshooting
-- Batch mode hints: "Creating multiple? Use begin_ppt_batch"
+- Batch mode hints: "Creating multiple? Use begin_visio_batch"
 
 ## Success Criteria
 
@@ -135,7 +135,7 @@ A good prompt:
 - ✅ Explains server-specific quirks
 - ✅ Helps choose between tools
 - ✅ Under 150 lines
-- ❌ Doesn't teach PowerPoint concepts
+- ❌ Doesn't teach Visio concepts
 - ❌ Doesn't show JSON syntax
 - ❌ Doesn't duplicate schema info
 

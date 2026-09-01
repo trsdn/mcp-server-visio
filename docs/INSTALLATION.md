@@ -10,7 +10,7 @@ Complete installation instructions for the VisioMcp MCP Server and CLI tool.
 - **.NET 10 Runtime or SDK** (not required for VS Code Extension or MCPB - they bundle it)
 
 ### Optional (for specific features)
-- **Node.js** - Required for `npx` commands (`add-mcp` auto-configuration, agent skills) and the official source-side agent client in `src\VisioMcp.Agent`. Install with `winget install OpenJS.NodeJS.LTS` or from [nodejs.org](https://nodejs.org/)
+- **Node.js** - Required for `npx` commands (`add-mcp` auto-configuration, agent skills). Install with `winget install OpenJS.NodeJS.LTS` or from [nodejs.org](https://nodejs.org/)
 
 ### Recommended
 - Windows 11 for best performance
@@ -250,40 +250,6 @@ If it works, you're all set! 🎉
 Show me Visio while you work on test.vsdx
 ```
 This opens Visio visibly so you can see every change in real-time - great for debugging and demos!
-
----
-
-## Optional: Official Agent Client (From Source)
-
-**Best for:** Multi-phase diagram generation and repair loops driven from one natural-language task
-
-`src\VisioMcp.Agent` is an official source component that plans a diagram workflow, executes it through standard MCP calls, verifies the result, and performs a repair pass when artifact validation fails.
-
-### Build and Run
-
-```powershell
-dotnet build src\VisioMcp.McpServer\VisioMcp.McpServer.csproj -c Release
-
-Set-Location src\VisioMcp.Agent
-npm install
-npm run check
-npm test
-
-node .\src\cli.mjs run `
-  --task "Build a Visio process diagram with an Overview page, three labeled boxes, and one connector." `
-  --output "C:\Users\you\Documents\process-diagram.vsdx"
-```
-
-### Notes
-
-- The agent is source-based today; it is not a separate released desktop product.
-- By default it looks for the MCP server at `src\VisioMcp.McpServer\bin\Release\net9.0-windows\VisioMcp.McpServer.exe`.
-- Override the server path with `--mcp-server`, `VISIO_MCP_AGENT_MCP_SERVER`, `VISIO_MCP_SERVER_COMMAND`, or `visio_mcp_SERVER_COMMAND`.
-
-More detail:
-
-- [Agent Client README](../src/VisioMcp.Agent/README.md)
-- [Agent Client Architecture](AGENT-CLIENT.md)
 
 ---
 

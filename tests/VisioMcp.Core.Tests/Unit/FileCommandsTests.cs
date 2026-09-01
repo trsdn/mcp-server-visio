@@ -7,7 +7,7 @@ namespace VisioMcp.Core.Tests.Unit;
 [Trait("Category", "Unit")]
 [Trait("Feature", "File")]
 [Trait("Speed", "Fast")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 public sealed class FileCommandsTests : IDisposable
 {
     private readonly string _tempDir;
@@ -39,7 +39,6 @@ public sealed class FileCommandsTests : IDisposable
         Assert.True(result.Exists);
         Assert.True(result.IsMacroEnabled);
         Assert.Equal(-1, result.PageCount);
-        Assert.Equal(-1, result.SlideCount);
     }
 
     [Fact]

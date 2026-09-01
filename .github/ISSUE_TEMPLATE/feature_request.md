@@ -24,12 +24,12 @@ A clear and concise description of what you want to happen.
 ## Proposed Syntax
 
 **For CLI:**
-```bash
-VisioMcp new-command <file.pptx> <parameters>
+```powershell
+visiocli <domain> <action> --file <file.vsdx> [options]
 ```
 
 **For MCP Server:**
-- Tool: [e.g., slide, shape, text, vba]
+- Tool: [e.g., page, shape, text, cell, layer, stencil, export, window, docproperty, shapealign, file]
 - Action: [e.g., new-action]
 - Parameters: [describe expected parameters]
 
@@ -38,30 +38,31 @@ A clear and concise description of any alternative solutions or features you've 
 
 ## Use Case
 Describe the specific use case this feature would address:
-- [ ] VBA script automation
-- [ ] Slide operations  
-- [ ] Data analysis
+- [ ] Diagram authoring (pages, shapes, connectors)
+- [ ] Diagram inspection / reporting
+- [ ] ShapeSheet automation
 - [ ] Coding agent automation
-- [ ] Macro-enabled presentation (.pptm) operations
+- [ ] Macro-enabled document (.vsdm) operations
 - [ ] Other: [please specify]
 
 ## Target Users
 Who would benefit from this feature?
 - [ ] **AI Assistants** (GitHub Copilot, Claude, ChatGPT via MCP Server)
 - [ ] **Direct CLI Users** (Command-line automation)
-- [ ] **CI/CD Pipelines** (Automated PowerPoint development workflows)
-- [ ] **PowerPoint Developers** (VBA development)
+- [ ] **CI/CD Pipelines** (Automated Visio development workflows)
+- [ ] **Visio Developers** (diagram tooling / templates)
 - [ ] **Data Engineers** (ETL workflows)
 - [ ] Other: [please specify]
 
-## PowerPoint Operations Involved
-What PowerPoint APIs or operations would this feature likely use?
-- [ ] Slides (Slide operations)
-- [ ] Shapes (Shape operations)
-- [ ] Charts
-- [ ] VBA/Macros (VBProject.VBComponents)
-- [ ] Animations/Transitions
-- [ ] Macro-enabled presentations (.pptm)
+## Visio Operations Involved
+What Visio APIs or operations would this feature likely use?
+- [ ] Pages (Document.Pages)
+- [ ] Shapes / connectors (Page.Shapes, Shape.Connects)
+- [ ] ShapeSheet cells (Shape.CellsU / FormulaU)
+- [ ] Stencils and masters (Document.Masters, Page.Drop)
+- [ ] Layers (Page.Layers)
+- [ ] Export / rendering
+- [ ] Macro-enabled documents (.vsdm)
 - [ ] Other: [please specify]
 
 ## Additional context

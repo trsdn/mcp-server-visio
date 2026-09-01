@@ -14,7 +14,7 @@ namespace VisioMcp.Core.Tests.Unit;
 [Trait("Category", "Unit")]
 [Trait("Feature", "ServiceRegistry")]
 [Trait("Speed", "Fast")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 public sealed class ServiceRegistryJsonParsingTests
 {
     private static readonly System.Type _registryType = typeof(ServiceRegistry);

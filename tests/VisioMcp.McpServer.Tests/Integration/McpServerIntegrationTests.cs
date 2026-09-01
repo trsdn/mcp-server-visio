@@ -1,4 +1,3 @@
-// Copyright (c) Sbroenne.
 // Copyright (c) 2026 Torsten Mahr. All rights reserved.
 // Licensed under the MIT License.
 
@@ -54,8 +53,7 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         "docproperty",
         "export",
         "file",
-        "hyperlink",
-        "master",
+        "layer",
         "page",
         "shape",
         "shapealign",
@@ -274,11 +272,11 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         output.WriteLine("=== TOOL INVOCATION VIA MCP PROTOCOL ===\n");
 
         // Arrange - Test action doesn't require an actual file
-        // Parameter names shortened for token optimization: presentationPath -> path
+        // Parameter names shortened for token optimization: documentPath -> path
         var arguments = new Dictionary<string, object?>
         {
             ["action"] = "test",
-            ["path"] = "C:\\fake\\test.pptx"
+            ["path"] = "C:\\fake\\test.vsdx"
         };
 
         // Act - Call tool via MCP protocol

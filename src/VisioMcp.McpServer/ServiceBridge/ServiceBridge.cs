@@ -123,7 +123,7 @@ public static class ServiceBridge
     /// Opens a session via the service.
     /// </summary>
     public static async Task<ServiceResponse> OpenSessionAsync(
-        string presentationPath,
+        string documentPath,
         bool show = false,
         string? pageName = null,
         int? pageIndex = null,
@@ -132,7 +132,7 @@ public static class ServiceBridge
     {
         return await SendAsync("session.open", null, new
         {
-            filePath = presentationPath,
+            filePath = documentPath,
             show,
             pageName,
             pageIndex,
@@ -144,7 +144,7 @@ public static class ServiceBridge
     /// Creates a new file and opens a session via the service.
     /// </summary>
     public static async Task<ServiceResponse> CreateSessionAsync(
-        string presentationPath,
+        string documentPath,
         bool macroEnabled = false,
         bool show = false,
         string? pageName = null,
@@ -154,7 +154,7 @@ public static class ServiceBridge
     {
         return await SendAsync("session.create", null, new
         {
-            filePath = presentationPath,
+            filePath = documentPath,
             macroEnabled,
             show,
             pageName,
@@ -196,10 +196,10 @@ public static class ServiceBridge
     /// Tests if a file can be opened via the service.
     /// </summary>
     public static async Task<ServiceResponse> TestFileAsync(
-        string presentationPath,
+        string documentPath,
         CancellationToken cancellationToken = default)
     {
-        return await SendAsync("session.test", null, new { filePath = presentationPath }, cancellationToken: cancellationToken);
+        return await SendAsync("session.test", null, new { filePath = documentPath }, cancellationToken: cancellationToken);
     }
 
     /// <summary>

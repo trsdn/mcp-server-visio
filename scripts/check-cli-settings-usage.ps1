@@ -63,10 +63,21 @@ function Get-SettingsProperties {
     param([string]$content)
 
     $properties = @()
-    # Match properties in Settings class: public string? PropertyName { get; init; }
-    $settingsMatch = $content -match '(?s)internal sealed class Settings[^{]*\{(.+)$'
-    if ($settingsMatch) {
-        $settingsBlock = $Matches[1]
+    # Locate the Settings class declaration, then take only its own body via brace matching.
+    # A naive "(.+)$" capture would swallow every nested class after Settings and report
+    # their properties as unused (false positives).
+    $decl = [regex]::Match($content, '(?s)internal sealed class Settings[^{]*\{')
+    if ($decl.Success) {
+        $start = $decl.Index + $decl.Length
+        $depth = 1
+        $i = $start
+        while ($i -lt $content.Length -and $depth -gt 0) {
+            $c = $content[$i]
+            if ($c -eq '{') { $depth++ }
+            elseif ($c -eq '}') { $depth-- }
+            $i++
+        }
+        $settingsBlock = $content.Substring($start, $i - $start - 1)
         # Extract property names
         $propertyMatches = [regex]::Matches($settingsBlock, 'public\s+\w+\??\s+(\w+)\s*\{')
         foreach ($match in $propertyMatches) {

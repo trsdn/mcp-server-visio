@@ -8,14 +8,14 @@ namespace VisioMcp.CLI.Tests.Integration;
 /// <summary>
 /// Integration tests for the diag CLI command.
 /// Tests the full CLI pipeline end-to-end: process launch → service dispatch → JSON response.
-/// These tests do NOT require PowerPoint — they validate CLI infrastructure (parameter parsing,
+/// These tests do NOT require Visio — they validate CLI infrastructure (parameter parsing,
 /// validation, routing, JSON serialization, exit codes).
 /// </summary>
 [Collection("Service")]
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Diag")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 [Trait("Speed", "Fast")]
 public sealed class DiagCommandTests
 {

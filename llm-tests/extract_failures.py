@@ -1,7 +1,7 @@
 import json, glob, os
 
 target_tests = [
-    "test_cli_file_and_slide_workflow",
+    "test_cli_diagram_page_and_shapes",
     "test_cli_table_create_query",
     "test_cli_chart_workflows",
     "test_cli_range_set_get",

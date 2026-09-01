@@ -40,32 +40,6 @@ public class ResultTypeSerializationTests
     }
 
     [Fact]
-    public void SlideListResult_WithSlides_SerializesCorrectly()
-    {
-        var result = new SlideListResult
-        {
-            Success = true,
-            Slides =
-            [
-                new SlideInfo
-                {
-                    SlideIndex = 1,
-                    SlideNumber = 1,
-                    SlideId = "256",
-                    LayoutName = "Title Slide",
-                    MasterName = "Office Theme",
-                    ShapeCount = 3
-                }
-            ]
-        };
-        var json = JsonSerializer.Serialize(result, JsonOptions);
-
-        Assert.Contains("\"slideIndex\":1", json);
-        Assert.Contains("\"layoutName\":\"Title Slide\"", json);
-        Assert.Contains("\"shapeCount\":3", json);
-    }
-
-    [Fact]
     public void ShapeInfo_NullOptionalFields_AreOmitted()
     {
         var info = new ShapeInfo
@@ -122,8 +96,8 @@ public class ResultTypeSerializationTests
         {
             Success = true,
             Action = "delete",
-            Message = "Deleted slide 3",
-            FilePath = @"C:\test\pres.pptx"
+            Message = "Deleted page 3",
+            FilePath = @"C:\test\pres.vsdx"
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -147,21 +121,6 @@ public class ResultTypeSerializationTests
         Assert.DoesNotContain("\"title\":", json);
         Assert.DoesNotContain("\"author\":", json);
         Assert.DoesNotContain("\"subject\":", json);
-    }
-
-    [Fact]
-    public void HyperlinkInfo_ConditionalSerialization_WhenWritingDefault()
-    {
-        var info = new HyperlinkInfo
-        {
-            Index = 1,
-            Address = "https://example.com"
-        };
-        var json = JsonSerializer.Serialize(info, JsonOptions);
-
-        Assert.Contains("\"address\":\"https://example.com\"", json);
-        // SlideIndex = 0 should be omitted (WhenWritingDefault)
-        Assert.DoesNotContain("\"slideIndex\":", json);
     }
 
     [Fact]
@@ -226,54 +185,4 @@ public class ResultTypeSerializationTests
         Assert.DoesNotContain("\"slideCount\":", json);
     }
 
-    [Fact]
-    public void ArchetypeDetailResult_ObservedExamples_RemainSanitized()
-    {
-        var result = new ArchetypeDetailResult
-        {
-            Success = true,
-            Id = "framework",
-            Name = "Framework",
-            ObservedExampleSlides = ["ref-sample123"],
-            ObservedExamples =
-            [
-                new ReferenceSlideInfo
-                {
-                    Id = "ref-sample123",
-                    ArchetypeId = "framework",
-                    SubArchetypeId = "matrix-grid",
-                    Rationale = "Sample rationale."
-                }
-            ],
-            ObservedSubtypes =
-            [
-                new ReferenceSubtypeInfo
-                {
-                    SubArchetypeId = "matrix-grid",
-                    Count = 1,
-                    ExampleSlides = ["ref-sample123"],
-                    ExampleDetails =
-                    [
-                        new ReferenceSlideInfo
-                        {
-                            Id = "ref-sample123",
-                            ArchetypeId = "framework",
-                            SubArchetypeId = "matrix-grid",
-                            Rationale = "Sample rationale."
-                        }
-                    ]
-                }
-            ]
-        };
-
-        var json = JsonSerializer.Serialize(result, JsonOptions);
-
-        Assert.Contains("\"observedExampleSlides\":[\"ref-sample123\"]", json);
-        Assert.Contains("\"observedExamples\":[", json);
-        Assert.Contains("\"exampleDetails\":[", json);
-        Assert.DoesNotContain("\"sourceName\":", json);
-        Assert.DoesNotContain("\"sourceImage\":", json);
-        Assert.DoesNotContain("\"batchId\":", json);
-        Assert.DoesNotContain("\"deckKey\":", json);
-    }
 }

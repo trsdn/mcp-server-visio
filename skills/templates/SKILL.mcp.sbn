@@ -95,9 +95,9 @@ Build the diagram in inspectable steps:
 4. cell write/set-formula (fine tune geometry)
 ```
 
-### Rule 4: Prefer Pages and Stencils Over Slide-era Concepts
+### Rule 4: Use Visio-Native Concepts
 
-Prefer Visio-native pages, masters, and ShapeSheet cells. Avoid slide-era assumptions when a page, stencil, or cell workflow exists.
+Work with pages, stencil masters, and ShapeSheet cells. A Visio document has no slides, layouts, or placeholders - if a workflow seems to need one, use a page, master, or cell instead.
 
 ### Rule 5: Session Lifecycle
 
@@ -178,14 +178,6 @@ See `references/` for detailed guidance:
 
 - [Core execution rules and LLM guidelines](./references/behavioral-rules.md)
 - [Generation pipeline](./references/generation-pipeline.md)
-- [Agent mode patterns](./references/ppt_agent_mode.md)
-
-For design catalog data (archetypes, palettes, grids, and styles), use the `design` tool:
-- `design(list-archetypes)` / `design(get-archetype)` — Primary unified archetype surface with curated layout guidance plus learned subtypes and concrete sanitized example details when local reference data is available
-- `design(list-palettes)` / `design(get-palette)` — Color palettes with hex values
-- `design(list-layout-grids)` / `design(get-layout-grid)` — Exact positioning coordinates
-- `design(list-style-profiles)` / `design(get-style-profile)` — Style configurations
-- `design(get-context-model)` — Context → density mapping
-- `design(get-icon-shapes)` — Native shape icon catalog
-
-Reference examples are exposed only as sanitized ids/details embedded in `design(get-archetype)`. Raw filenames and source provenance remain in local gitignored reference data and never appear in MCP responses.
+- [Agent mode patterns](./references/visio_agent_mode.md)
+- [Diagram design principles](./references/diagram-design-principles.md)
+- [Diagram self-review checklist](./references/diagram-design-review.md)

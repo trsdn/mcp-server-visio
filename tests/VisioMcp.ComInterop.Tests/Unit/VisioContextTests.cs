@@ -6,7 +6,7 @@ namespace VisioMcp.ComInterop.Tests.Unit;
 /// <summary>
 /// Unit tests for VisioContext - validates constructor and property behavior.
 /// This class is a simple data holder, so tests focus on path validation and immutability.
-/// Note: PowerPoint.Application and PowerPoint.Presentation COM objects cannot be mocked in unit tests,
+/// Note: Visio.Application and Visio.Document COM objects cannot be mocked in unit tests,
 /// so these tests use null! for those parameters and verify only what is testable.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -18,14 +18,14 @@ public class VisioContextTests
     public void Constructor_WithValidArguments_SetsPresentationPathCorrectly()
     {
         // Arrange
-        string presentationPath = @"C:\test\presentation.pptx";
+        string documentPath = @"C:\test\document.vsdx";
 
         // Act & Assert - Constructor throws ArgumentNullException for null COM objects,
-        // which is expected behavior. PresentationPath validation is tested separately.
+        // which is expected behavior. DocumentPath validation is tested separately.
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+            new VisioContext(documentPath, null!, null!));
 
-        // When null is passed, the constructor throws on the first null param (powerpoint)
+        // When null is passed, the constructor throws on the first null param (visioApp)
         Assert.NotNull(ex);
     }
 
@@ -33,39 +33,39 @@ public class VisioContextTests
     public void Constructor_WithNullPresentationPath_ThrowsArgumentNullException()
     {
         // Arrange
-        string? presentationPath = null;
+        string? documentPath = null;
 
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath!, null!, null!));
+            new VisioContext(documentPath!, null!, null!));
 
-        Assert.Equal("presentationPath", ex.ParamName);
+        Assert.Equal("documentPath", ex.ParamName);
     }
 
     [Fact]
-    public void Constructor_WithNullPowerPoint_ThrowsArgumentNullException()
+    public void Constructor_WithNullVisio_ThrowsArgumentNullException()
     {
         // Arrange
-        string presentationPath = @"C:\test\presentation.pptx";
+        string documentPath = @"C:\test\document.vsdx";
 
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+            new VisioContext(documentPath, null!, null!));
 
         Assert.Equal("app", ex.ParamName);
     }
 
     [Fact]
-    public void Constructor_WithNullPresentationPath_ThrowsBeforeNullPowerPoint()
+    public void Constructor_WithNullPresentationPath_ThrowsBeforeNullVisio()
     {
         // Arrange
-        string? presentationPath = null;
+        string? documentPath = null;
 
-        // Act & Assert - PresentationPath is validated first
+        // Act & Assert - DocumentPath is validated first
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath!, null!, null!));
+            new VisioContext(documentPath!, null!, null!));
 
-        Assert.Equal("presentationPath", ex.ParamName);
+        Assert.Equal("documentPath", ex.ParamName);
     }
 
     [Fact]
@@ -75,21 +75,21 @@ public class VisioContextTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new VisioContext(null!, null!, null!));
 
-        Assert.Equal("presentationPath", ex.ParamName);
+        Assert.Equal("documentPath", ex.ParamName);
     }
 
     [Theory]
-    [InlineData(@"C:\test\presentation.pptx")]
-    [InlineData(@"\\server\share\presentation.pptm")]
-    [InlineData(@"D:\Documents\My Presentation.pptx")]
-    [InlineData(@"presentation.pptx")] // Relative path
-    public void Constructor_WithNullPowerPointAnyPath_ThrowsArgumentNullException(string presentationPath)
+    [InlineData(@"C:\test\document.vsdx")]
+    [InlineData(@"\\server\share\document.vsdm")]
+    [InlineData(@"D:\Documents\My Document.vsdx")]
+    [InlineData(@"document.vsdx")] // Relative path
+    public void Constructor_WithNullVisioAnyPath_ThrowsArgumentNullException(string documentPath)
     {
-        // Act & Assert - Path is validated, then PowerPoint COM object is validated
+        // Act & Assert - Path is validated, then Visio COM object is validated
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+            new VisioContext(documentPath, null!, null!));
 
-        // app is the first COM parameter validated after presentationPath
+        // app is the first COM parameter validated after documentPath
         Assert.Equal("app", ex.ParamName);
     }
 

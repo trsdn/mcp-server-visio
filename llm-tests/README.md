@@ -1,10 +1,10 @@
 # VisioMcp LLM Integration Tests
 
-LLM-powered integration tests for both VisioMcp MCP Server and PowerPoint CLI using pytest-aitest.
+LLM-powered integration tests for both VisioMcp MCP Server and Visio CLI using pytest-aitest.
 
 ## Prerequisites
 
-- Windows desktop with Microsoft PowerPoint installed
+- Windows desktop with Microsoft Visio installed
 - .NET 10 SDK
 - Azure OpenAI endpoint configured
 - VisioMcp MCP Server and CLI built/installed
@@ -68,31 +68,29 @@ Run the standard manual gate with the helper script from the repository root:
 
 This runs the canonical six scenarios:
 
-- `cli/test_cli_table.py::test_cli_table_create_query`
-- `cli/test_cli_chart.py::test_cli_chart_workflows`
-- `cli/test_cli_styling.py::test_cli_styling_header_fill`
-- `mcp_tests/test_mcp_table.py::test_mcp_table_create_query`
-- `mcp_tests/test_mcp_chart.py::test_mcp_chart_workflows`
-- `mcp_tests/test_mcp_styling.py::test_mcp_styling_header_fill`
+- `cli/test_cli_diagram.py::test_create_document_with_named_page`
+- `cli/test_cli_diagram.py::test_draw_two_shapes_and_connect_them`
+- `cli/test_cli_diagram.py::test_shapesheet_cell_roundtrip`
+- `mcp_tests/test_mcp_diagram.py::test_create_document_with_named_page`
+- `mcp_tests/test_mcp_diagram.py::test_draw_two_shapes_and_connect_them`
+- `mcp_tests/test_mcp_diagram.py::test_shapesheet_cell_roundtrip`
 
 Use this gate after changing skill content, MCP tool descriptions, CLI help text, or other LLM-facing workflow guidance.
 
 ## Configuration Overrides
 
-- `visio_mcp_SERVER_COMMAND` — override MCP server command (full command line)
-- `VISIO_CLI_COMMAND` — override CLI command (default: `visiocli`)
+- `MCP_SERVER_COMMAND` — override MCP server command (full command line)
+- `CLI_COMMAND` — override CLI command (default: `visiocli`)
 
 Example:
 
 ```powershell
-$env:visio_mcp_SERVER_COMMAND = "d:\\source\\mcp-server-visio\\src\\VisioMcp.McpServer\\bin\\Release\\net9.0-windows\\VisioMcp.McpServer.exe"
-$env:VISIO_CLI_COMMAND = "d:\\source\\mcp-server-visio\\src\\VisioMcp.CLI\\bin\\Release\\net9.0-windows\\visiocli.exe"
+$env:MCP_SERVER_COMMAND = "d:\\source\\mcp-server-visio\\src\\VisioMcp.McpServer\\bin\\Release\\net9.0-windows\\VisioMcp.McpServer.exe"
+$env:CLI_COMMAND = "d:\\source\\mcp-server-visio\\src\\VisioMcp.CLI\\bin\\Release\\net9.0-windows\\visiocli.exe"
 ```
 
 ## Test Structure
 
 - `test_mcp_*.py` — MCP Server workflows
 - `test_cli_*.py` — CLI workflows
-- `test_*calculation_mode*.py` — new calculation mode scenarios
-- `Fixtures/` — shared test inputs (CSV/JSON/M files)
 - `TestResults/` — HTML reports and artifacts

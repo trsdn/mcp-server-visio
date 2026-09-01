@@ -13,7 +13,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Shape")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Trait("Speed", "Medium")]
 public sealed class ShapeTextCommandTests(ITestOutputHelper output)
 {

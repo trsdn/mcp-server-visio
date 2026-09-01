@@ -5,8 +5,6 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Office COM Interop PIA still used outside the session layer during migration -->
-    <PackageVersion Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018" />
     <!-- UI Framework -->
     <PackageVersion Include="Spectre.Console" Version="0.54.0" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.53.1" />
@@ -35,7 +33,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <!-- Template Engine for Skill Generation -->
-    <PackageVersion Include="Scriban" Version="6.6.0" />
+    <PackageVersion Include="Scriban" Version="7.2.6" />
     <!-- MSBuild Task Development -->
     <PackageVersion Include="Microsoft.Build.Framework" Version="17.14.8" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="17.14.8" />

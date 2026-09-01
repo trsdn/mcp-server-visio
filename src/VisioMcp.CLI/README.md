@@ -70,7 +70,7 @@ Use `-q` or `--quiet` when you want JSON-only output for scripts and coding agen
 
 ## Migration note
 
-This repository was bootstrapped from a PowerPoint-oriented foundation. Some legacy command groups still exist in the codebase, but the Visio-first recommended workflow for new automation is the MVP surface listed above.
+This repository was bootstrapped from a Visio-oriented foundation. Some legacy command groups still exist in the codebase, but the Visio-first recommended workflow for new automation is the MVP surface listed above.
 
 ## Requirements
 

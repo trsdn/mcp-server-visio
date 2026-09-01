@@ -81,7 +81,7 @@
     </Task>
   </UsingTask>
 
-  <!-- Inline task: Generate PptSkillPrompts.g.cs from skills/shared/*.md files -->
+  <!-- Inline task: Generate VisioSkillPrompts.g.cs from skills/shared/*.md files -->
   <UsingTask TaskName="GenerateSkillPromptsClass" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <SkillFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
@@ -94,27 +94,11 @@
 // Keys are skill filenames (without .md), values are LLM-friendly descriptions
 var descriptionOverrides = new System.Collections.Generic.Dictionary<string, string>
 {
-    { "anti-patterns", "Common mistakes to avoid when using PowerPoint MCP tools" },
-    { "behavioral-rules", "Rules and constraints for PowerPoint MCP operations" },
-    { "chart", "Chart creation, types, positioning, and multi-chart layouts" },
-    { "conditionalformat", "Conditional formatting rule types, parameters, and examples" },
-    { "dashboard", "Dashboard and report best practices: Tables, formatting, charts, verification" },
-    { "datamodel", "Data Model (Power Pivot) operations, DAX measures, and prerequisites" },
-    { "dmv-reference", "DMV query reference for PowerPoint's embedded Analysis Services (TMSCHEMA catalog)" },
-    { "m-code-syntax", "Power Query M code syntax: column quoting, named ranges, query chaining" },
-    { "pivottable", "PivotTable creation, fields, calculated items, and required parameters" },
-    { "powerquery", "Power Query M code workflows, refresh patterns, and development tips" },
-    { "range", "Range number formats, locale-aware formatting, and format codes" },
-    { "screenshot", "Screenshot capture for visual verification of charts and dashboards" },
-    { "slicer", "Slicer types, creation patterns, and multi-select filtering" },
-    { "table", "PowerPoint Table operations, Data Model integration, and column management" },
-    { "workflows", "Key constraints, batch operations, and session management patterns" },
-    { "context-model", "Meeting types, audience levels, consumption modes, and context-driven slide design decisions" },
-    { "density-profiles", "D1-D5 density profiles: text volume, element count, data granularity, annotation depth, whitespace" },
-    { "deck-architecture", "SCQA narrative, MECE grouping, canonical deck sequences S1-S5, headline flow validation" },
-    { "generation-pipeline", "Pre/post-generation pipeline, prompt contract, data-to-visual and intent-to-archetype mappings" },
-    { "professional-slide-patterns", "Advanced consulting-grade slide patterns: multi-panel charts, comments sidebar, ranking tables, evidence density benchmarks, transformation deck structure" },
-    { "worksheet", "Worksheet operations including cross-file copy and move" },
+    { "behavioral-rules", "Rules and constraints for Visio MCP operations" },
+    { "generation-pipeline", "Pre/post-generation pipeline, prompt contract, and data-to-visual mapping for diagram generation" },
+    { "visio_agent_mode", "Agent-mode guidance for driving Visio through the MCP tools" },
+    { "diagram-design-principles", "Diagram layout principles: hierarchy, alignment, spacing, and visual balance" },
+    { "diagram-design-review", "Review checklist for evaluating a generated diagram before handing it back" },
 };
 
 var sb = new System.Text.StringBuilder();
@@ -132,9 +116,9 @@ sb.AppendLine("/// Auto-generated MCP prompts from skills/shared/*.md files.");
 sb.AppendLine("/// Ensures Claude Desktop and other MCP clients get the same guidance as skill-based clients.");
 sb.AppendLine("/// </summary>");
 sb.AppendLine("[McpServerPromptType]");
-sb.AppendLine("public static class PptSkillPrompts");
+sb.AppendLine("public static class VisioSkillPrompts");
 sb.AppendLine("{");
-sb.AppendLine("    private static readonly Assembly _assembly = typeof(PptSkillPrompts).Assembly;");
+sb.AppendLine("    private static readonly Assembly _assembly = typeof(VisioSkillPrompts).Assembly;");
 sb.AppendLine();
 sb.AppendLine("    private static string LoadResource(string fileName)");
 sb.AppendLine("    {");
@@ -214,7 +198,7 @@ System.IO.File.WriteAllText(OutputFile, sb.ToString());
   <Target Name="GenerateSkillPrompts" BeforeTargets="BeforeCompile;CoreCompile">
     <PropertyGroup>
       <SkillsSharedDir>$(MSBuildProjectDirectory)\..\..\skills\shared</SkillsSharedDir>
-      <SkillPromptsGenFile>$(IntermediateOutputPath)PptSkillPrompts.g.cs</SkillPromptsGenFile>
+      <SkillPromptsGenFile>$(IntermediateOutputPath)VisioSkillPrompts.g.cs</SkillPromptsGenFile>
     </PropertyGroup>
     <ItemGroup>
       <SkillSharedFiles Include="$(SkillsSharedDir)\*.md" />

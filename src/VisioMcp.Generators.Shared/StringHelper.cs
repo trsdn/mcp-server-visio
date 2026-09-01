@@ -80,7 +80,7 @@ public static class StringHelper
             "newName" => "New name (for rename)",
             "timeout" => "Timeout duration",
             "refresh" => "Whether to refresh after update",
-            "sheetName" => "Slide name",
+            "pageName" => "Page name",
             "tableName" => "Table name",
             "connectionName" => "Connection name",
             "chartName" => "Chart name",

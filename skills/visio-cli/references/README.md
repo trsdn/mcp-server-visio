@@ -10,5 +10,5 @@ This folder contains supporting guidance for the generated Visio CLI skill.
 
 - `behavioral-rules.md` — execution and verification rules
 - `generation-pipeline.md` — page-and-shape generation workflow
-- `ppt_agent_mode.md` — visible-session guidance for users who want to watch the work
-- `slide-design-principles.md` — page layout and diagram readability guidance
+- `visio_agent_mode.md` — visible-session guidance for users who want to watch the work
+- `diagram-design-principles.md` — page layout and diagram readability guidance

@@ -13,10 +13,10 @@ applyTo: "src/**/*.cs"
 ### Key Rules
 
 1. **One Public Class Per File** - Standard .NET practice (System.Text.Json, ASP.NET Core, EF Core)
-2. **File Name = Class Name** - `RangeCommands.cs` contains `RangeCommands`
+2. **File Name = Class Name** - `ShapeCommands.cs` contains `ShapeCommands`
 3. **Partial Classes for Large Implementations** - Split 15+ method classes by feature domain
-4. **Descriptive Names** - No over-optimization (`RangeCommands` ✅, `Commands` ❌)
-5. **Folder = Organization, Not Identity** - `Commands/Range/RangeCommands.cs`
+4. **Descriptive Names** - No over-optimization (`ShapeCommands` ✅, `Commands` ❌)
+5. **Folder = Organization, Not Identity** - `Commands/Shape/ShapeCommands.cs`
 
 ### Partial Class Pattern
 
@@ -24,12 +24,10 @@ applyTo: "src/**/*.cs"
 
 **Structure:**
 ```
-Commands/Range/
-    IRangeCommands.cs           # Interface
-    RangeCommands.cs            # Partial (constructor, DI)
-    RangeCommands.Values.cs     # Partial (Get/Set values)
-    RangeCommands.Formulas.cs   # Partial (formulas)
-    RangeHelpers.cs             # Separate helper class
+Commands/Shape/
+    IShapeCommands.cs           # Interface
+    ShapeCommands.cs            # Implementation
+    ShapeHelpers.cs             # Separate helper class when needed
 ```
 
 **Benefits:** Git-friendly, team-friendly, ~100-200 lines per file, mirrors .NET Framework patterns
@@ -46,8 +44,8 @@ Commands/Range/
 When adding or changing ANY feature, ALWAYS update BOTH entry points. See Rule 24 (Post-Change Sync).
 
 ```
-MCP Server (MCP tools, JSON-RPC) ──► In-process VisioMcpService ──► Core Commands ──► PowerPoint COM
-CLI (command-line args, console)  ──► CLI Daemon (named pipe) ─────► Core Commands ──► PowerPoint COM
+MCP Server (MCP tools, JSON-RPC) ──► In-process VisioMcpService ──► Core Commands ──► Visio COM
+CLI (command-line args, console)  ──► CLI Daemon (named pipe) ─────► Core Commands ──► Visio COM
 ```
 
 ---
@@ -57,15 +55,15 @@ CLI (command-line args, console)  ──► CLI Daemon (named pipe) ────
 ### Structure
 ```
 Commands/
-├── ISlideCommands.cs    # Interface
-├── SlideCommands.cs     # Implementation
+├── IPageCommands.cs     # Interface
+├── PageCommands.cs      # Implementation
 ```
 
 ### Routing (Program.cs)
 ```csharp
 return args[0] switch
 {
-    "slide-list" => slide.List(args),
+    "page-list" => page.List(args),
     "shape-read" => shape.Read(args),
     _ => ShowHelp()
 };
@@ -75,7 +73,7 @@ return args[0] switch
 
 ## Resource Management Pattern
 
-**See ppt-com-interop.instructions.md** for complete WithPowerPoint() pattern and COM object lifecycle management.
+**See visio-com-interop.instructions.md** for complete WithVisio() pattern and COM object lifecycle management.
 
 ---
 
@@ -85,7 +83,7 @@ return args[0] switch
 
 ```csharp
 // ❌ WRONG: Suppressing exception with catch block
-public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
+public async Task<OperationResult> SomeAsync(IVisioBatch batch, string param)
 {
     try
     {
@@ -106,7 +104,7 @@ public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
 }
 
 // ✅ CORRECT: Let exception propagate through batch.Execute()
-public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
+public async Task<OperationResult> SomeAsync(IVisioBatch batch, string param)
 {
     return await batch.Execute((ctx, ct) => {
         // ... operation ...
@@ -117,13 +115,14 @@ public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
 }
 
 // ✅ CORRECT: Finally blocks still allowed for COM resource cleanup
-public async Task<OperationResult> ComplexAsync(IPptBatch batch, string param)
+public async Task<OperationResult> ComplexAsync(IVisioBatch batch, string param)
 {
     dynamic? shapeRef = null;
     try
     {
         return await batch.Execute((ctx, ct) => {
-            shapeRef = ctx.Presentation.Slides[1].Shapes.AddShape(...);
+            var page = ((dynamic)ctx.Document).Pages.Item(1);
+            shapeRef = page.DrawRectangle(1.0, 1.0, 3.0, 2.0);
             // ... operation ...
             return ValueTask.FromResult(new OperationResult { Success = true });
         });
@@ -153,43 +152,35 @@ public async Task<OperationResult> ComplexAsync(IPptBatch batch, string param)
 **In-Process Architecture**: MCP Server hosts VisioMcpService fully in-process with direct method calls (no pipe).
 ServiceBridge holds the service reference and calls ProcessAsync() directly.
 
-**19 Focused Tools:**
-1. `file` - Session lifecycle (open, close, create, list)
-2. `slide` - Slide operations
-3. `slide_style` - Slide layout and background
-4. `shape` - Shape operations (add, modify, delete)
-5. `text` - Text and TextFrame operations
-6. `table` - Table operations on slides
-7. `image` - Image and picture operations
-8. `chart` - Chart lifecycle
-9. `chart_config` - Chart configuration
-10. `animation` - Animation effects
-11. `transition` - Slide transitions
-12. `slide_master` - Slide master and layout management
-13. `notes` - Speaker notes
-14. `section` - Presentation sections
-15. `media` - Audio and video operations
-16. `vba` - VBA macros
-17. `comment` - Slide comments
-18. `export` - Export slides (images, PDF)
-19. `hyperlink` - Hyperlink operations
+**11 Focused Tools (101 generated actions):**
+1. `file` - Document lifecycle (create, open, save, close, list)
+2. `cell` - ShapeSheet cell read/write and formulas
+3. `docproperty` - Document custom properties
+4. `export` - Export documents and pages
+5. `layer` - Layer lifecycle and shape assignment
+6. `page` - Page lifecycle, guides, and layout/routing
+7. `shape` - Shape drawing, stencil drops, modification, deletion, and connectivity
+8. `shapealign` - Shape alignment and distribution
+9. `stencil` - Stencil and master discovery
+10. `text` - Shape text read/write
+11. `window` - Visio window operations
 
 ### Action-Based Routing with ForwardToService
 ```csharp
 [McpServerTool]
-public static string PptSlide(string action, string sessionId, ...)
+public static string VisioPage(string action, string sessionId, ...)
 {
     return action.ToLowerInvariant() switch
     {
         "list" => ForwardList(sessionId),
-        "get" => ForwardGet(sessionId, slideIndex),
+        "read" => ForwardRead(sessionId, pageIndex),
         _ => throw new McpException($"Unknown action: {action}")
     };
 }
 
 private static string ForwardList(string sessionId)
 {
-    return PptToolsBase.ForwardToService("slide.list", sessionId);
+    return VisioToolsBase.ForwardToService("page.list", sessionId);
 }
 ```
 
@@ -197,7 +188,7 @@ private static string ForwardList(string sessionId)
 
 ## DRY Shared Utilities
 
-**PptHelper Methods:** `FindSlide()`, `FindShape()`, `GetShapeTypeName()`, `GetSlideLayout()`
+**Shared helper methods:** `GetPage()`, `ReadShapeInfo()`, ShapeSheet cell readers, and path/session validators
 
 **Why:** Prevents 60+ lines of duplicate code per feature
 
@@ -214,17 +205,17 @@ SavePassword = false  // Never export credentials by default
 
 ## Performance Patterns
 
-**Minimize presentation opens** - Use single session for multiple operations
-**Bulk operations** - Minimize COM round-trips by batching shape/slide operations
+**Minimize document opens** - Use single session for multiple operations
+**Bulk operations** - Minimize COM round-trips by batching page, shape, and cell operations
 
 ---
 
 ## Key Principles
 
-1. **WithPowerPoint() for everything** - See ppt-com-interop.instructions.md
-2. **Release intermediate objects** - Prevents PowerPoint hanging
+1. **VisioSession / IVisioBatch for everything** - See visio-com-interop.instructions.md
+2. **Release intermediate objects** - Prevents Visio hanging
 3. **Batch/Session for MCP** - Multiple operations in single session
-4. **Resource-based tools** - 19 tools, not 33+ operations
+4. **Resource-based tools** - 11 tools, 101 generated actions
 5. **DRY utilities** - Share common patterns
 6. **Security defaults** - Never expose credentials
 7. **Bulk operations** - Minimize COM round-trips

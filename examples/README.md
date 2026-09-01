@@ -1,62 +1,54 @@
 # VisioMcp CLI Examples
 
-This directory contains example scripts demonstrating VisioMcp CLI features.
+This directory contains example configuration for using VisioMcp with MCP clients, plus a walkthrough of session mode.
 
-## Session Mode Demo
+See [mcp-configs/](mcp-configs/) for ready-to-paste client configuration.
 
-The session mode demo shows how to use sessions for high-performance multi-operation workflows.
+## Session Mode
+
+Session mode keeps a single Visio instance alive across many CLI invocations instead of opening and closing the file for every command.
 
 ### Requirements
 
-- Windows with PowerPoint installed
-- VisioMcp installed (`dotnet tool install --global VisioMcp.McpServer`)
+- Windows with Microsoft Visio installed
+- VisioMcp CLI on your PATH (`visiocli`)
 
-### Running the Demo
+### Walkthrough
 
-**Linux/macOS/WSL:**
 ```powershell
-./session-demo.sh
+# 1. Create a document and open a session against it
+visiocli file create --file test-session.vsdx
+$session = visiocli file open --file test-session.vsdx --session-id demo
+
+# 2. Run several operations against the same live Visio instance
+visiocli page add    --session-id demo --name "Overview"
+visiocli page add    --session-id demo --name "Detail"
+visiocli page list   --session-id demo
+visiocli shape list  --session-id demo --page-index 1
+
+# 3. Close the session, committing all changes at once
+visiocli file close --session-id demo --save
 ```
 
-**Windows PowerShell:**
-```powershell
-.\session-demo.ps1
-```
+Run `visiocli --help` and `visiocli <domain> --help` to discover the exact flags for your build.
 
-### What the Demo Does
+### Why Session Mode Is Faster
 
-1. Creates a test presentation (`test-session.pptx`)
-2. Opens a session and captures the session ID
-3. Performs multiple operations using the same PowerPoint instance:
-   - Creates 3 slides (Sales, Customers, Products)
-   - Lists slides
-   - Lists Power Queries
-4. Lists active sessions
-5. Closes the session with `--save` (saves all changes)
-6. Verifies changes were saved
-
-### Expected Performance
-
-Session mode is **75-90% faster** than running individual commands because:
-- Only one PowerPoint instance is opened
+- Only one Visio instance is started
 - No file open/close overhead between operations
-- All changes committed atomically
+- All changes are committed together when the session closes
 
 ### Cleanup
 
 ```powershell
-rm test-session.pptx
-```
-
-Or in PowerShell:
-```powershell
-Remove-Item test-session.pptx
+Remove-Item test-session.vsdx
 ```
 
 ## Use Cases
 
 Session mode is ideal for:
-- **RPA workflows** - Automated report generation
-- **Data pipelines** - ETL operations with multiple steps
-- **Testing** - Setting up test data across multiple sheets
-- **Bulk operations** - Making many changes to a presentation
+
+- **Diagram generation** - Building a multi-page document shape by shape
+- **Bulk edits** - Applying many ShapeSheet changes across a document
+- **Reporting** - Reading pages, shapes, and connections in one pass
+- **Testing** - Setting up fixture documents across multiple pages

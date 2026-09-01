@@ -60,7 +60,7 @@ The MCP server and CLI are equal entry points. Both forward into the shared `Vis
 
 ## Migration note
 
-This repository started from a PowerPoint-oriented template. Legacy categories still exist during migration, but the Visio-first path for new clients is the MVP surface described above.
+This repository started from a Visio-oriented template. Legacy categories still exist during migration, but the Visio-first path for new clients is the MVP surface described above.
 
 ## Related
 

@@ -9,7 +9,7 @@ applyTo: "tests/**/*.cs"
 **⚠️ CRITICAL: Always specify the test project explicitly to avoid running all test projects!**
 
 ### Core.Tests (Business Logic)
-```bash
+```powershell
 # Development (fast - excludes VBA and Screenshot)
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust&Feature!=Screenshot"
 
@@ -23,42 +23,42 @@ dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "(Feat
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Screenshot"
 
 # Specific feature
-dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Slide"
+dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Page"
 ```
 
 ### ComInterop.Tests (Session/Batch Infrastructure)
-```bash
+```powershell
 # Session/batch changes (MANDATORY - see CRITICAL-RULES.md Rule 3)
 dotnet test tests/VisioMcp.ComInterop.Tests/VisioMcp.ComInterop.Tests.csproj --filter "RunType=OnDemand"
 ```
 
 ### McpServer.Tests (End-to-End Tool Tests)
-```bash
+```powershell
 # All MCP tool tests
 dotnet test tests/VisioMcp.McpServer.Tests/VisioMcp.McpServer.Tests.csproj
 
 # Specific tool
-dotnet test tests/VisioMcp.McpServer.Tests/VisioMcp.McpServer.Tests.csproj --filter "FullyQualifiedName~SlideTool"
+dotnet test tests/VisioMcp.McpServer.Tests/VisioMcp.McpServer.Tests.csproj --filter "FullyQualifiedName~PageTool"
 ```
 
 ### CLI.Tests (Command-Line Interface)
-```bash
+```powershell
 # All CLI tests
 dotnet test tests/VisioMcp.CLI.Tests/VisioMcp.CLI.Tests.csproj
 
 # Specific command
-dotnet test tests/VisioMcp.CLI.Tests/VisioMcp.CLI.Tests.csproj --filter "FullyQualifiedName~Slide"
+dotnet test tests/VisioMcp.CLI.Tests/VisioMcp.CLI.Tests.csproj --filter "FullyQualifiedName~Page"
 ```
 
 ### Run Specific Test by Name
-```bash
+```powershell
 # Use full project path + filter
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "FullyQualifiedName~TestMethodName"
 ```
 
 ## Round-Trip Validation Pattern
 
-**Always verify actual PowerPoint state after operations:**
+**Always verify actual Visio state after operations:**
 
 ```csharp
 // ✅ CREATE → Verify exists
@@ -117,11 +117,11 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 | Mistake | Fix |
 |---------|-----|
 | Shared test file | Each test creates unique file |
-| Only test success flag | Verify actual PowerPoint state |
+| Only test success flag | Verify actual Visio state |
 | Save before assertions | Remove Save entirely |
 | Save in middle of test | Only at end or in persistence test |
 | Manual IDisposable | Use `IClassFixture<TempDirectoryFixture>` |
-| .pptx for VBA tests | Use `.pptm` |
+| .vsdx for VBA tests | Use `.vsdm` |
 | "Accept both" assertions | Binary assertions only |
 | Missing Feature trait | Add from valid feature list above |
 
@@ -131,7 +131,7 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 2. Check file isolation (unique files?)
 3. Check assertions (binary, not conditional?)
 4. Check Save (removed unless persistence test?)
-5. Verify PowerPoint state (not just success flag?)
+5. Verify Visio state (not just success flag?)
 
 **Full checklist**: See CRITICAL-RULES.md Rule 12
 
@@ -141,7 +141,7 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 
 **Location**: `llm-tests/`
 
-**Purpose**: Validate that LLMs correctly use PowerPoint MCP Server and CLI tools using [pytest-aitest](https://github.com/sbroenne/pytest-aitest).
+**Purpose**: Validate that LLMs correctly use Visio MCP Server and CLI tools using [pytest-aitest](https://github.com/sbroenne/pytest-aitest).
 
 ### When to Run
 
@@ -172,7 +172,7 @@ uv run pytest -m aitest -v
 ### Prerequisites
 
 - `AZURE_OPENAI_ENDPOINT` environment variable
-- Windows desktop with PowerPoint installed
+- Windows desktop with Visio installed
 - MCP Server built (Release) and CLI available on PATH
 
 ### Canonical Gate

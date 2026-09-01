@@ -14,7 +14,7 @@ namespace VisioMcp.ComInterop.Tests.Integration;
 [Trait("Speed", "Medium")]
 [Trait("Layer", "ComInterop")]
 [Trait("Feature", "SessionManager")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Collection("Sequential")]
 public class DisposalVerificationTest : IAsyncLifetime
 {
@@ -31,13 +31,13 @@ public class DisposalVerificationTest : IAsyncLifetime
 
     public Task InitializeAsync()
     {
-        // Kill any existing PowerPoint processes to ensure clean state
+        // Kill any existing Visio processes to ensure clean state
         try
         {
-            var existingProcesses = Process.GetProcessesByName("POWERPNT");
+            var existingProcesses = Process.GetProcessesByName("VISIO");
             if (existingProcesses.Length > 0)
             {
-                _output.WriteLine($"Cleaning up {existingProcesses.Length} existing PowerPoint processes...");
+                _output.WriteLine($"Cleaning up {existingProcesses.Length} existing Visio processes...");
                 foreach (var p in existingProcesses)
                 {
                     p.Kill(entireProcessTree: true);
@@ -48,7 +48,7 @@ public class DisposalVerificationTest : IAsyncLifetime
         }
         catch (Exception ex)
         {
-            _output.WriteLine($"Warning: Failed to clean PowerPoint processes: {ex.Message}");
+            _output.WriteLine($"Warning: Failed to clean Visio processes: {ex.Message}");
         }
 
         return Task.CompletedTask;
@@ -87,19 +87,19 @@ public class DisposalVerificationTest : IAsyncLifetime
     }
 
     /// <summary>
-    /// Path to the template xlsx file used for fast test file creation.
-    /// Copying a template is ~1000x faster than spawning PowerPoint to create a new presentation.
+    /// Path to the template Visio drawing used for fast test file creation.
+    /// Copying a template is ~1000x faster than spawning Visio to create a new drawing.
     /// </summary>
     private static readonly string TemplateFilePath = Path.Combine(
         Path.GetDirectoryName(typeof(DisposalVerificationTest).Assembly.Location)!,
-        "Integration", "Session", "TestFiles", "batch-test-static.pptx");
+        "Integration", "Session", "TestFiles", "batch-test-static.vsdx");
 
     private string CreateTestFile(string testName)
     {
-        var fileName = $"{testName}_{Guid.NewGuid():N}.pptx";
+        var fileName = $"{testName}_{Guid.NewGuid():N}.vsdx";
         var filePath = Path.Combine(_tempDir, fileName);
 
-        // PERFORMANCE OPTIMIZATION: Copy from template instead of spawning PowerPoint.
+        // PERFORMANCE OPTIMIZATION: Copy from template instead of spawning Visio.
         // This reduces test file creation from ~7-14 seconds to <10ms.
         File.Copy(TemplateFilePath, filePath);
 

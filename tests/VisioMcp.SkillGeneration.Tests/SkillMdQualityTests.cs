@@ -112,24 +112,28 @@ public class SkillMdQualityTests
     [Fact]
     [Trait("Category", "Unit")]
     [Trait("Feature", "SkillGeneration")]
-    public void CliSkill_DoesNotExposePowerPointResidue()
+    public void CliSkill_DoesNotExposeUpstreamResidue()
     {
         var skillPath = Path.Combine(SkillsFolder, "visio-cli", "SKILL.md");
         var content = File.ReadAllText(skillPath);
-        Assert.DoesNotContain("PowerPoint", content);
-        Assert.DoesNotContain(".pptx", content);
-        Assert.DoesNotContain("slide.create", content);
+        Assert.DoesNotContain("PowerPoint", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Excel", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".pptx", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".xlsx", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("slide", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
     [Trait("Feature", "SkillGeneration")]
-    public void McpSkill_DoesNotExposePowerPointResidue()
+    public void McpSkill_DoesNotExposeUpstreamResidue()
     {
         var skillPath = Path.Combine(SkillsFolder, "visio-mcp", "SKILL.md");
         var content = File.ReadAllText(skillPath);
-        Assert.DoesNotContain("PowerPoint", content);
-        Assert.DoesNotContain("slide sequences", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PowerPoint", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Excel", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".pptx", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".xlsx", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

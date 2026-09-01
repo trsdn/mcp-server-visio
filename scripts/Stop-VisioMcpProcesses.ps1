@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Stops the VisioMcp Service gracefully and kills PowerPoint processes before build.
+    Stops the VisioMcp Service gracefully and kills Visio processes before build.
 .DESCRIPTION
     Pre-build cleanup script that:
     1. Gracefully stops the VisioMcp Service via named pipe (service.shutdown)
-    2. Kills any remaining PowerPoint (POWERPNT.EXE) processes
+    2. Kills any remaining Visio (VISIO.EXE) processes
 
-    This prevents file locking issues during build when the service or PowerPoint
+    This prevents file locking issues during build when the service or Visio
     holds handles to assemblies or presentations.
 .NOTES
     Called from Directory.Build.props as a BeforeBuild target.
@@ -32,8 +32,8 @@ function Stop-VisioMcpService {
     # Look for visiocli in build output directories (Debug/Release)
     $scriptDir = Split-Path -Parent $PSScriptRoot  # repo root
     $cliPaths = @(
-        "$scriptDir\src\VisioMcp.CLI\bin\Debug\net10.0-windows\visiocli.exe",
-        "$scriptDir\src\VisioMcp.CLI\bin\Release\net10.0-windows\visiocli.exe"
+        "$scriptDir\src\VisioMcp.CLI\bin\Debug\net9.0-windows\visiocli.exe",
+        "$scriptDir\src\VisioMcp.CLI\bin\Release\net9.0-windows\visiocli.exe"
     )
     $visiocli = $cliPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
@@ -105,18 +105,18 @@ function Stop-VisioMcpServiceFallback {
 }
 
 # ----------------------------------------------
-# 2. Kill PowerPoint processes
+# 2. Kill Visio processes
 # ----------------------------------------------
-function Stop-PowerPointProcesses {
-    $pptProcs = Get-Process -Name 'POWERPNT' -ErrorAction SilentlyContinue
-    if ($pptProcs) {
-        $count = $pptProcs.Count
-        $pptProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+function Stop-VisioProcesses {
+    $visioProcs = Get-Process -Name 'VISIO' -ErrorAction SilentlyContinue
+    if ($visioProcs) {
+        $count = $visioProcs.Count
+        $visioProcs | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 500
-        Write-Host "  Killed $count PowerPoint process(es)" -ForegroundColor Yellow
+        Write-Host "  Killed $count Visio process(es)" -ForegroundColor Yellow
     }
     else {
-        Write-Status "No PowerPoint processes running"
+        Write-Status "No Visio processes running"
     }
 }
 
@@ -124,4 +124,4 @@ function Stop-PowerPointProcesses {
 # Run cleanup
 # ----------------------------------------------
 Stop-VisioMcpService
-Stop-PowerPointProcesses
+Stop-VisioProcesses

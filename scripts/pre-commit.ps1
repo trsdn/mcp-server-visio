@@ -5,13 +5,12 @@
 
 .DESCRIPTION
     Runs checks before allowing commits:
-    0. Process cleanup - kills stale PowerPoint, visiocli, and MCP server processes to prevent file locks
-    1. COM leak checker - ensures no PowerPoint COM objects are leaked
-    2. Coverage audit - ensures 100% Core Commands are exposed via MCP Server
-    3. Naming consistency - ensures enum names match Core method names exactly
-    4. Success flag validation - ensures Success=true never paired with ErrorMessage (Rule 0)
-    5. CLI workflow smoke test - validates end-to-end CLI functionality
-    6. MCP Server smoke test - validates all MCP tools work correctly
+    0. Process cleanup - kills stale Visio, visiocli, and MCP server processes to prevent file locks
+    1. COM leak checker - ensures no Visio COM objects are leaked
+    2. Coverage tests - ensures every Core method is exposed via a generated action with a mapping
+    3. Success flag validation - ensures Success=true never paired with ErrorMessage (Rule 0)
+    4. CLI workflow smoke test - validates end-to-end CLI functionality
+    5. MCP Server smoke test - validates all MCP tools work correctly
 
     Ensures code quality and prevents regression.
 
@@ -50,11 +49,11 @@ if ($currentBranch -eq "main") {
 Write-Host "Branch check passed - on '$currentBranch' (not main)" -ForegroundColor Green
 Write-Host ""
 
-# Kill stale PowerPoint and MCP server processes to avoid file locks on Release binaries
-Write-Host "Killing stale PowerPoint and server processes..." -ForegroundColor Cyan
+# Kill stale Visio and MCP server processes to avoid file locks on Release binaries
+Write-Host "Killing stale Visio and server processes..." -ForegroundColor Cyan
 
 $killedProcesses = @()
-foreach ($procName in @("POWERPNT", "visiocli", "VisioMcp.McpServer", "VisioMcp.Service")) {
+foreach ($procName in @("VISIO", "visiocli", "VisioMcp.McpServer", "VisioMcp.Service")) {
     $procs = Get-Process -Name $procName -ErrorAction SilentlyContinue
     if ($procs) {
         $procs | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -94,48 +93,28 @@ catch {
 }
 
 Write-Host ""
-Write-Host "Checking Core Commands coverage and naming..." -ForegroundColor Cyan
+Write-Host "Checking Core Commands coverage (action enums + mappings)..." -ForegroundColor Cyan
 
 try {
-    $auditScript = Join-Path $rootDir "scripts\audit-core-coverage.ps1"
-    & $auditScript -CheckNaming -FailOnGaps
+    # The reflection-driven coverage tests replace the former hard-coded path audits:
+    # they read the generated action enums directly, so they cannot drift out of date.
+    dotnet test (Join-Path $rootDir "tests\VisioMcp.McpServer.Tests") `
+        --filter "FullyQualifiedName~CoreCommandsCoverageTests" `
+        --nologo -v q
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
-        Write-Host "Coverage or naming issues detected!" -ForegroundColor Red
-        Write-Host "   All Core methods must be exposed via MCP Server with matching names." -ForegroundColor Red
-        Write-Host "   Fix the issues before committing (add/rename enum values and mappings)." -ForegroundColor Red
+        Write-Host "Coverage gaps detected!" -ForegroundColor Red
+        Write-Host "   Every Core method must have a generated action value and a ToActionString mapping." -ForegroundColor Red
+        Write-Host "   Fix the issues before committing." -ForegroundColor Red
         exit 1
     }
 
-    Write-Host "Coverage and naming checks passed - 100% coverage with consistent names" -ForegroundColor Green
+    Write-Host "Coverage checks passed - every Core method is reachable" -ForegroundColor Green
 }
 catch {
     Write-Host ""
-    Write-Host "Error running coverage audit: $($_.Exception.Message)" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host ""
-Write-Host "Checking MCP actions have Core implementations..." -ForegroundColor Cyan
-
-try {
-    $mcpCoreScript = Join-Path $rootDir "scripts\check-mcp-core-implementations.ps1"
-    & $mcpCoreScript
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "MCP actions without Core implementations detected!" -ForegroundColor Red
-        Write-Host "   All enum actions must have matching Core Command methods." -ForegroundColor Red
-        Write-Host "   Fix the issues before committing (remove enum or implement method)." -ForegroundColor Red
-        exit 1
-    }
-
-    Write-Host "MCP-Core implementation check passed" -ForegroundColor Green
-}
-catch {
-    Write-Host ""
-    Write-Host "Error running MCP-Core implementation check: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error running coverage tests: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -247,7 +226,9 @@ try {
 
     # Check if any tests actually passed (critical - filter typos cause silent failures!)
     # Note: "No test matches" appears for projects without the test, so we check for "Passed"
-    if (-not ($testOutput -match "Passed!.*Passed:\s*[1-9]")) {
+    # The summary line is localized ("Passed! - ... Passed: 1" / "Bestanden! : ... erfolgreich: 1"),
+    # so match both rather than silently failing on a non-English Windows.
+    if (-not ($testOutput -match "(Passed!|Bestanden!)[^\r\n]*(Passed|erfolgreich):\s*[1-9]")) {
         Write-Host ""
         Write-Host "CRITICAL: No smoke tests passed! Filter may have matched zero tests." -ForegroundColor Red
         Write-Host "   Filter: $smokeTestFilter" -ForegroundColor Yellow
@@ -273,7 +254,7 @@ try {
 catch {
     Write-Host ""
     Write-Host "Error running smoke test: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "   Ensure PowerPoint is installed and accessible." -ForegroundColor Yellow
+    Write-Host "   Ensure Visio is installed and accessible." -ForegroundColor Yellow
     exit 1
 }
 

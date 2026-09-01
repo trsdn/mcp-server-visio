@@ -4,7 +4,7 @@ using VisioMcp.Core.Models;
 namespace VisioMcp.Core.Commands.File;
 
 /// <summary>
-/// File management commands for PowerPoint presentations.
+/// File management commands for Visio documents.
 /// Handles file validation and metadata retrieval.
 /// </summary>
 [ServiceCategory("file")]
@@ -12,9 +12,9 @@ namespace VisioMcp.Core.Commands.File;
 public interface IFileCommands
 {
     /// <summary>
-    /// Validate a PowerPoint file and return metadata (size, slide count, macro status).
+    /// Validate a Visio file and return metadata (size, page count, macro status).
     /// </summary>
-    /// <param name="filePath">Path to the .pptx or .pptm file</param>
+    /// <param name="filePath">Path to the .vsdx or .vsdm file</param>
     [ServiceAction("test")]
     FileValidationInfo Test(string filePath);
 }

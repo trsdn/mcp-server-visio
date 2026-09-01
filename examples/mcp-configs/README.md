@@ -32,7 +32,7 @@ Select the configuration file for your AI assistant and follow the instructions 
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a Visio file called "test.vsdx"
 ```
 
 ---
@@ -56,7 +56,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a Visio file called "test.vsdx"
 ```
 
 ---
@@ -79,7 +79,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a Visio file called "test.vsdx"
 ```
 
 ---
@@ -101,7 +101,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a Visio file called "test.vsdx"
 ```
 
 ---
@@ -115,7 +115,7 @@ Create a PowerPoint file called "test.pptx"
 **Setup Steps:**
 
 **Option A: Use VS Code Extension (Recommended)**
-1. Install the [PowerPoint MCP VS Code Extension](https://marketplace.visualstudio.com/items?itemName=trsdn.visio-mcp)
+1. Install the [Visio MCP VS Code Extension](https://marketplace.visualstudio.com/items?itemName=trsdn.visio-mcp)
 2. Configuration is automatic!
 
 **Option B: Manual Configuration**
@@ -125,7 +125,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a Visio file called "test.vsdx"
 ```
 
 ---
@@ -151,15 +151,15 @@ Create a PowerPoint file called "test.pptx"
    dotnet tool install --global VisioMcp.McpServer
    ```
 
-### PowerPoint Not Found
+### Visio Not Found
 
-- Ensure Microsoft PowerPoint Desktop (2016+) is installed
-- VisioMcp requires Windows OS with PowerPoint installed
+- Ensure Microsoft Visio Desktop (2016+) is installed
+- VisioMcp requires Windows OS with Visio installed
 
 ### Permission Issues
 
-- Close all PowerPoint windows before running VisioMcp
-- Ensure your user account has PowerPoint access
+- Close all Visio windows before running VisioMcp
+- Ensure your user account has Visio access
 
 ### Still Having Issues?
 

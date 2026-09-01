@@ -2,32 +2,16 @@ using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using VisioMcp.ComInterop.Session;
-using VisioMcp.Core.Commands.Accessibility;
-using VisioMcp.Core.Commands.Animation;
-using VisioMcp.Core.Commands.Chart;
 using VisioMcp.Core.Commands.Cell;
-using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
 using VisioMcp.Core.Commands.Export;
 using VisioMcp.Core.Commands.File;
-using VisioMcp.Core.Commands.Hyperlink;
-using VisioMcp.Core.Commands.Image;
 using VisioMcp.Core.Commands.Layer;
-using VisioMcp.Core.Commands.Master;
-using VisioMcp.Core.Commands.Media;
-using VisioMcp.Core.Commands.Notes;
 using VisioMcp.Core.Commands.Page;
-using VisioMcp.Core.Commands.Proofing;
-using VisioMcp.Core.Commands.Section;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
-using VisioMcp.Core.Commands.Slide;
-using VisioMcp.Core.Commands.SlideTable;
-using VisioMcp.Core.Commands.Slideshow;
 using VisioMcp.Core.Commands.Stencil;
 using VisioMcp.Core.Commands.Text;
-using VisioMcp.Core.Commands.Transition;
-using VisioMcp.Core.Commands.Vba;
 using VisioMcp.Core.Commands.Window;
 using VisioMcp.Service.Rpc;
 using StreamJsonRpc;
@@ -55,30 +39,14 @@ public sealed class VisioMcpService : IDisposable
     private readonly FileCommands _fileCommands = new();
     private readonly PageCommands _pageCommands = new();
     private readonly LayerCommands _layerCommands = new();
-    private readonly SlideCommands _slideCommands = new();
     private readonly ShapeCommands _shapeCommands = new();
     private readonly ShapeAlignCommands _shapeAlignCommands = new();
     private readonly CellCommands _cellCommands = new();
     private readonly StencilCommands _stencilCommands = new();
     private readonly TextCommands _textCommands = new();
-    private readonly NotesCommands _notesCommands = new();
-    private readonly MasterCommands _masterCommands = new();
     private readonly ExportCommands _exportCommands = new();
-    private readonly TransitionCommands _transitionCommands = new();
-    private readonly ImageCommands _imageCommands = new();
-    private readonly SlideTableCommands _slideTableCommands = new();
-    private readonly ChartCommands _chartCommands = new();
-    private readonly AnimationCommands _animationCommands = new();
-    private readonly DesignCommands _designCommands = new();
-    private readonly SlideshowCommands _slideshowCommands = new();
-    private readonly VbaCommands _vbaCommands = new();
     private readonly WindowCommands _windowCommands = new();
-    private readonly HyperlinkCommands _hyperlinkCommands = new();
-    private readonly SectionCommands _sectionCommands = new();
     private readonly DocumentPropertyCommands _documentPropertyCommands = new();
-    private readonly MediaCommands _mediaCommands = new();
-    private readonly ProofingCommands _proofingCommands = new();
-    private readonly AccessibilityCommands _accessibilityCommands = new();
 
     public VisioMcpService()
     {
@@ -233,9 +201,6 @@ public sealed class VisioMcpService : IDisposable
                 "layer" => await DispatchSimpleAsync<LayerAction>(action, request,
                     ServiceRegistry.Layer.TryParseAction,
                     (a, batch) => ServiceRegistry.Layer.DispatchToCore(_layerCommands, a, batch, request.Args)),
-                "slide" => await DispatchSimpleAsync<SlideAction>(action, request,
-                    ServiceRegistry.Slide.TryParseAction,
-                    (a, batch) => ServiceRegistry.Slide.DispatchToCore(_slideCommands, a, batch, request.Args)),
                 "shape" => await DispatchSimpleAsync<ShapeAction>(action, request,
                     ServiceRegistry.Shape.TryParseAction,
                     (a, batch) => ServiceRegistry.Shape.DispatchToCore(_shapeCommands, a, batch, request.Args)),
@@ -251,60 +216,15 @@ public sealed class VisioMcpService : IDisposable
                 "shapealign" => await DispatchSimpleAsync<ShapealignAction>(action, request,
                     ServiceRegistry.Shapealign.TryParseAction,
                     (a, batch) => ServiceRegistry.Shapealign.DispatchToCore(_shapeAlignCommands, a, batch, request.Args)),
-                "notes" => await DispatchSimpleAsync<NotesAction>(action, request,
-                    ServiceRegistry.Notes.TryParseAction,
-                    (a, batch) => ServiceRegistry.Notes.DispatchToCore(_notesCommands, a, batch, request.Args)),
-                "master" => await DispatchSimpleAsync<MasterAction>(action, request,
-                    ServiceRegistry.Master.TryParseAction,
-                    (a, batch) => ServiceRegistry.Master.DispatchToCore(_masterCommands, a, batch, request.Args)),
                 "export" => await DispatchSimpleAsync<ExportAction>(action, request,
                     ServiceRegistry.Export.TryParseAction,
                     (a, batch) => ServiceRegistry.Export.DispatchToCore(_exportCommands, a, batch, request.Args)),
-                "transition" => await DispatchSimpleAsync<TransitionAction>(action, request,
-                    ServiceRegistry.Transition.TryParseAction,
-                    (a, batch) => ServiceRegistry.Transition.DispatchToCore(_transitionCommands, a, batch, request.Args)),
-                "image" => await DispatchSimpleAsync<ImageAction>(action, request,
-                    ServiceRegistry.Image.TryParseAction,
-                    (a, batch) => ServiceRegistry.Image.DispatchToCore(_imageCommands, a, batch, request.Args)),
-                "slidetable" => await DispatchSimpleAsync<SlidetableAction>(action, request,
-                    ServiceRegistry.Slidetable.TryParseAction,
-                    (a, batch) => ServiceRegistry.Slidetable.DispatchToCore(_slideTableCommands, a, batch, request.Args)),
-                "chart" => await DispatchSimpleAsync<ChartAction>(action, request,
-                    ServiceRegistry.Chart.TryParseAction,
-                    (a, batch) => ServiceRegistry.Chart.DispatchToCore(_chartCommands, a, batch, request.Args)),
-                "animation" => await DispatchSimpleAsync<AnimationAction>(action, request,
-                    ServiceRegistry.Animation.TryParseAction,
-                    (a, batch) => ServiceRegistry.Animation.DispatchToCore(_animationCommands, a, batch, request.Args)),
-                "design" => await DispatchSimpleAsync<DesignAction>(action, request,
-                    ServiceRegistry.Design.TryParseAction,
-                    (a, batch) => ServiceRegistry.Design.DispatchToCore(_designCommands, a, batch, request.Args)),
-                "slideshow" => await DispatchSimpleAsync<SlideshowAction>(action, request,
-                    ServiceRegistry.Slideshow.TryParseAction,
-                    (a, batch) => ServiceRegistry.Slideshow.DispatchToCore(_slideshowCommands, a, batch, request.Args)),
-                "vba" => await DispatchSimpleAsync<VbaAction>(action, request,
-                    ServiceRegistry.Vba.TryParseAction,
-                    (a, batch) => ServiceRegistry.Vba.DispatchToCore(_vbaCommands, a, batch, request.Args)),
                 "window" => await DispatchSimpleAsync<WindowAction>(action, request,
                     ServiceRegistry.Window.TryParseAction,
                     (a, batch) => ServiceRegistry.Window.DispatchToCore(_windowCommands, a, batch, request.Args)),
-                "hyperlink" => await DispatchSimpleAsync<HyperlinkAction>(action, request,
-                    ServiceRegistry.Hyperlink.TryParseAction,
-                    (a, batch) => ServiceRegistry.Hyperlink.DispatchToCore(_hyperlinkCommands, a, batch, request.Args)),
-                "section" => await DispatchSimpleAsync<SectionAction>(action, request,
-                    ServiceRegistry.Section.TryParseAction,
-                    (a, batch) => ServiceRegistry.Section.DispatchToCore(_sectionCommands, a, batch, request.Args)),
                 "docproperty" => await DispatchSimpleAsync<DocpropertyAction>(action, request,
                     ServiceRegistry.Docproperty.TryParseAction,
                     (a, batch) => ServiceRegistry.Docproperty.DispatchToCore(_documentPropertyCommands, a, batch, request.Args)),
-                "media" => await DispatchSimpleAsync<MediaAction>(action, request,
-                    ServiceRegistry.Media.TryParseAction,
-                    (a, batch) => ServiceRegistry.Media.DispatchToCore(_mediaCommands, a, batch, request.Args)),
-                "proofing" => await DispatchSimpleAsync<ProofingAction>(action, request,
-                    ServiceRegistry.Proofing.TryParseAction,
-                    (a, batch) => ServiceRegistry.Proofing.DispatchToCore(_proofingCommands, a, batch, request.Args)),
-                "accessibility" => await DispatchSimpleAsync<AccessibilityAction>(action, request,
-                    ServiceRegistry.Accessibility.TryParseAction,
-                    (a, batch) => ServiceRegistry.Accessibility.DispatchToCore(_accessibilityCommands, a, batch, request.Args)),
                 _ => new ServiceResponse { Success = false, ErrorMessage = $"Unknown command category: {category}" }
             };
         }
@@ -463,7 +383,7 @@ public sealed class VisioMcpService : IDisposable
             return new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"File already exists: {fullPath}. Use session open to open an existing presentation."
+                ErrorMessage = $"File already exists: {fullPath}. Use session open to open an existing document."
             };
         }
 
@@ -481,7 +401,7 @@ public sealed class VisioMcpService : IDisposable
 
         try
         {
-            // Use the combined create+open which starts PowerPoint only once
+            // Use the combined create+open which starts Visio only once
             TimeSpan? timeout = args.TimeoutSeconds.HasValue
                 ? TimeSpan.FromSeconds(args.TimeoutSeconds.Value)
                 : null;
@@ -589,14 +509,14 @@ public sealed class VisioMcpService : IDisposable
             return new ServiceResponse { Success = false, ErrorMessage = $"Session '{request.SessionId}' not found" };
         }
 
-        // Check if PowerPoint process is still alive before attempting save
-        if (!batch.IsPowerPointProcessAlive())
+        // Check if Visio process is still alive before attempting save
+        if (!batch.IsVisioProcessAlive())
         {
             _sessionManager.CloseSession(request.SessionId, save: false, force: true);
             return new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{request.SessionId}' has died. Session has been closed. Please create a new session."
+                ErrorMessage = $"Visio process for session '{request.SessionId}' has died. Session has been closed. Please create a new session."
             };
         }
 
@@ -614,8 +534,7 @@ public sealed class VisioMcpService : IDisposable
                 documentPath = s.DocumentPath,
                 pageName = s.PageName,
                 pageIndex = s.PageIndex,
-                isVisioVisible = _sessionManager.IsPowerPointVisible(s.SessionId),
-                isPowerPointVisible = _sessionManager.IsPowerPointVisible(s.SessionId),
+                isVisioVisible = _sessionManager.IsVisioVisible(s.SessionId),
                 activeOperations = _sessionManager.GetActiveOperationCount(s.SessionId),
                 canClose = _sessionManager.GetActiveOperationCount(s.SessionId) == 0
             })
@@ -677,7 +596,7 @@ public sealed class VisioMcpService : IDisposable
     }
 
     /// <summary>
-    /// Dispatches a session-less command (no PowerPoint batch required).
+    /// Dispatches a session-less command (no Visio batch required).
     /// Used for [NoSession] categories like file.
     /// </summary>
     private ServiceResponse DispatchSessionless(string actionString, ServiceRequest request)
@@ -701,15 +620,15 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse { Success = false, ErrorMessage = $"Session '{sessionId}' not found" });
         }
 
-        // Check if PowerPoint process is still alive before attempting operation
-        if (!batch.IsPowerPointProcessAlive())
+        // Check if Visio process is still alive before attempting operation
+        if (!batch.IsVisioProcessAlive())
         {
-            // PowerPoint died - clean up the dead session
+            // Visio died - clean up the dead session
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' has died. Session has been closed. Please create a new session."
+                ErrorMessage = $"Visio process for session '{sessionId}' has died. Session has been closed. Please create a new session."
             });
         }
 
@@ -720,13 +639,13 @@ public sealed class VisioMcpService : IDisposable
         }
         catch (TimeoutException ex)
         {
-            // Operation timed out — PowerPoint COM call is hung.
+            // Operation timed out — Visio COM call is hung.
             // Force-close the session to trigger the force-kill path in VisioBatch.Dispose().
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint operation timed out and the session has been closed: {ex.Message} " +
+                ErrorMessage = $"Visio operation timed out and the session has been closed: {ex.Message} " +
                                "Please reopen the file with a new session."
             });
         }
@@ -738,7 +657,7 @@ public sealed class VisioMcpService : IDisposable
             {
                 Success = false,
                 ErrorMessage = $"Operation was cancelled and the session has been closed. " +
-                               "The PowerPoint COM thread may have been unresponsive. " +
+                               "The Visio COM thread may have been unresponsive. " +
                                "Please reopen the file with a new session."
             });
         }
@@ -746,12 +665,12 @@ public sealed class VisioMcpService : IDisposable
             ex.HResult == ResiliencePipelines.RPC_S_SERVER_UNAVAILABLE ||
             ex.HResult == ResiliencePipelines.RPC_E_CALL_FAILED)
         {
-            // PowerPoint process died during the operation — clean up the dead session
+            // Visio process died during the operation — clean up the dead session
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' has died. " +
+                ErrorMessage = $"Visio process for session '{sessionId}' has died. " +
                                "Session has been cleaned up. Please reopen the file with a new session."
             });
         }
@@ -759,12 +678,12 @@ public sealed class VisioMcpService : IDisposable
             ex.Message.Contains("no longer running", StringComparison.OrdinalIgnoreCase) ||
             ex.Message.Contains("process", StringComparison.OrdinalIgnoreCase))
         {
-            // PowerPoint process detected as dead before COM call (VisioBatch pre-check)
+            // Visio process detected as dead before COM call (VisioBatch pre-check)
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' is no longer running. " +
+                ErrorMessage = $"Visio process for session '{sessionId}' is no longer running. " +
                                "Session has been cleaned up. Please reopen the file with a new session."
             });
         }

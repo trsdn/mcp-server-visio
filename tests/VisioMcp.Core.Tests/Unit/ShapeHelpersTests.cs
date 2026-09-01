@@ -1,4 +1,4 @@
-using VisioMcp.Core.Commands.Slide;
+using VisioMcp.Core.Commands.Shape;
 using Xunit;
 
 namespace VisioMcp.Core.Tests.Unit;
@@ -63,7 +63,7 @@ public class ShapeHelpersTests
     [Fact]
     public void GetShapeTypeName_MsoShapeType18_IsNotDefined()
     {
-        // msoShapeType 18 is intentionally skipped in PowerPoint COM API
+        // msoShapeType 18 is intentionally skipped in Visio COM API
         var result = ShapeHelpers.GetShapeTypeName(18);
         Assert.Equal("Unknown(18)", result);
     }

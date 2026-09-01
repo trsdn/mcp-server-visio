@@ -9,12 +9,12 @@
     that weren't investigated.
 
     Valid comment prefixes (on the line immediately before the cast):
-      // PIA gap: ...    — Type not in v16 Microsoft.Office.Interop.PowerPoint PIA
-      // TODO: ...       — Type IS in PIA but migration not yet done (tracked for removal)
-      // Reason: ...     — Other documented reason for dynamic cast
+      // PIA gap: ...    - Type not in v16 Microsoft.Office.Interop.Visio PIA
+      // TODO: ...       - Type IS in PIA but migration not yet done (tracked for removal)
+      // Reason: ...     - Other documented reason for dynamic cast
 
     False positives are excluded:
-      - PptBatch.cs / PptSession.cs / PptShutdownService.cs (infrastructure — uses `dynamic excel`)
+      - VisioBatch.cs / VisioSession.cs / VisioShutdownService.cs / SessionManager.cs (infrastructure - holds the raw `dynamic` Visio objects)
       - Lines inside comments
 
 .EXAMPLE
@@ -40,10 +40,10 @@ $searchDirs = @(
 
 # Files where bare dynamic casts are acceptable (infrastructure files)
 $excludeFiles = @(
-    "PptBatch.cs",
-    "PptSession.cs",
-    "PptShutdownService.cs",
-    "PptShutdownService.cs"
+    "VisioBatch.cs",
+    "VisioSession.cs",
+    "VisioShutdownService.cs",
+    "SessionManager.cs"
 )
 
 $violations = @()
@@ -109,8 +109,8 @@ Write-Host ""
 Write-Host "UNDOCUMENTED ((dynamic)) CASTS FOUND: $($violations.Count)" -ForegroundColor Red
 Write-Host ""
 Write-Host "Every ((dynamic)) cast must have a comment on the preceding line explaining why:" -ForegroundColor Yellow
-Write-Host "  // PIA gap: <type> not in Microsoft.Office.Interop.PowerPoint v16 PIA because..." -ForegroundColor Gray
-Write-Host "  // TODO: <type> IS in PIA, migration tracked — left as dynamic temporarily" -ForegroundColor Gray
+Write-Host "  // PIA gap: <type> not in Microsoft.Office.Interop.Visio v16 PIA because..." -ForegroundColor Gray
+Write-Host "  // TODO: <type> IS in PIA, migration tracked - left as dynamic temporarily" -ForegroundColor Gray
 Write-Host "  // Reason: <explanation>" -ForegroundColor Gray
 Write-Host ""
 
@@ -120,5 +120,5 @@ foreach ($v in $violations) {
 }
 
 Write-Host ""
-Write-Host "Fix these before committing. See docs/PIA-COVERAGE.md for guidance." -ForegroundColor Red
+Write-Host "Fix these before committing. See docs/VISIO-COM-REFERENCE.md for guidance." -ForegroundColor Red
 exit 1

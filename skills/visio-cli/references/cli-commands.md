@@ -1,51 +1,31 @@
-# CLI Command Reference
+﻿# CLI Command Reference
 
-> Auto-generated from \visiocli --help\. Do not edit manually.
+> Auto-generated from \isiocli --help\. Do not edit manually.
 
 ## service
 
-## calculationmode
-
-## chart
-
-## chartconfig
-
-## conditionalformat
-
-## connection
-
-## datamodel
-
-## datamodelrel
+## batch
 
 ## diag
 
-## namedrange
+## cell
 
-## pivottable
+## docproperty
 
-## pivottablecalc
+## export
 
-## pivottablefield
+## file
 
-## powerquery
+## layer
 
-## range
+## page
 
-## rangeedit
+## shape
 
-## rangeformat
+## shapealign
 
-## rangelink
+## stencil
 
-## slicer
+## text
 
-## table
-
-## tablecolumn
-
-## vba
-
-## slide
-
-## worksheetstyle
+## window

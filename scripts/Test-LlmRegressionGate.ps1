@@ -72,15 +72,15 @@ if (-not $SkipBuild) {
 $cliPath = Find-BuildArtifact @(
     "src\VisioMcp.CLI\bin\Release\net9.0-windows\visiocli.exe",
     "src\VisioMcp.CLI\bin\Debug\net9.0-windows\visiocli.exe",
-    "src\VisioMcp.CLI\bin\Release\net10.0-windows\visiocli.exe",
-    "src\VisioMcp.CLI\bin\Debug\net10.0-windows\visiocli.exe"
+    "src\VisioMcp.CLI\bin\Release\net9.0-windows\visiocli.exe",
+    "src\VisioMcp.CLI\bin\Debug\net9.0-windows\visiocli.exe"
 )
 
 $mcpServerPath = Find-BuildArtifact @(
     "src\VisioMcp.McpServer\bin\Release\net9.0-windows\VisioMcp.McpServer.exe",
     "src\VisioMcp.McpServer\bin\Debug\net9.0-windows\VisioMcp.McpServer.exe",
-    "src\VisioMcp.McpServer\bin\Release\net10.0-windows\VisioMcp.McpServer.exe",
-    "src\VisioMcp.McpServer\bin\Debug\net10.0-windows\VisioMcp.McpServer.exe"
+    "src\VisioMcp.McpServer\bin\Release\net9.0-windows\VisioMcp.McpServer.exe",
+    "src\VisioMcp.McpServer\bin\Debug\net9.0-windows\VisioMcp.McpServer.exe"
 )
 
 if (-not $cliPath) {
@@ -97,17 +97,17 @@ $tests = @()
 
 if (-not $McpOnly) {
     $tests += @(
-        "cli/test_cli_table.py::test_cli_table_create_query",
-        "cli/test_cli_chart.py::test_cli_chart_workflows",
-        "cli/test_cli_styling.py::test_cli_styling_header_fill"
+        "cli/test_cli_diagram.py::test_create_document_with_named_page",
+        "cli/test_cli_diagram.py::test_draw_two_shapes_and_connect_them",
+        "cli/test_cli_diagram.py::test_shapesheet_cell_roundtrip"
     )
 }
 
 if (-not $CliOnly) {
     $tests += @(
-        "mcp_tests/test_mcp_table.py::test_mcp_table_create_query",
-        "mcp_tests/test_mcp_chart.py::test_mcp_chart_workflows",
-        "mcp_tests/test_mcp_styling.py::test_mcp_styling_header_fill"
+        "mcp_tests/test_mcp_diagram.py::test_create_document_with_named_page",
+        "mcp_tests/test_mcp_diagram.py::test_draw_two_shapes_and_connect_them",
+        "mcp_tests/test_mcp_diagram.py::test_shapesheet_cell_roundtrip"
     )
 }
 

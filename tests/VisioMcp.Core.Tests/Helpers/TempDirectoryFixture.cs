@@ -31,12 +31,12 @@ public class TempDirectoryFixture : IDisposable
     public string TempDir { get; }
 
     /// <summary>
-    /// Creates a unique test PowerPoint file for the calling test method.
+    /// Creates a unique test Visio file for the calling test method.
     /// </summary>
     /// <param name="testName">Auto-populated with the calling method name.</param>
-    /// <param name="extension">File extension (default: .pptx).</param>
+    /// <param name="extension">File extension (default: .vsdx).</param>
     /// <returns>Full path to the created file.</returns>
-    public string CreateTestFile([CallerMemberName] string testName = "", string extension = ".pptx")
+    public string CreateTestFile([CallerMemberName] string testName = "", string extension = ".vsdx")
     {
         var fileName = $"{testName}_{Guid.NewGuid():N}{extension}";
         var filePath = Path.Combine(TempDir, fileName);

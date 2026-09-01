@@ -123,7 +123,7 @@ public async Task ListAsync_EmptyPresentation_ReturnsEmptyList()  // ❌ Remove 
 |-------|---------|---------|
 | **Empty** | `<Method>_EmptyPresentation_<Outcome>` | `List_EmptyPresentation_ReturnsEmptyList` |
 | **With Data** | `<Method>_PresentationWithData_<Outcome>` | `Refresh_PresentationWithData_UpdatesValues` |
-| **Multiple Items** | `<Method>_MultipleItems_<Outcome>` | `Delete_PresentationWithMultipleSlides_RemovesTargetOnly` |
+| **Multiple Items** | `<Method>_MultipleItems_<Outcome>` | `Delete_DocumentWithMultiplePages_RemovesTargetOnly` |
 
 ## Feature-Specific Guidelines
 

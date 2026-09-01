@@ -484,62 +484,10 @@ public class WindowCommands : IWindowCommands
     public OperationResult SetExtensionsSnapStrength(IVisioBatch batch, int strength)
         => SetSnapStrength(batch, strength, "set-extensions-snap-strength", "extensions", "SnapStrengthExtensionsX", "SnapStrengthExtensionsY");
 
-    public OperationResult SetView(IVisioBatch batch, int viewType)
-    {
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic app = ctx.Application;
-            dynamic? window = null;
-            try
-            {
-                window = app.ActiveWindow;
-                window.ViewType = viewType;
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "set-view",
-                    Message = $"Set legacy view to {GetViewTypeName(viewType)}",
-                    FilePath = ctx.DocumentPath
-                };
-            }
-            finally
-            {
-                if (window != null) ComUtilities.Release(ref window!);
-                ComUtilities.Release(ref app!);
-            }
-        });
-    }
-
-    public OperationResult GetView(IVisioBatch batch)
-    {
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic app = ctx.Application;
-            dynamic? window = null;
-            try
-            {
-                window = app.ActiveWindow;
-                int viewType = Convert.ToInt32(window.ViewType);
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "get-view",
-                    Message = $"Current legacy view: {GetViewTypeName(viewType)} ({viewType})",
-                    FilePath = ctx.DocumentPath
-                };
-            }
-            finally
-            {
-                if (window != null) ComUtilities.Release(ref window!);
-                ComUtilities.Release(ref app!);
-            }
-        });
-    }
-
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static OperationResult SetSnapStrength(
@@ -809,16 +757,6 @@ public class WindowCommands : IWindowCommands
         2 => "Minimized",
         3 => "Maximized",
         _ => $"Unknown({state})"
-    };
-
-    private static string GetViewTypeName(int viewType) => viewType switch
-    {
-        1 => "Normal",
-        2 => "Outline",
-        3 => "SlideSorter",
-        4 => "NotesPage",
-        5 => "SlideMaster",
-        _ => $"Unknown({viewType})"
     };
 
     private static string GetWindowTypeName(int windowType) => windowType switch

@@ -1,15 +1,10 @@
 namespace VisioMcp.ComInterop.Session;
 
 /// <summary>
-/// Represents a batch of Office COM operations that share a single application instance.
+/// Represents a batch of Visio COM operations that share a single application instance.
 /// </summary>
 public interface IVisioBatch : IDisposable
 {
-    /// <summary>
-    /// Gets the path to the primary document using the legacy presentation name.
-    /// </summary>
-    string PresentationPath { get; }
-
     /// <summary>
     /// Gets the path to the primary Visio document.
     /// </summary>
@@ -21,19 +16,9 @@ public interface IVisioBatch : IDisposable
     Microsoft.Extensions.Logging.ILogger Logger { get; }
 
     /// <summary>
-    /// Gets all open documents keyed by normalized file path using the legacy property name.
-    /// </summary>
-    IReadOnlyDictionary<string, object> Presentations { get; }
-
-    /// <summary>
     /// Gets all open Visio documents keyed by normalized file path.
     /// </summary>
     IReadOnlyDictionary<string, object> Documents { get; }
-
-    /// <summary>
-    /// Gets the COM document object for a specific file path using the legacy method name.
-    /// </summary>
-    object GetPresentation(string filePath);
 
     /// <summary>
     /// Gets the COM Visio document object for a specific file path.
@@ -56,14 +41,14 @@ public interface IVisioBatch : IDisposable
     void Save(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks if the underlying Office process is still alive.
+    /// Checks if the underlying Visio process is still alive.
     /// </summary>
-    bool IsPowerPointProcessAlive();
+    bool IsVisioProcessAlive();
 
     /// <summary>
-    /// Gets the underlying Office process ID, if captured.
+    /// Gets the underlying Visio process ID, if captured.
     /// </summary>
-    int? PowerPointProcessId { get; }
+    int? VisioProcessId { get; }
 
     /// <summary>
     /// Gets the operation timeout for this batch.

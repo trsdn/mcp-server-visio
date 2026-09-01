@@ -16,7 +16,7 @@ namespace VisioMcp.ComInterop.Tests.Integration.Session;
 /// - ✅ Test that SessionManager.CloseSession(force:true) works after timeout
 /// - ✅ Test that session is removed after timeout + force close
 /// - ✅ Test that subsequent GetSession returns null after timeout cleanup
-/// - ✅ Test that PowerPoint process is cleaned up end-to-end through SessionManager
+/// - ✅ Test that Visio process is cleaned up end-to-end through SessionManager
 /// </summary>
 [Trait("Category", "Integration")]
 [Trait("Speed", "Slow")]
@@ -32,7 +32,7 @@ public class SessionManagerTimeoutTests : IDisposable
 
     private static readonly string TemplateFilePath = Path.Combine(
         Path.GetDirectoryName(typeof(SessionManagerTimeoutTests).Assembly.Location)!,
-        "Integration", "Session", "TestFiles", "batch-test-static.pptx");
+        "Integration", "Session", "TestFiles", "batch-test-static.vsdx");
 
     public SessionManagerTimeoutTests(ITestOutputHelper output)
     {
@@ -62,7 +62,7 @@ public class SessionManagerTimeoutTests : IDisposable
 
     private string CreateTestFile(string testName)
     {
-        var filePath = Path.Combine(_tempDir, $"{testName}_{Guid.NewGuid():N}.pptx");
+        var filePath = Path.Combine(_tempDir, $"{testName}_{Guid.NewGuid():N}.vsdx");
         File.Copy(TemplateFilePath, filePath);
         _testFiles.Add(filePath);
         return filePath;
@@ -88,7 +88,7 @@ public class SessionManagerTimeoutTests : IDisposable
         Assert.NotNull(batch);
 
         // Warm up
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         // Trigger timeout
         var ex = Assert.Throws<TimeoutException>(() =>
@@ -113,24 +113,24 @@ public class SessionManagerTimeoutTests : IDisposable
     }
 
     /// <summary>
-    /// REGRESSION TEST: After timeout + force close, the PowerPoint process must be terminated.
+    /// REGRESSION TEST: After timeout + force close, the Visio process must be terminated.
     /// This is the end-to-end test for the complete Bug 8 recovery chain:
     /// timeout → force close → pre-emptive kill → process cleanup.
     /// </summary>
     [Fact]
-    public void CloseSession_AfterTimeout_PowerPointProcessIsTerminated()
+    public void CloseSession_AfterTimeout_VisioProcessIsTerminated()
     {
         // Arrange
-        var testFile = CreateTestFile(nameof(CloseSession_AfterTimeout_PowerPointProcessIsTerminated));
+        var testFile = CreateTestFile(nameof(CloseSession_AfterTimeout_VisioProcessIsTerminated));
         using var manager = new SessionManager();
 
         var sessionId = manager.CreateSession(testFile, operationTimeout: TimeSpan.FromSeconds(3));
         var batch = manager.GetSession(sessionId)!;
-        int? pptPid = batch.PowerPointProcessId;
-        _output.WriteLine($"Session {sessionId}, PowerPoint PID: {pptPid}");
+        int? visioPid = batch.VisioProcessId;
+        _output.WriteLine($"Session {sessionId}, Visio PID: {visioPid}");
 
         // Warm up
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         // Trigger timeout
         Assert.Throws<TimeoutException>(() =>
@@ -151,13 +151,13 @@ public class SessionManagerTimeoutTests : IDisposable
         // Wait for process cleanup
         Thread.Sleep(2000);
 
-        // Assert — PowerPoint process should be dead
-        if (pptPid.HasValue)
+        // Assert — Visio process should be dead
+        if (visioPid.HasValue)
         {
             bool processAlive;
             try
             {
-                using var process = Process.GetProcessById(pptPid.Value);
+                using var process = Process.GetProcessById(visioPid.Value);
                 processAlive = !process.HasExited;
             }
             catch (ArgumentException)
@@ -166,10 +166,10 @@ public class SessionManagerTimeoutTests : IDisposable
             }
 
             Assert.False(processAlive,
-                $"REGRESSION: PowerPoint process {pptPid.Value} still alive after timeout + force close. " +
+                $"REGRESSION: Visio process {visioPid.Value} still alive after timeout + force close. " +
                 "The pre-emptive kill in Dispose() may not be working.");
 
-            _output.WriteLine($"✓ PowerPoint process {pptPid.Value} terminated");
+            _output.WriteLine($"✓ Visio process {visioPid.Value} terminated");
         }
     }
 
@@ -189,7 +189,7 @@ public class SessionManagerTimeoutTests : IDisposable
         // Act — quick operation should succeed
         var result = batch.Execute((ctx, ct) =>
         {
-            dynamic sheet = ctx.Presentation.Slides[1];
+            dynamic sheet = ctx.Document.Pages.Item(1);
             return sheet.Name?.ToString() ?? "unknown";
         });
 

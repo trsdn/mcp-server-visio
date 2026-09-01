@@ -38,7 +38,7 @@ When you run the release workflow:
 | `VisioMcp-MCP-Server-{version}-windows.zip` | ZIP | GitHub Release |
 | `VisioMcp-{version}.vsix` | VSIX | GitHub Release + VS Code Marketplace (~68-70 MB, self-contained) |
 | `visio-mcp-{version}.mcpb` | MCPB | GitHub Release |
-| `ppt-skills-v{version}.zip` | ZIP | GitHub Release |
+| `visio-skills-v{version}.zip` | ZIP | GitHub Release |
 | `VisioMcp.McpServer.{version}.nupkg` | NuGet | NuGet.org (unified — includes CLI) |
 
 > **Note:** Separate CLI ZIP and CLI NuGet package are no longer produced. The CLI is bundled in the unified MCP Server NuGet package and in the VS Code extension.

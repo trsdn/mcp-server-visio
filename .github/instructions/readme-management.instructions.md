@@ -27,7 +27,7 @@ You need to make sure that the `Features.md` file is up-to-date with the latest 
 
 Before updating counts, verify by counting:
 
-- **MCP Server**: Count tool files (ppt_batch handled via PptTools.cs, not separate tool file)
+- **MCP Server**: Count generated MCP tool definitions and the 11 resource tools
 - **CLI**: Count command group folders (includes Session commands)
 - **Operations**: Count separately for each - they differ!
 
@@ -122,7 +122,7 @@ gh-pages uses Jekyll includes to pull content from source READMEs:
 ### Adding New Local Pages
 
 1. **Update `build.sh`** - Add awk command to copy source file to `_includes/`:
-   ```bash
+   ```powershell
    awk '
        BEGIN { inheader=0; headerdone=0 }
        {

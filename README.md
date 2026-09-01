@@ -109,14 +109,24 @@ Key architectural properties:
 - incremental generator-driven surfaces
 - integration-first validation against the real desktop app
 
+## Where this project comes from
+
+This repository was bootstrapped from [sbroenne/mcp-server-visio](https://github.com/sbroenne/mcp-server-visio) by Stefan Broenner, which itself grew out of [sbroenne/mcp-server-excel](https://github.com/sbroenne/mcp-server-excel).
+
+What carried over is the architecture — the layered `ComInterop`/`Core`/`Service`/`CLI`/`McpServer` split, STA session and batch management, the source generators that keep MCP and CLI at parity, and the integration-test-first approach to COM automation.
+
+What did not carry over is the domain layer. The Excel code is gone, and the Visio code has been replaced with Visio-native operations. Both upstream projects are MIT licensed, and [LICENSE](LICENSE) preserves the original copyright alongside this project's.
+
+Full details: [ATTRIBUTION.md](ATTRIBUTION.md).
+
 ## Current migration posture
 
-The repo still contains inherited legacy areas from the original PowerPoint-oriented bootstrap. The cleanup strategy is now:
+The repo still contains inherited legacy areas from the original Visio-oriented bootstrap. The cleanup strategy is now:
 
 - keep only truthful Visio-facing docs and package metadata
 - port inherited surfaces to real Visio behavior where they make sense
 - redesign domains that need a Visio-native API shape
-- remove clearly misleading PowerPoint-only leftovers instead of documenting them as if they already worked
+- remove clearly misleading Visio-only leftovers instead of documenting them as if they already worked
 
 ## Repository roadmap
 
@@ -131,6 +141,7 @@ The next major wave focuses on:
 ## Related docs
 
 - [Feature inventory and migration status](FEATURES.md)
+- [Attribution and provenance](ATTRIBUTION.md)
 - [Installation guide](docs/INSTALLATION.md)
 - [Visio COM reference](docs/VISIO-COM-REFERENCE.md)
 - [CLI guide](src/VisioMcp.CLI/README.md)
@@ -145,3 +156,5 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The license carries a dual copyright notice covering both this project and its upstream origin. See [ATTRIBUTION.md](ATTRIBUTION.md) for why.

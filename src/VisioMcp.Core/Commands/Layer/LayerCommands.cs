@@ -323,7 +323,7 @@ public class LayerCommands : ILayerCommands
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static dynamic FindLayer(dynamic page, string layerName)

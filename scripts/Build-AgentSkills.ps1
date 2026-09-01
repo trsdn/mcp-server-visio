@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Builds the PowerPoint MCP Agent Skills package for distribution.
+    Builds the Visio MCP Agent Skills package for distribution.
 
 .DESCRIPTION
     Creates distributable artifacts for Agent Skills:
-    - ppt-skills-v{version}.zip: Combined skill package with both visio-mcp and visio-cli
+    - visio-skills-v{version}.zip: Combined skill package with both visio-mcp and visio-cli
     - packages/visio-mcp-skill/: npm package for visio-mcp skill (publish with npm publish)
     - packages/visio-cli-skill/: npm package for visio-cli skill (publish with npm publish)
     - CLAUDE.md: Claude Code project instructions
@@ -54,7 +54,7 @@ function Generate-CliReference {
 
     # Find visiocli binary
     if (-not $visiocliPath) {
-        $visiocliPath = Join-Path $RepoRoot "src/VisioMcp.CLI/bin/Release/net10.0-windows/visiocli.exe"
+        $visiocliPath = Join-Path $RepoRoot "src/VisioMcp.CLI/bin/Release/net9.0-windows/visiocli.exe"
     }
 
     if (-not (Test-Path $visiocliPath)) {
@@ -74,17 +74,20 @@ function Generate-CliReference {
     $Content = @()
     $Content += "# CLI Command Reference"
     $Content += ""
-    $Content += "> Auto-generated from \`visiocli --help\`. Do not edit manually."
+    $Content += '> Auto-generated from `visiocli --help`. Do not edit manually.'
     $Content += ""
 
     # Get main help to extract commands
     $MainHelp = & $visiocliPath --help 2>&1 | Out-String
+    if (-not ($MainHelp -match "(?m)^(COMMANDS|KOMMANDOS|BEFEHLE):")) {
+        throw "Could not locate the command list in ``visiocli --help`` output. Refusing to emit a stale cli-commands.md."
+    }
 
     # Parse commands from main help (look for lines with command names)
     $Commands = @()
     $InCommands = $false
     foreach ($line in ($MainHelp -split "`r?`n")) {
-        if ($line -match "^COMMANDS:") {
+        if ($line -match "^(COMMANDS|KOMMANDOS|BEFEHLE):") {
             $InCommands = $true
             continue
         }
@@ -170,22 +173,18 @@ function Copy-SharedReferences {
     $SkillReferences = @{
         "visio-cli" = @(
             "behavioral-rules.md"
-            "anti-patterns.md"
-            "workflows.md"
+            "generation-pipeline.md"
+            "diagram-design-principles.md"
+            "diagram-design-review.md"
+            "visio_agent_mode.md"
             # cli-commands.md is generated dynamically by Generate-CliReference
         )
         "visio-mcp" = @(
             "behavioral-rules.md"
-            "anti-patterns.md"
-            "workflows.md"
-            "chart.md"
-            "conditionalformat.md"
-            "datamodel.md"
-            "powerquery.md"
-            "range.md"
-            "slicer.md"
-            "table.md"
-            "worksheet.md"
+            "generation-pipeline.md"
+            "diagram-design-principles.md"
+            "diagram-design-review.md"
+            "visio_agent_mode.md"
         )
     }
 
@@ -262,7 +261,7 @@ if (-not (Test-Path $OutputPath)) {
 Write-Host "Building combined skills package..." -ForegroundColor Yellow
 
 # Create staging directory
-$StagingDir = Join-Path $env:TEMP "ppt-skills-$([guid]::NewGuid().ToString('N').Substring(0,8))"
+$StagingDir = Join-Path $env:TEMP "visio-skills-$([guid]::NewGuid().ToString('N').Substring(0,8))"
 New-Item -ItemType Directory -Path $StagingDir -Force | Out-Null
 
 try {
@@ -297,7 +296,7 @@ try {
     }
 
     # Create ZIP archive
-    $ZipName = "ppt-skills-v$Version.zip"
+    $ZipName = "visio-skills-v$Version.zip"
     $ZipPath = Join-Path $OutputPath $ZipName
 
     if (Test-Path $ZipPath) {
@@ -356,9 +355,9 @@ if (Test-Path $CursorSrc) {
 
 # Generate manifest
 $Manifest = @{
-    name = "ppt-skills"
+    name = "visio-skills"
     version = $Version
-    description = "PowerPoint MCP Server Agent Skills for AI coding assistants"
+    description = "Visio MCP Server Agent Skills for AI coding assistants"
     platforms = @("github-copilot", "claude-code", "cursor", "windsurf", "gemini-cli", "goose", "codex", "opencode", "amp", "kilo", "roo", "trae")
     skills = @(
         @{
@@ -384,7 +383,7 @@ $Manifest = @{
         @{ name = ".cursorrules"; type = "config"; description = "Cursor project rules" }
     )
     repository = "https://github.com/trsdn/mcp-server-visio"
-    documentation = "https://VisioMcpserver.dev/"
+    documentation = "https://github.com/trsdn/mcp-server-visio"
     buildDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 }
 

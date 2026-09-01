@@ -18,11 +18,11 @@ Relates to #[issue number]
 - Change 3
 
 ## Testing Performed
-- [ ] Tested manually with various PowerPoint files
-- [ ] Verified PowerPoint process cleanup (no powerpnt.exe remains after 5 seconds)
+- [ ] Tested manually with various Visio files
+- [ ] Verified Visio process cleanup (no visio.exe remains after 5 seconds)
 - [ ] Tested error conditions (missing files, invalid arguments, etc.)
 - [ ] All existing commands still work
-- [ ] If PowerPoint CI runner was inactive, ran the required PowerPoint integration tests locally
+- [ ] If Visio CI runner was inactive, ran the required Visio integration tests locally
 - [ ] If LLM-facing help/docs changed, ran `scripts\Test-LlmRegressionGate.ps1` or explained why not
 - [ ] VBA script execution tested (if applicable)
 - [ ] PPTM file format validation tested (if applicable)
@@ -32,8 +32,8 @@ Relates to #[issue number]
 ## Test Commands
 ```powershell
 # Commands used for testing
-VisioMcp command1 "test.pptx"
-VisioMcp command2 "test.pptx" "param"
+VisioMcp command1 "test.vsdx"
+VisioMcp command2 "test.vsdx" "param"
 ```
 
 ## Screenshots (if applicable)
@@ -66,9 +66,9 @@ If YES, verify all steps completed:
 - [ ] Appropriate error handling added
 - [ ] Updated help text (if adding new commands)
 - [ ] Updated README.md (if needed)
-- [ ] Follows PowerPoint COM best practices from copilot-instructions.md
+- [ ] Follows Visio COM best practices from copilot-instructions.md
 - [ ] Uses batch API with proper disposal (`using var batch` or `await using var batch`)
-- [ ] Properly handles 1-based PowerPoint indexing
+- [ ] Properly handles 1-based Visio indexing
 - [ ] Escapes user input with `.EscapeMarkup()`
 - [ ] Returns consistent exit codes (0 = success, 1+ = error)
 

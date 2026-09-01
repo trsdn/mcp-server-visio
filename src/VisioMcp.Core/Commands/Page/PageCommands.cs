@@ -403,7 +403,7 @@ public class PageCommands : IPageCommands
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static OperationResult SetRoutingIntValue(IVisioBatch batch, int pageIndex, string cellName, int value, string actionName)

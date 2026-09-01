@@ -90,7 +90,7 @@ internal sealed class Program
             config.AddCommand<BatchCommand>("batch")
                 .WithDescription("Execute multiple commands from a JSON file or stdin. Outputs NDJSON (one result per line).");
 
-            // Diagnostic commands — infrastructure validation (no PowerPoint required)
+            // Diagnostic commands — infrastructure validation (no Visio required)
             config.AddBranch("diag", branch =>
             {
                 branch.SetDescription("Diagnostic commands: ping, echo, validate-params.");
@@ -107,9 +107,9 @@ internal sealed class Program
             {
                 branch.SetDescription("Session management. WORKFLOW: open -> use sessionId -> close (--save to persist).");
                 branch.AddCommand<SessionCreateCommand>("create")
-                    .WithDescription("Create a new PowerPoint file, open it, and create a session.");
+                    .WithDescription("Create a new Visio file, open it, and create a session.");
                 branch.AddCommand<SessionOpenCommand>("open")
-                    .WithDescription("Open a PowerPoint file and create a session.");
+                    .WithDescription("Open a Visio file and create a session.");
                 branch.AddCommand<SessionCloseCommand>("close")
                     .WithDescription("Close a session. Use --save to persist changes.");
                 branch.AddCommand<SessionListCommand>("list")
@@ -211,8 +211,8 @@ internal sealed class Program
         // (Console.IsOutputRedirected is false in VS Code integrated terminal
         // even when capturing with $result = visiocli ...).
         var err = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(Console.Error) });
-        err.Write(new FigletText("PPT CLI").Color(Spectre.Console.Color.Blue));
-        err.MarkupLine("[dim]PowerPoint automation powered by VisioMcp Core[/]");
+        err.Write(new FigletText("VISIO CLI").Color(Spectre.Console.Color.Blue));
+        err.MarkupLine("[dim]Visio automation powered by VisioMcp Core[/]");
         err.MarkupLine("[yellow]Workflow:[/] [green]session open <file>[/] → run commands with [green]--session <id>[/] → [green]session close --save[/].");
         err.MarkupLine("[dim]A background service manages sessions for performance.[/]");
         err.WriteLine();

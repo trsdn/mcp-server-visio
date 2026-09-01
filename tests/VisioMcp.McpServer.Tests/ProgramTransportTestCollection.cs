@@ -1,4 +1,3 @@
-// Copyright (c) Sbroenne.
 // Copyright (c) 2026 Torsten Mahr. All rights reserved.
 // Licensed under the MIT License.
 

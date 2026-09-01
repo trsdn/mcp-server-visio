@@ -188,6 +188,6 @@ public class ExportCommands : IExportCommands
 
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 }

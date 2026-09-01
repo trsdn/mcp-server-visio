@@ -10,7 +10,7 @@ applyTo: "src/VisioMcp.Core/Commands/**/*.cs,src/VisioMcp.McpServer/**/*.cs"
 
 | Task | Command | Time |
 |------|---------|------|
-| Check coverage before commit | `.\scripts\audit-core-coverage.ps1` | 30s |
+| Check coverage before commit | `dotnet test tests\VisioMcp.McpServer.Tests --filter "FullyQualifiedName~CoreCommandsCoverageTests"` | 30s |
 | Add new Core method | Follow 8-step workflow below | 5-10 min |
 | Fix pre-commit hook failure | Add missing enum values + mappings | 2-3 min |
 | Verify build | `dotnet build -c Release` | 1-2 min |
@@ -24,28 +24,28 @@ applyTo: "src/VisioMcp.Core/Commands/**/*.cs,src/VisioMcp.McpServer/**/*.cs"
 ```markdown
 1. ✅ Add method to Core Commands interface
    File: src/VisioMcp.Core/Commands/[Feature]/I[Feature]Commands.cs
-   Example: Task<OperationResult> NewMethodAsync(IPptBatch batch);
+   Example: OperationResult NewMethod(IVisioBatch batch);
 
 2. ✅ Implement in Core Commands class  
    File: src/VisioMcp.Core/Commands/[Feature]/[Feature]Commands.cs
 
 3. ✅ Add enum value to ToolActions.cs
    File: src/VisioMcp.McpServer/Models/ToolActions.cs
-   Example: SlideAction.NewMethod
+   Example: PageAction.NewMethod
    ⚠️ Build will show CS8524 error until steps 4-6 complete
 
 4. ✅ Add ToActionString mapping
    File: src/VisioMcp.McpServer/Models/ActionExtensions.cs
-   Example: SlideAction.NewMethod => "new-method",
+   Example: PageAction.NewMethod => "new-method",
    ⚠️ CS8524 error persists
 
 5. ✅ Add switch case in MCP Tool
-   File: src/VisioMcp.McpServer/Tools/Ppt[Feature]Tool.cs
-   Example: SlideAction.NewMethod => await NewMethodAsync(...),
+   File: src/VisioMcp.McpServer/Tools/Visio[Feature]Tool.cs
+   Example: PageAction.NewMethod => await NewMethodAsync(...),
    ⚠️ CS8524 error persists
 
 6. ✅ Implement MCP method
-   File: src/VisioMcp.McpServer/Tools/Ppt[Feature]Tool.cs
+   File: src/VisioMcp.McpServer/Tools/Visio[Feature]Tool.cs
    Example: private static async Task<string> NewMethodAsync(...)
    ✅ CS8524 errors resolved
 
@@ -67,27 +67,27 @@ applyTo: "src/VisioMcp.Core/Commands/**/*.cs,src/VisioMcp.McpServer/**/*.cs"
 
 ```csharp
 // Step 3: Add enum value (compiler checks this)
-public enum SlideAction
+public enum PageAction
 {
     List,
-    Get,
+    Read,
     NewMethod  // ⚠️ Forget this → CS8524 error in ActionExtensions.cs
 }
 
 // Step 4: Add ToActionString mapping (compiler checks this)
-public static string ToActionString(this SlideAction action) => action switch
+public static string ToActionString(this PageAction action) => action switch
 {
-    SlideAction.List => "list",
-    SlideAction.Get => "get",
-    SlideAction.NewMethod => "new-method",  // ⚠️ Forget this → CS8524 error
+    PageAction.List => "list",
+    PageAction.Read => "read",
+    PageAction.NewMethod => "new-method",  // ⚠️ Forget this → CS8524 error
 };
 
 // Step 5: Add switch case in Tool (compiler checks this)
 return action switch
 {
-    SlideAction.List => await ListAsync(...),
-    SlideAction.Get => await GetAsync(...),
-    SlideAction.NewMethod => await NewMethodAsync(...),  // ⚠️ Forget this → CS8524 error
+    PageAction.List => await ListAsync(...),
+    PageAction.Read => await ReadAsync(...),
+    PageAction.NewMethod => await NewMethodAsync(...),  // ⚠️ Forget this → CS8524 error
 };
 ```
 
@@ -97,7 +97,7 @@ return action switch
 
 ## Pre-Commit Hook (Automatic Check)
 
-**Before every commit**, the pre-commit hook runs `audit-core-coverage.ps1` to verify Core methods match enum values.
+**Before every commit**, the pre-commit hook runs the `CoreCommandsCoverageTests` suite to verify Core methods match enum values.
 
 **Setup** (one-time):
 ```powershell
@@ -109,7 +109,7 @@ return action switch
 ❌ Coverage gaps detected! All Core methods must be exposed via MCP Server.
 
 The following interfaces have fewer enum values than Core methods:
-  - IRangeCommands: Core has 42 methods, RangeAction has 40 values (missing 2)
+  - IPageCommands: Core has 14 methods, PageAction has 12 values (missing 2)
 
 Action Required:
   1. Review Core interface for new methods
@@ -121,7 +121,7 @@ Action Required:
 **Fix**: Follow 8-step workflow above.
 
 **Emergency bypass** (use only for non-Core changes):
-```bash
+```powershell
 git commit --no-verify -m "Message"
 ```
 
@@ -135,32 +135,32 @@ git commit --no-verify -m "Message"
 
 ```powershell
 # Check coverage (shows gaps if any)
-.\scripts\audit-core-coverage.ps1
+dotnet test tests\VisioMcp.McpServer.Tests --filter "FullyQualifiedName~CoreCommandsCoverageTests"
 
 # Check coverage and fail if gaps found (useful in CI/CD)
-.\scripts\audit-core-coverage.ps1 -FailOnGaps
+dotnet test tests\VisioMcp.McpServer.Tests --filter "FullyQualifiedName~CoreCommandsCoverageTests"
 
 # Verbose output with detailed counts
-.\scripts\audit-core-coverage.ps1 -Verbose
+dotnet test tests\VisioMcp.McpServer.Tests --filter "FullyQualifiedName~CoreCommandsCoverageTests" -v n
 ```
 
 **Expected output when 100% coverage**:
 ```
 Interface           CoreMethods EnumValues Gap Status
 ---------           ----------- ---------- --- ------
-ISlideCommands               15         15   0 ✅
+IPageCommands                14         14   0 ✅
 IShapeCommands               20         20   0 ✅
-ITableCommands               12         12   0 ✅
-IChartCommands               18         18   0 ✅
+ICellCommands                 4          4   0 ✅
+ITextCommands                 4          4   0 ✅
 
-Summary: 100% coverage ✅ (65 Core methods, 65 enum values)
+Summary: 100% coverage ✅ (101 Core methods, 101 enum values)
 ```
 
 **When gaps detected**:
 ```
 Interface           CoreMethods EnumValues Gap Status
 ---------           ----------- ---------- --- ------
-IRangeCommands               42         40   2 ❌
+IPageCommands                14         12   2 ❌
 
 Summary: 98.7% coverage (65 Core methods, 63 enum values, 2 gaps)
 ```

@@ -4,7 +4,7 @@ Low-level COM interop utilities for Visio automation.
 
 ## Overview
 
-This library provides the session, batching, threading, retry, and COM cleanup primitives that the rest of VisioMcp builds on. The implementation still uses some historical `Ppt*` type names internally, but the public intent of this layer is Visio automation on Windows.
+This library provides the session, batching, threading, retry, and COM cleanup primitives that the rest of VisioMcp builds on. It binds to Visio entirely late-bound through the `Visio.Application` / `Visio.InvisibleApp` ProgIDs, so it carries no Office interop assemblies.
 
 ## Responsibilities
 
@@ -16,8 +16,8 @@ This library provides the session, batching, threading, retry, and COM cleanup p
 
 ## Key Types
 
-- **`PptSession`** — session lifecycle helper used by the higher Visio layers
-- **`PptBatch`** — groups multiple operations into one automation session
+- **`VisioSession`** — session lifecycle helper used by the higher Visio layers
+- **`VisioBatch`** — groups multiple operations into one automation session
 - **`ComUtilities`** — safe COM cleanup and helper methods
 - **`OleMessageFilter`** — retries rejected/busy COM calls
 

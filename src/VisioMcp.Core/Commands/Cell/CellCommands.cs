@@ -180,7 +180,7 @@ public class CellCommands : ICellCommands
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static CellInfo ReadCellInfo(dynamic cell, string fallbackName, bool includeValue, bool includeFormula)

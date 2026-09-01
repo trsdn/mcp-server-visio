@@ -23,7 +23,7 @@ applyTo: "src/VisioMcp.McpServer/**/*.cs"
 
 ```csharp
 [McpServerTool]
-public async Task<string> PptSlide(string action, string pptPath, ...)
+public async Task<string> VisioPage(string action, string path, ...)
 {
     return action.ToLowerInvariant() switch
     {
@@ -51,15 +51,15 @@ private static string ForwardSomeAction(string sessionId, string? param)
         throw new ModelContextProtocol.McpException("param is required for action");
 
     // 2. Forward to in-process VisioMcpService (direct call, no pipe)
-    return PptToolsBase.ForwardToService("category.action", sessionId, new { param });
+    return VisioToolsBase.ForwardToService("category.action", sessionId, new { param });
 }
 ```
 
 **When to Throw McpException:**
 - ✅ **Parameter validation** - missing required params, invalid formats (pre-conditions)
-- ✅ **File not found** - presentation doesn't exist (pre-conditions)
+- ✅ **File not found** - document does not exist (pre-conditions)
 - ✅ **Batch not found** - invalid batch session (pre-conditions)
-- ❌ **NOT for business logic errors** - table not found, shape not found, operation failed, etc.
+- ❌ **NOT for business logic errors** - page not found, shape not found, operation failed, etc.
 
 **Why This Pattern:**
 - ✅ MCP spec requires business errors return JSON with `isError: true` flag
@@ -69,15 +69,15 @@ private static string ForwardSomeAction(string sessionId, string? param)
 
 **Example - Business Error (return JSON):**
 ```csharp
-// Core returns: { Success = false, ErrorMessage = "Table 'Sales' not found" }
+// Core returns: { Success = false, ErrorMessage = "Shape 'Process' not found" }
 // MCP Tool: Return this as-is
-return JsonSerializer.Serialize(result, PptToolsBase.JsonOptions);
+return JsonSerializer.Serialize(result, VisioToolsBase.JsonOptions);
 // Client receives via MCP protocol:
 // {
 //   "jsonrpc": "2.0",
 //   "id": 4,
 //   "result": {
-//     "content": [{"type": "text", "text": "{\"success\": false, \"errorMessage\": \"Table 'Sales' not found\"}"}],
+//     "content": [{"type": "text", "text": "{\"success\": false, \"errorMessage\": \"Shape 'Process' not found\"}"}],
 //     "isError": true
 //   }
 // }
@@ -86,9 +86,9 @@ return JsonSerializer.Serialize(result, PptToolsBase.JsonOptions);
 **Example - Validation Error (throw exception):**
 ```csharp
 // Missing required parameter - PROTOCOL ERROR
-if (string.IsNullOrWhiteSpace(tableName))
+if (string.IsNullOrWhiteSpace(shapeName))
 {
-    throw new ModelContextProtocol.McpException("tableName is required for create-from-table action");
+    throw new ModelContextProtocol.McpException("shapeName is required for read action");
 }
 // Client receives: JSON-RPC error with HTTP error code
 ```
@@ -99,7 +99,7 @@ if (string.IsNullOrWhiteSpace(tableName))
 
 ```csharp
 [McpServerTool]
-public static async Task<string> PptTool(ToolAction action, ...)
+public static async Task<string> VisioTool(ToolAction action, ...)
 {
     try
     {
@@ -120,11 +120,11 @@ public static async Task<string> PptTool(ToolAction action, ...)
         {
             Success = false,
             ErrorMessage = ex.Message,
-            FilePath = pptPath,
+            FilePath = path,
             Action = action.ToActionString(),
             SuggestedNextActions = new List<string>
             {
-                "Check if PowerPoint is showing a dialog or prompt",
+                "Check if Visio is showing a dialog or prompt",
                 "Verify data source connectivity",
                 "For large datasets, operation may need more time"
             },
@@ -138,11 +138,11 @@ public static async Task<string> PptTool(ToolAction action, ...)
                 ? "Maximum timeout reached. Check connectivity manually."
                 : "Retry acceptable if issue is transient."
         };
-        return JsonSerializer.Serialize(result, PptToolsBase.JsonOptions);
+        return JsonSerializer.Serialize(result, VisioToolsBase.JsonOptions);
     }
     catch (Exception ex)
     {
-        PptToolsBase.ThrowInternalError(ex, action.ToActionString(), pptPath);
+        VisioToolsBase.ThrowInternalError(ex, action.ToActionString(), path);
         throw; // Unreachable but satisfies compiler
     }
 }
@@ -155,7 +155,7 @@ public static async Task<string> PptTool(ToolAction action, ...)
 ```csharp
 // Tool signature: async Task<string> (MCP SDK requirement)
 [McpServerTool]
-public static async Task<string> PptSlide(string action, ...)
+public static async Task<string> VisioPage(string action, ...)
 {
     // Action methods: synchronous (no await!)
     return action.ToLowerInvariant() switch
@@ -169,14 +169,14 @@ public static async Task<string> PptSlide(string action, ...)
 // Action methods forward to in-process VisioMcpService:
 private static string ForwardList(string sessionId)
 {
-    return PptToolsBase.ForwardToService("slide.list", sessionId);
+    return VisioToolsBase.ForwardToService("page.list", sessionId);
 }
 
-private static string ForwardView(string sessionId, string slideIndex)
+private static string ForwardRead(string sessionId, string pageIndex)
 {
-    if (string.IsNullOrEmpty(slideIndex))
-        PptToolsBase.ThrowMissingParameter("slideIndex", "view");
-    return PptToolsBase.ForwardToService("slide.view", sessionId, new { slideIndex });
+    if (string.IsNullOrEmpty(pageIndex))
+        VisioToolsBase.ThrowMissingParameter("pageIndex", "read");
+    return VisioToolsBase.ForwardToService("page.read", sessionId, new { pageIndex });
 }
 ```
 
@@ -191,7 +191,7 @@ return JsonSerializer.Serialize(result, JsonOptions);
 
 ## JSON Deserialization & COM Marshalling
 
-**⚠️ CRITICAL:** MCP deserializes JSON arrays to `JsonElement`, NOT primitives. PowerPoint COM requires proper types.
+**⚠️ CRITICAL:** MCP deserializes JSON arrays to `JsonElement`, NOT primitives. Visio COM requires proper types.
 
 **Problem:** `values: [["text", 123, true]]` → `List<List<object?>>` where each object is `JsonElement`.
 
@@ -234,13 +234,13 @@ private static object ConvertToCellValue(object? value)
 
 **❌ WRONG: Verbose guidance (LLM doesn't need step-by-step instructions)**
 ```csharp
-errorMessage = "Operation failed. This usually means: (1) Slide doesn't exist, (2) Shape not found, or (3) Session closed. " +
-               "Use slide(action: 'list') to verify slide exists, then file(action: 'list') to check sessions.";
+errorMessage = "Operation failed. This usually means: (1) Page doesn't exist, (2) Shape not found, or (3) Session closed. " +
+               "Use page(action: 'list') to verify pages, then file(action: 'list') to check sessions.";
 ```
 
 **✅ CORRECT: State facts (LLM determines next action)**
 ```csharp
-errorMessage = $"Cannot read shape '{shape}' on slide '{slide}': {ex.Message}";
+errorMessage = $"Cannot read shape '{shape}' on page '{page}': {ex.Message}";
 ```
 
 **Why:** LLMs are intelligent agents that determine workflow. Error messages should report what failed and why, not prescribe solutions.
@@ -337,18 +337,14 @@ Before committing MCP tool changes:
 **Example - Good tool description:**
 ```csharp
 /// <summary>
-/// Manage slides in a PowerPoint presentation.
+/// Manage Visio pages in a document: list, read, create, rename, delete, and configure guides/layout.
 /// 
-/// LAYOUT OPTIONS (non-enum parameter):
-/// - 'blank': Empty slide with no placeholders (DEFAULT)
-/// - 'title': Title slide layout
-/// - 'title-content': Title and content layout
-/// - 'section-header': Section header layout
-/// - 'two-content': Two content areas side by side
+/// PAGE OPERATIONS:
+/// - Use page for document page lifecycle and page-level routing settings.
+/// - Use shape for drawing rectangles/lines, dropping stencil masters, and connecting shapes.
+/// - Use cell for direct ShapeSheet formulas such as Width, Height, PinX, PinY, and Angle.
 /// 
 /// TIMEOUT: Long-running operations auto-timeout after 5 minutes.
-/// 
-/// Use shape tool for adding content to slides.
 /// </summary>
 ```
 ✅ Describes purpose and use cases

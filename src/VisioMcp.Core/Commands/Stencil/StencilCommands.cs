@@ -124,7 +124,7 @@ public class StencilCommands : IStencilCommands
             throw new FileNotFoundException($"Stencil file was not found: {stencilPath}", stencilPath);
         }
 
-        return ((dynamic)ctx.Application).Documents.OpenEx(stencilPath, StencilOpenFlags);
+        return ctx.Application.Documents.OpenEx(stencilPath, StencilOpenFlags);
     }
 
     private static void CloseStencilDocument(ref dynamic? stencilDocument)
@@ -192,7 +192,7 @@ public class StencilCommands : IStencilCommands
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
-        return ((dynamic)ctx.Document).Pages.Item(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static StencilMasterInfo ReadMasterInfo(dynamic master, int index)

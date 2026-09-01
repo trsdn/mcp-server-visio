@@ -5,7 +5,7 @@ using Polly.Retry;
 namespace VisioMcp.ComInterop.Session;
 
 /// <summary>
-/// Provides pre-configured resilience pipelines for _pptApp COM interop operations.
+/// Provides pre-configured resilience pipelines for Visio COM interop operations.
 /// </summary>
 public static class ResiliencePipelines
 {
@@ -22,19 +22,19 @@ public static class ResiliencePipelines
     public const int RPC_E_CALL_REJECTED = unchecked((int)0x80010001);          // -2147418111
 
     /// <summary>
-    /// RPC_E_CALL_FAILED - RPC connection failed. _pptApp is unreachable.
-    /// FATAL ERROR - Do not retry, _pptApp process must be force-killed.
+    /// RPC_E_CALL_FAILED - RPC connection failed. Visio is unreachable.
+    /// FATAL ERROR - Do not retry, Visio process must be force-killed.
     /// </summary>
     public const int RPC_E_CALL_FAILED = unchecked((int)0x800706BE);            // -2147023170
 
     /// <summary>
-    /// RPC_S_SERVER_UNAVAILABLE - The RPC server is unavailable. _pptApp process has died.
+    /// RPC_S_SERVER_UNAVAILABLE - The RPC server is unavailable. Visio process has died.
     /// FATAL ERROR - Do not retry, session must be cleaned up.
     /// </summary>
     public const int RPC_S_SERVER_UNAVAILABLE = unchecked((int)0x800706BA);     // -2147023174
 
     /// <summary>
-    /// CO_E_SERVER_EXEC_FAILURE - COM class factory failed to start the server (PowerPoint).
+    /// CO_E_SERVER_EXEC_FAILURE - COM class factory failed to start the server (Visio).
     /// Transient during session creation when system resources are constrained.
     /// </summary>
     public const int CO_E_SERVER_EXEC_FAILURE = unchecked((int)0x80080005);     // -2146959355
@@ -66,8 +66,8 @@ public static class ResiliencePipelines
         AdditionalHResults: [DATA_MODEL_BUSY]);
 
     /// <summary>
-    /// Retry configuration for session creation (starting new _pptApp instances).
-    /// Handles CO_E_SERVER_EXEC_FAILURE when system can't launch _pptApp temporarily.
+    /// Retry configuration for session creation (starting new Visio instances).
+    /// Handles CO_E_SERVER_EXEC_FAILURE when system can't launch Visio temporarily.
     /// Also handles RPC_E_CALL_FAILED since a new process hasn't been contacted yet.
     /// </summary>
     private static readonly PipelineConfig SessionCreationConfig = new(
@@ -80,11 +80,11 @@ public static class ResiliencePipelines
     #region Factory Methods
 
     /// <summary>
-    /// Creates a retry pipeline for PowerPoint.Quit() operations.
+    /// Creates a retry pipeline for Visio.Quit() operations.
     /// Handles transient COM busy conditions with exponential backoff + jitter.
     /// </summary>
     /// <returns>Configured resilience pipeline</returns>
-    public static ResiliencePipeline CreatePowerPointQuitPipeline() => CreatePipeline(DefaultComConfig);
+    public static ResiliencePipeline CreateVisioQuitPipeline() => CreatePipeline(DefaultComConfig);
 
     /// <summary>
     /// Creates a retry pipeline for Data Model operations (measures, relationships, tables).
@@ -92,7 +92,7 @@ public static class ResiliencePipelines
     /// </summary>
     /// <remarks>
     /// The 0x800AC472 error occurs intermittently when performing Data Model operations
-    /// on Presentations with active Power Pivot models. The operation typically succeeds on retry.
+    /// on Documents with active Power Pivot models. The operation typically succeeds on retry.
     /// See GitHub Issue #315 for details.
     /// </remarks>
     /// <returns>Configured resilience pipeline</returns>
@@ -101,12 +101,12 @@ public static class ResiliencePipelines
     /// <summary>
     /// Creates a retry pipeline for session creation operations.
     /// Handles CO_E_SERVER_EXEC_FAILURE (0x80080005) and RPC_E_CALL_FAILED (0x800706BE)
-    /// which occur when the system cannot start a new _pptApp process temporarily.
+    /// which occur when the system cannot start a new Visio process temporarily.
     /// </summary>
     /// <remarks>
-    /// Unlike mid-session pipelines where RPC_E_CALL_FAILED is fatal (_pptApp died),
+    /// Unlike mid-session pipelines where RPC_E_CALL_FAILED is fatal (Visio died),
     /// during session creation these errors are transient — the system may be temporarily
-    /// unable to launch a new _pptApp process due to resource constraints.
+    /// unable to launch a new Visio process due to resource constraints.
     /// </remarks>
     /// <returns>Configured resilience pipeline</returns>
     public static ResiliencePipeline CreateSessionCreationPipeline() => CreateSessionPipeline(SessionCreationConfig);
@@ -144,7 +144,7 @@ public static class ResiliencePipelines
     /// <summary>
     /// Creates a resilience pipeline for session creation.
     /// Unlike <see cref="CreatePipeline"/>, this does NOT exclude RPC_E_CALL_FAILED as fatal
-    /// because during session creation there is no existing _pptApp process to have died.
+    /// because during session creation there is no existing Visio process to have died.
     /// </summary>
     private static ResiliencePipeline CreateSessionPipeline(PipelineConfig config)
     {

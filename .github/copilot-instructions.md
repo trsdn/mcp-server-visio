@@ -5,18 +5,18 @@
 ## 📋 Critical Files (Read These First)
 
 **ALWAYS read when working on code:**
-- [CRITICAL-RULES.md](instructions/critical-rules.instructions.md) - 27 mandatory rules (Success flag, COM cleanup, tests, etc.)
+- [CRITICAL-RULES.md](instructions/critical-rules.instructions.md) - numbered mandatory rules (Success flag, COM cleanup, tests, etc.)
 - [Architecture Patterns](instructions/architecture-patterns.instructions.md) - Batch API, command pattern, resource management
 
 **Read based on task type:**
-- Adding/fixing commands → [PowerPoint COM Interop](instructions/ppt-com-interop.instructions.md)
+- Adding/fixing commands → [Visio COM Interop](instructions/visio-com-interop.instructions.md)
 - Writing tests → [Testing Strategy](instructions/testing-strategy.instructions.md)
 - MCP Server work → [MCP Server Guide](instructions/mcp-server-guide.instructions.md)
 - Creating PR → [Development Workflow](instructions/development-workflow.instructions.md)
 - Fixing bugs → [Bug Fixing Checklist](instructions/bug-fixing-checklist.instructions.md)
 
 **Less frequently needed:**
-- [PowerPoint Connection Types](instructions/ppt-com-patterns-guide.instructions.md) - Only for connection-specific work
+- [Visio Connection Types](instructions/visio-com-patterns-guide.instructions.md) - Only for connection-specific work
 - [README Management](instructions/readme-management.instructions.md) - Only when updating READMEs
 - [Documentation Structure](instructions/documentation-structure.instructions.md) - Only when creating docs
 
@@ -24,7 +24,7 @@
 
 ## What is VisioMcp?
 
-**VisioMcp** is a Windows-only toolset for programmatic PowerPoint automation via COM interop, designed for coding agents and automation scripts.
+**VisioMcp** is a Windows-only toolset for programmatic Visio automation via COM interop, designed for coding agents and automation scripts.
 
 > **⚠️ CRITICAL: VisioMcp has TWO equal entry points — MCP Server AND CLI.**
 > Both are first-class citizens. Every feature, action, and parameter must work identically through both.
@@ -33,8 +33,8 @@
 
 **Core Layers:**
 1. **ComInterop** (`src/VisioMcp.ComInterop`) - Reusable COM automation patterns (STA threading, session management, batch operations, OLE message filter)
-2. **Core** (`src/VisioMcp.Core`) - PowerPoint-specific business logic (slides, shapes, VBA, parameters)
-3. **Service** (`src/VisioMcp.Service`) - PowerPoint session management and command routing (in-process for MCP Server, named pipe for CLI daemon)
+2. **Core** (`src/VisioMcp.Core`) - Visio-specific business logic (pages, shapes, stencils, ShapeSheet cells, parameters)
+3. **Service** (`src/VisioMcp.Service`) - Visio session management and command routing (in-process for MCP Server, named pipe for CLI daemon)
 4. **CLI** (`src/VisioMcp.CLI`) - Command-line interface for scripting (EQUAL entry point)
 5. **MCP Server** (`src/VisioMcp.McpServer`) - Model Context Protocol for AI assistants (EQUAL entry point)
 
@@ -53,7 +53,7 @@
 dotnet test --filter "Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust"
 
 # Surgical testing - Feature-specific (2-5 minutes per feature)
-dotnet test --filter "Feature=Slide&RunType!=OnDemand"
+dotnet test --filter "Feature=Page&RunType!=OnDemand"
 dotnet test --filter "Feature=Shape&RunType!=OnDemand"
 dotnet test --filter "Feature=Text&RunType!=OnDemand"
 
@@ -65,13 +65,13 @@ dotnet test --filter "RunType=OnDemand"
 ```csharp
 // Core: NEVER wrap batch.Execute() in try-catch that returns error result
 // Let exceptions propagate naturally - batch.Execute() handles them via TaskCompletionSource
-public DataType Method(IPptBatch batch, string arg1)
+public DataType Method(IVisioBatch batch, string arg1)
 {
     return batch.Execute((ctx, ct) => {
         dynamic? item = null;
         try {
             // Operation code here
-            item = ctx.Presentation.SomeObject;
+            item = ctx.Document.Pages.Item(1);
             // For CRUD: return void (throws on error)
             // For queries: return actual data
             return someData;
@@ -89,7 +89,7 @@ public DataType Method(IPptBatch batch, string arg1)
 public int Method(string[] args)
 {
     try {
-        using var batch = PptSession.BeginBatch(filePath);
+        using var batch = VisioSession.BeginBatch(filePath);
         _coreCommands.Method(batch, arg1);
         return 0;
     } catch (Exception ex) {
@@ -102,7 +102,7 @@ public int Method(string[] args)
 [Fact]
 public void TestMethod()
 {
-    using var batch = PptSession.BeginBatch(_testFile);
+    using var batch = VisioSession.BeginBatch(_testFile);
     var result = _commands.Method(batch, args);
     Assert.NotNull(result); // Or other appropriate assertion
 }
@@ -122,9 +122,9 @@ public void TestMethod()
 
 **Batch API:** Create NEW simple tests. CLI needs try-catch wrapping.
 
-**PowerPoint Quirks:** Shape Z-order requires explicit reordering. Slide indices are 1-based. Use `Slides.Item(index)` not zero-based access.
+**Visio Quirks:** Page and shape collections are 1-based. Use `Pages.Item(index)` / `Shapes.Item(index)` and ShapeSheet cells (`CellsU`) for geometry.
 
-**MCP Design:** Prompts are shortcuts, not tutorials. LLMs know PowerPoint/programming.
+**MCP Design:** Prompts are shortcuts, not tutorials. LLMs know Visio/programming.
 
 **Tool Priority:** `replace_string_in_file` > `grep_search` > `run_in_terminal`. Avoid PowerShell for code.
 
@@ -134,7 +134,7 @@ public void TestMethod()
 
 **Surgical Testing:** Integration tests take 45+ minutes. ALWAYS test only the feature you changed using `--filter "Feature=<name>"`.
 
-**MCP Parameter Naming:** NEVER use underscores in C# Core interface parameter names. The `McpToolGenerator` calls `StringHelper.ToSnakeCase()` on the C# parameter name to produce the MCP snake_case parameter automatically. Use camelCase in C# that produces the desired snake_case output: `rangeAddress` → `range_address`, `sourceRangeAddress` → `source_range_address`. If the C# name can't produce the desired MCP name via ToSnakeCase, use `[FromString("desiredName")]` attribute instead of underscores in C# names.
+**MCP Parameter Naming:** NEVER use underscores in C# Core interface parameter names. The `McpToolGenerator` calls `StringHelper.ToSnakeCase()` on the C# parameter name to produce the MCP snake_case parameter automatically. Use camelCase in C# that produces the desired snake_case output: `pageIndex` → `page_index`, `shapeName` → `shape_name`. If the C# name can't produce the desired MCP name via ToSnakeCase, use `[FromString("desiredName")]` attribute instead of underscores in C# names.
 
 ---
 
@@ -143,7 +143,7 @@ public void TestMethod()
 GitHub Copilot auto-loads instructions based on files you're editing:
 
 - `tests/**/*.cs` → [Testing Strategy](instructions/testing-strategy.instructions.md)
-- `src/VisioMcp.Core/**/*.cs` → [PowerPoint COM Interop](instructions/ppt-com-interop.instructions.md)
+- `src/VisioMcp.Core/**/*.cs` → [Visio COM Interop](instructions/visio-com-interop.instructions.md)
 - `src/VisioMcp.McpServer/**/*.cs` → [MCP Server Guide](instructions/mcp-server-guide.instructions.md)
 - `.github/workflows/**/*.yml` → [Development Workflow](instructions/development-workflow.instructions.md)
 - `**` (all files) → [CRITICAL-RULES.md](instructions/critical-rules.instructions.md)
@@ -152,7 +152,7 @@ Modular approach = relevant context without overload.
 
 ---
 
-## 🔒 Pre-Commit Hooks (10 Automated Checks)
+## 🔒 Pre-Commit Hooks (6 Automated Checks)
 
 Pre-commit runs `scripts/pre-commit.ps1` which blocks commits if any check fails:
 
@@ -160,14 +160,14 @@ Pre-commit runs `scripts/pre-commit.ps1` which blocks commits if any check fails
 |---|-------|--------|-------------------|
 | 1 | Branch | (inline) | Never commit to `main` directly (Rule 6) |
 | 2 | COM Leaks | `check-com-leaks.ps1` | All `dynamic` COM objects have `ComUtilities.Release()` in finally |
-| 3 | Coverage Audit | `audit-core-coverage.ps1` | 100% Core methods exposed via MCP Server |
-| 4 | MCP-Core Implementation | `check-mcp-core-implementations.ps1` | All enum actions have Core method implementations |
-| 5 | Success Flag | `check-success-flag.ps1` | Rule 0: Never `Success=true` with `ErrorMessage` |
-| 6 | CLI Coverage | `check-cli-coverage.ps1` | All action enums have CLI commands |
-| 7 | CLI Action Switch | `check-cli-action-coverage.ps1` | Actions requiring args have explicit switch cases |
-| 8 | CLI Settings Usage | `check-cli-settings-usage.ps1` | All Settings properties used in args |
-| 9 | CLI Workflow Test | `Test-CliWorkflow.ps1` | E2E CLI workflow smoke test |
-| 10 | MCP Smoke Test | `dotnet test --filter "...SmokeTest..."` | All MCP tools functional |
+| 3 | Coverage | `dotnet test --filter "...CoreCommandsCoverageTests"` | Every Core method has a generated action value and a `ToActionString` mapping |
+| 4 | Success Flag | `check-success-flag.ps1` | Rule 0: Never `Success=true` with `ErrorMessage` |
+| 5 | CLI Workflow Test | `Test-CliWorkflow.ps1` | E2E CLI workflow smoke test |
+| 6 | MCP Smoke Test | `dotnet test --filter "...SmokeTest..."` | All MCP tools functional |
+
+> The coverage check is a reflection-driven test rather than a path-scanning script. Actions are
+> emitted by the source generators, so scanning fixed file paths drifts out of date; reading the
+> generated enums at runtime cannot.
 
 **Install hook:**
 ```powershell
@@ -219,12 +219,12 @@ dotnet build -c Release  # Generates SKILL.md, copies references, and generates 
 
 **Guidance architecture (single source of truth):**
 - `skills/shared/*.md` → auto-copied to skill references AND auto-generated as MCP prompts
-- Skill-based clients (VS Code, Cursor) read `skills/ppt-*/references/`
+- Skill-based clients (VS Code, Cursor) read `skills/visio-*/references/`
 - MCP-only clients (Claude Desktop) read auto-generated `[McpServerPrompt]` methods
 - NEVER create separate prompt files for content that belongs in `skills/shared/`
 
 **Install via npx:**
-```bash
+```powershell
 npx skills add trsdn/mcp-server-visio --skill visio-cli   # Coding agents
 npx skills add trsdn/mcp-server-visio --skill visio-mcp   # Conversational AI
 ```
@@ -235,11 +235,13 @@ npx skills add trsdn/mcp-server-visio --skill visio-mcp   # Conversational AI
 
 ### Command File Structure
 ```
-Commands/Slide/
-├── ISlideCommands.cs           # Interface (defines contract)
-├── SlideCommands.cs            # Partial class (constructor, DI)
-├── SlideCommands.Lifecycle.cs  # Partial (Create, Delete, Rename...)
-└── SlideCommands.Style.cs      # Partial (formatting operations)
+Commands/Page/
+├── IPageCommands.cs            # Interface (defines contract)
+└── PageCommands.cs             # Implementation (Create, Read, Delete, Guides, Layout)
+
+Commands/Shape/
+├── IShapeCommands.cs           # Interface (defines contract)
+└── ShapeCommands.cs            # Implementation (Draw, Drop, Connect, Modify, Delete)
 ```
 
 **Rules:**
@@ -265,8 +267,8 @@ catch (Exception ex) {
 ### Service Architecture (TWO EQUAL ENTRY POINTS)
 
 ```
-MCP Server ──► In-process VisioMcpService ──► Core Commands ──► PowerPoint COM
-CLI ─────────► CLI Daemon (named pipe) ─────► Core Commands ──► PowerPoint COM
+MCP Server ──► In-process VisioMcpService ──► Core Commands ──► Visio COM
+CLI ─────────► CLI Daemon (named pipe) ─────► Core Commands ──► Visio COM
 ```
 
 **⚠️ MCP Server and CLI are BOTH first-class entry points.** Each hosts its own VisioMcpService instance:

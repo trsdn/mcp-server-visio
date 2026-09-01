@@ -13,21 +13,21 @@ public static class ComUtilities
     /// </summary>
     /// <param name="comObject">The COM object to release</param>
     /// <remarks>
-    /// Use this helper to release intermediate COM objects (like slides, shapes)
-    /// to prevent PowerPoint process from staying open. This is especially important when
+    /// Use this helper to release intermediate COM objects (like pages, shapes)
+    /// to prevent Visio process from staying open. This is especially important when
     /// iterating through collections or accessing multiple COM properties.
     /// </remarks>
     /// <example>
     /// <code>
-    /// dynamic? slides = null;
+    /// dynamic? pages = null;
     /// try
     /// {
-    ///     slides = presentation.Slides;
-    ///     // Use slides...
+    ///     pages = document.Pages;
+    ///     // Use pages...
     /// }
     /// finally
     /// {
-    ///     ComUtilities.Release(ref slides);
+    ///     ComUtilities.Release(ref pages);
     /// }
     /// </code>
     /// </example>
@@ -57,7 +57,7 @@ public static class ComUtilities
     /// need to handle or report errors. For production shutdown with retry
     /// logic, use VisioShutdownService.CloseAndQuit instead.
     /// </remarks>
-    public static void TryQuitPowerPoint(dynamic? application)
+    public static void TryQuitVisio(dynamic? application)
     {
         if (application == null) return;
 

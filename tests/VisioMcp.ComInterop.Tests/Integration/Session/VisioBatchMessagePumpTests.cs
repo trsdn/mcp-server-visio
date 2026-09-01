@@ -15,7 +15,7 @@ namespace VisioMcp.ComInterop.Tests.Integration.Session;
 ///    when any exception occurred (e.g., ObjectDisposedException on CancellationTokenSource).
 ///
 /// 2. Thread.Sleep(10) on STA thread with registered OLE message filter returned immediately
-///    when pending COM messages existed (PowerPoint events during calculation), turning the poll
+///    when pending COM messages existed (Visio events during calculation), turning the poll
 ///    loop into a tight spin.
 ///
 /// The fix replaced polling with WaitToReadAsync() which blocks efficiently and wakes
@@ -27,7 +27,7 @@ namespace VisioMcp.ComInterop.Tests.Integration.Session;
 /// - ✅ Test shutdown drains remaining work items (race condition fix)
 /// - ✅ Test Dispose during Execute gives clean error (race condition fix)
 ///
-/// IMPORTANT: These tests spawn and terminate PowerPoint processes (side effects).
+/// IMPORTANT: These tests spawn and terminate Visio processes (side effects).
 /// They run OnDemand only to avoid interference with normal test runs.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -49,20 +49,9 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
 
     public Task InitializeAsync()
     {
-        if (_staticTestFile == null)
-        {
-            var testFolder = Path.Join(AppContext.BaseDirectory, "Integration", "Session", "TestFiles");
-            _staticTestFile = Path.Join(testFolder, "batch-test-static.pptx");
+        _staticTestFile ??= VisioTestFixture.EnsureStaticTestFile();
 
-            if (!File.Exists(_staticTestFile))
-            {
-                throw new FileNotFoundException($"Static test file not found at {_staticTestFile}. " +
-                    "Please create the batch-test-static.pptx file in the TestFiles folder.");
-            }
-        }
-
-        _testFileCopy = Path.Join(Path.GetTempPath(), $"batch-pump-test-{Guid.NewGuid():N}.pptx");
-        File.Copy(_staticTestFile, _testFileCopy, overwrite: true);
+        _testFileCopy = VisioTestFixture.CreateCopy("batch-pump-test");
 
         return Task.Delay(500);
     }
@@ -86,7 +75,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
     /// 3-second idle period. The original bug caused ~100% CPU on one core (2.97s/3s).
     /// The fix should show near-zero CPU.
     ///
-    /// We measure CPU time of the POWERPNT.EXE process (which should be ~0 since we're not
+    /// We measure CPU time of the VISIO.EXE process (which should be ~0 since we're not
     /// doing anything) AND the overall thread behavior by measuring our own process's CPU.
     /// </summary>
     [Fact]
@@ -98,13 +87,13 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         // Perform one operation to ensure everything is fully initialized
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 
-        // Capture the PowerPoint process ID for measurement
-        int? pptPid = batch.PowerPointProcessId;
-        Assert.NotNull(pptPid);
+        // Capture the Visio process ID for measurement
+        int? visioPid = batch.VisioProcessId;
+        Assert.NotNull(visioPid);
 
         // Let everything settle
         Thread.Sleep(500);
@@ -114,12 +103,12 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         var cpuBefore = currentProcess.TotalProcessorTime;
         var wallBefore = Stopwatch.GetTimestamp();
 
-        // Also measure PowerPoint's CPU
-        TimeSpan pptCpuBefore;
-        using (var pptProcess = Process.GetProcessById(pptPid.Value))
+        // Also measure Visio's CPU
+        TimeSpan visioCpuBefore;
+        using (var pptProcess = Process.GetProcessById(visioPid.Value))
         {
             pptProcess.Refresh();
-            pptCpuBefore = pptProcess.TotalProcessorTime;
+            visioCpuBefore = pptProcess.TotalProcessorTime;
         }
 
         // Idle period — the message pump should be sleeping, not spinning
@@ -128,11 +117,11 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         var cpuAfter = currentProcess.TotalProcessorTime;
         var wallAfter = Stopwatch.GetTimestamp();
 
-        TimeSpan pptCpuAfter;
-        using (var pptProcess = Process.GetProcessById(pptPid.Value))
+        TimeSpan visioCpuAfter;
+        using (var pptProcess = Process.GetProcessById(visioPid.Value))
         {
             pptProcess.Refresh();
-            pptCpuAfter = pptProcess.TotalProcessorTime;
+            visioCpuAfter = pptProcess.TotalProcessorTime;
         }
 
         // Calculate
@@ -140,12 +129,12 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         var wallElapsed = Stopwatch.GetElapsedTime(wallBefore, wallAfter).TotalMilliseconds;
         var cpuPercent = (cpuUsed / wallElapsed) * 100.0;
 
-        var pptCpuUsed = (pptCpuAfter - pptCpuBefore).TotalMilliseconds;
-        var pptCpuPercent = (pptCpuUsed / wallElapsed) * 100.0;
+        var visioCpuUsed = (visioCpuAfter - visioCpuBefore).TotalMilliseconds;
+        var visioCpuPercent = (visioCpuUsed / wallElapsed) * 100.0;
 
         _output.WriteLine($"Idle period: {wallElapsed:F0}ms wall time");
         _output.WriteLine($"MCP process CPU: {cpuUsed:F1}ms ({cpuPercent:F1}%)");
-        _output.WriteLine($"PowerPoint process CPU: {pptCpuUsed:F1}ms ({pptCpuPercent:F1}%)");
+        _output.WriteLine($"Visio process CPU: {visioCpuUsed:F1}ms ({visioCpuPercent:F1}%)");
 
         // Assert — CPU should be well under 5% during idle.
         // The original bug showed ~100% (one full core). Even with test runner overhead,
@@ -176,7 +165,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         // Warmup — ensure first-call JIT overhead is gone
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 
@@ -244,7 +233,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         // Initialize
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 
@@ -340,7 +329,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
 
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 
@@ -365,7 +354,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
     /// actively waiting for its result. The Execute caller should get either:
     /// - Their result (if work completed before disposal)
     /// - ObjectDisposedException (if disposal won the race)
-    /// - TimeoutException (if PowerPoint cleanup took too long — unlikely but acceptable)
+    /// - TimeoutException (if Visio cleanup took too long — unlikely but acceptable)
     ///
     /// It must NOT get a ChannelClosedException or hang indefinitely.
     /// </summary>
@@ -378,7 +367,7 @@ public class VisioBatchMessagePumpTests : IAsyncLifetime
         // Initialize
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 

@@ -11,8 +11,8 @@
     <Copyright>Copyright © 2026 Torsten Mahr</Copyright>
 
     <!-- Repository information -->
-    <PackageProjectUrl>https://github.com/torstenmahr/mcp-server-visio</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/torstenmahr/mcp-server-visio</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/trsdn/mcp-server-visio</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/trsdn/mcp-server-visio</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
 
@@ -28,8 +28,8 @@
       - CA1416: Windows-only APIs (this is a Windows-only COM automation project)
       - CS8602: Dereference of possibly null reference (dynamic COM objects)
       - SYSLIB1045: GeneratedRegexAttribute pattern (not applicable to our regex usage)
-      - IL2026: Reflection/dynamic code incompatible with trimming (Excel COM uses dynamic)
-      - IL3050: Code incompatible with Native AOT (Excel COM requires runtime COM activation)
+      - IL2026: Reflection/dynamic code incompatible with trimming (Visio COM uses dynamic)
+      - IL3050: Code incompatible with Native AOT (Visio COM requires runtime COM activation)
       - CS1573: Parameter has no matching param tag (batch parameter is internal, filtered by generators)
       - CA1848: Use LoggerMessage delegates (perf optimization not needed for our diagnostic logging)
       - CA1873: Logging argument evaluation (diagnostics only, performance not critical)
@@ -61,8 +61,8 @@
   </PropertyGroup>
 
   <!--
-    Pre-build cleanup: gracefully stop VisioMcp Service and kill PowerPoint processes.
-    Prevents file locking during build. Skipped in CI (no PowerPoint/Service there).
+    Pre-build cleanup: gracefully stop VisioMcp Service and kill Visio processes.
+    Prevents file locking during build. Skipped in CI (no Visio/Service there).
   -->
   <Target Name="StopVisioMcpProcesses" BeforeTargets="Build" Condition="'$(CI)' != 'true' AND '$(VisioMcpSkipCleanup)' != 'true'">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts\Stop-VisioMcpProcesses.ps1&quot;"

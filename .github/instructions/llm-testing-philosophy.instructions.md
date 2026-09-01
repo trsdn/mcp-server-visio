@@ -50,15 +50,13 @@ A real user doesn't know our CLI syntax. Neither should the test prompt.
 ```python
 # ❌ WRONG: Teaching the LLM how to use our CLI
 prompt = """
-Create a slide layout then set it to use a custom master using 
-'visiocli slidemaster' (run --help to see options).
-The custom layout uses layout-type value 0.
+Open a stencil, find the Basic Shapes master, and drop it using
+'visiocli stencil' and 'visiocli shape' commands (run --help to see options).
 """
 
 # ✅ CORRECT: Natural user request
 prompt = """
-Create a presentation with a custom slide layout showing
-title and content areas.
+Create a Visio drawing with two labeled process boxes connected by a line.
 """
 ```
 
@@ -67,13 +65,13 @@ title and content areas.
 ```python
 # ❌ WRONG: Directing the LLM to a specific command
 prompt = """
-Use the 'visiocli chartconfig' command to change the chart title.
+Use the 'visiocli layer' command to assign the selected shape to a layer.
 """
 
 # ✅ CORRECT: What the user wants
 prompt = """
-Change the chart title to "Q1 Sales Report" without 
-deleting and recreating the chart.
+Move the "Review" shape onto a layer named "Process" without
+deleting and recreating the shape.
 """
 ```
 
@@ -92,7 +90,7 @@ agent = Agent(
 
 # ✅ CORRECT: No system prompt (use skill only) or minimal role context
 agent = Agent(
-    skill=ppt_cli_skill,  # Our product — this IS the right place for guidance
+    skill=visio_cli_skill,  # Our product — this IS the right place for guidance
 )
 ```
 
@@ -115,22 +113,19 @@ which file is open, then use that file path.
 
 ### Natural Language Prompts
 
-Write prompts as a knowledgeable PowerPoint user would. They know PowerPoint concepts but NOT our specific CLI/MCP tool syntax.
+Write prompts as a knowledgeable Visio user would. They know Visio concepts but NOT our specific CLI/MCP tool syntax.
 
 ```python
 prompt = f"""
-Create a new PowerPoint file at {unique_path('sales-presentation')}
+Create a new Visio file at {unique_path('process-flow')}
 
-Add a title slide with:
-Title: "Q1 Sales Report"
-Subtitle: "Regional Performance Summary"
+Add a page named "Q1 Process".
 
-Add a second slide with a table:
-Region, Product, Sales
-North, Widget, 15000
-South, Gadget, 12000
+Draw two rectangles labeled:
+Start
+Review
 
-Add a chart on the third slide showing Region vs Sales.
+Connect the rectangles with a line and save the file.
 
 Save and close the file.
 """
@@ -146,7 +141,7 @@ assert result.success
 assert_cli_exit_codes(result)
 
 # ✅ Good: Did the LLM report key results?
-assert_regex(result.final_response, r"(?i)(slide|shape|title)")
+assert_regex(result.final_response, r"(?i)(page|shape|process)")
 
 # ⚠️ Fragile: Exact numeric values across 5 conversation turns
 assert_regex(result.final_response, r"\$?43,500\.00")  # Requires perfect execution of ALL prior steps
@@ -158,9 +153,9 @@ Match test complexity to what a real user would attempt in one conversation:
 
 | Complexity | Turns | Example |
 |-----------|-------|---------|
-| Simple | 1 | Create file → add slides → read back → close |
-| Medium | 1-2 | Create file → add content → add chart → save |
-| Complex | 2-3 | Build presentation → add animations → configure transitions |
+| Simple | 1 | Create file → add pages/shapes → read back → close |
+| Medium | 1-2 | Create file → add shapes/connectors → save |
+| Complex | 2-3 | Build diagram → add stencil masters → connect and format shapes |
 | Unreasonable | 5+ | 13-step workflow with exact numeric assertions on final state |
 
 ## Where to Fix Failures
@@ -170,15 +165,15 @@ When a test fails, investigate in this order:
 ### 1. Skill Documentation (`skills/visio-cli/SKILL.md`, `skills/visio-mcp/SKILL.md`)
 
 The skill IS our product's interface to LLMs. If the LLM doesn't know how to:
-- Add a shape to a slide → Add workflow patterns to the skill
+- Add a shape to a page → Add workflow patterns to the skill
 - Use `--values-file` instead of `--values` → Document when to use file params
-- Discover `chartconfig` commands → Add chart modification patterns
+- Discover `layer` commands → Add layer workflow patterns
 
 ```markdown
-## Chart Modification Patterns
-To change chart properties WITHOUT deleting the chart:
-- Title: `chartconfig set-title`
-- Type: `chartconfig set-type`
+## Layer Modification Patterns
+To assign shapes WITHOUT deleting and recreating them:
+- Create layer: `layer create`
+- Assign shape: `layer assign-shape`
 ```
 
 ### 2. CLI `--help` Output
@@ -220,10 +215,10 @@ If the LLM consistently gets a parameter name wrong, the name might be confusing
 agent = Agent(
     name="descriptive-test-name",
     provider=Provider(model=f"azure/{DEFAULT_MODEL}", rpm=DEFAULT_RPM, tpm=DEFAULT_TPM),
-    cli_servers=[ppt_cli_server],   # CLI tests
+    cli_servers=[visio_cli_server],   # CLI tests
     # OR
     mcp_servers=[visio_mcp_server],   # MCP tests
-    skill=ppt_cli_skill,            # Our product documentation
+    skill=visio_cli_skill,            # Our product documentation
     max_turns=DEFAULT_MAX_TURNS,      # Always set explicitly
 )
 ```
@@ -242,7 +237,7 @@ result = await aitest_run(agent, "Create file and enter data...")
 messages = result.messages
 
 # Turn 2: Analyze (natural continuation)
-result = await aitest_run(agent, "Now add a chart to the third slide from that data...", messages=messages)
+result = await aitest_run(agent, "Now add a decision shape connected to the review step...", messages=messages)
 ```
 
 Keep multi-turn tests to **2-3 turns maximum**. If you need 5 turns, the test is testing too many features at once — split it into separate tests.
@@ -255,18 +250,13 @@ Keep multi-turn tests to **2-3 turns maximum**. If you need 5 turns, the test is
 
 | Test Scenario | CLI File | MCP File |
 |---------------|----------|----------|
-| calculation_mode | `test_cli_calculation_mode.py` | `test_mcp_calculation_mode.py` |
-| chart | `test_cli_chart.py` | `test_mcp_chart.py` |
-| chart_positioning | `test_cli_chart_positioning.py` | `test_mcp_chart_positioning.py` |
-| file_slide | `test_cli_file_slide.py` | `test_mcp_file_slide.py` |
-| financial_report_automation | `test_cli_financial_report_automation.py` | `test_mcp_financial_report_automation.py` |
-| modification_patterns | `test_cli_modification_patterns.py` | `test_mcp_modification_patterns.py` |
-| slide_layout | `test_cli_slide_layout.py` | `test_mcp_slide_layout.py` |
+| file_page | `test_cli_file_page.py` | `test_mcp_file_page.py` |
 | shape_operations | `test_cli_shape_operations.py` | `test_mcp_shape_operations.py` |
-| range | `test_cli_range.py` | `test_mcp_range.py` |
-| sales_report_workflow | `test_cli_sales_report_workflow.py` | `test_mcp_sales_report_workflow.py` |
-| animation | `test_cli_animation.py` | `test_mcp_animation.py` |
-| table | `test_cli_table.py` | `test_mcp_table.py` |
+| stencil | `test_cli_stencil.py` | `test_mcp_stencil.py` |
+| text | `test_cli_text.py` | `test_mcp_text.py` |
+| cell | `test_cli_cell.py` | `test_mcp_cell.py` |
+| layer | `test_cli_layer.py` | `test_mcp_layer.py` |
+| export | `test_cli_export.py` | `test_mcp_export.py` |
 
 ### Rules for Creating / Updating / Deleting Tests
 
@@ -286,8 +276,8 @@ The ONLY differences between CLI and MCP versions of a test should be:
 # CLI version
 agent = Agent(
     name="test-name-cli",
-    cli_servers=[ppt_cli_server],
-    skill=ppt_cli_skill,
+    cli_servers=[visio_cli_server],
+    skill=visio_cli_skill,
     ...
 )
 
@@ -323,7 +313,7 @@ C# Interfaces (XML /// docs)
 skills/shared/*.md (source of truth)
   → MSBuild EmbeddedResource with Link (embedded in assembly)
   → MSBuild GenerateSkillPromptsClass inline task
-    → PptSkillPrompts.g.cs (14 [McpServerPrompt] methods)
+    → VisioSkillPrompts.g.cs (14 [McpServerPrompt] methods)
       → Claude Desktop sees identical guidance as skill clients
 ```
 
@@ -334,7 +324,7 @@ skills/shared/*.md (source of truth)
 | Wrong tool/command description | `I*Commands.cs` XML `/// <summary>` | `SKILL.md` |
 | Wrong parameter docs | `I*Commands.cs` XML `/// <param>` | `SKILL.md` |
 | Wrong skill prose/rules/workflows | `skills/templates/SKILL.cli.sbn` or `SKILL.mcp.sbn` | `SKILL.md` |
-| Wrong reference doc content | `skills/shared/*.md` | `skills/ppt-*/references/*.md` |
+| Wrong reference doc content | `skills/shared/*.md` | `skills/visio-*/references/*.md` |
 | Wrong MCP prompt content | `skills/shared/*.md` | `Prompts/Content/Skills/` |
 | Wrong Tool Selection table (MCP) | `skills/templates/SKILL.mcp.sbn` | `SKILL.md` |
 | New skill reference needed | Add `.md` to `skills/shared/` + description in `.csproj` | Don't create separate prompt |
@@ -343,7 +333,7 @@ skills/shared/*.md (source of truth)
 
 - **Templates:** `skills/templates/SKILL.cli.sbn`, `skills/templates/SKILL.mcp.sbn`
 - **Reference docs (source of truth):** `skills/shared/*.md` → auto-synced to BOTH skill refs AND MCP prompts
-- **Generated files (NEVER edit):** `skills/visio-cli/SKILL.md`, `skills/visio-mcp/SKILL.md`, `obj/.../PptSkillPrompts.g.cs`
+- **Generated files (NEVER edit):** `skills/visio-cli/SKILL.md`, `skills/visio-mcp/SKILL.md`, `obj/.../VisioSkillPrompts.g.cs`
 - **Description overrides:** `src/VisioMcp.McpServer/VisioMcp.McpServer.csproj` → `GenerateSkillPromptsClass` task
 - **Build command:** `dotnet build -c Release` regenerates SKILL.md, copies references, and generates prompt class
 

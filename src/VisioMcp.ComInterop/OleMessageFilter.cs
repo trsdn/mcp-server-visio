@@ -4,12 +4,12 @@ using System.Runtime.InteropServices.Marshalling;
 namespace VisioMcp.ComInterop;
 
 /// <summary>
-/// OLE Message Filter for handling _pptApp COM busy/retry scenarios.
-/// Automatically retries when _pptApp returns RPC_E_SERVERCALL_RETRYLATER.
+/// OLE Message Filter for handling Visio COM busy/retry scenarios.
+/// Automatically retries when Visio returns RPC_E_SERVERCALL_RETRYLATER.
 /// </summary>
 /// <remarks>
-/// This filter intercepts COM calls to _pptApp and handles transient "server busy" conditions.
-/// When _pptApp is temporarily busy (e.g., showing a dialog), the filter automatically retries
+/// This filter intercepts COM calls to Visio and handles transient "server busy" conditions.
+/// When Visio is temporarily busy (e.g., showing a dialog), the filter automatically retries
 /// after a short delay rather than throwing an exception.
 ///
 /// Register once per STA thread via Register(), revoke on thread shutdown via Revoke().
@@ -161,7 +161,7 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
     }
 
     /// <summary>
-    /// Handles rejected COM calls from PowerPoint.
+    /// Handles rejected COM calls from Visio.
     /// Implements automatic retry logic with exponential backoff for busy/unavailable conditions.
     /// </summary>
     /// <param name="htaskCallee">Handle to the task that rejected the call</param>
@@ -195,7 +195,7 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
         // 0-1s:   100ms delays (quick retries for brief busy states)
         // 1-5s:   200ms delays
         // 5-15s:  500ms delays
-        // 15-30s: 1000ms delays (_pptApp is seriously stuck)
+        // 15-30s: 1000ms delays (Visio is seriously stuck)
         return dwTickCount switch
         {
             < 1000 => 100,
@@ -218,7 +218,7 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
         {
             // PENDINGMSG_WAITDEFPROCESS (2) — dispatch to HandleInComingCall.
             //
-            // During long operations (e.g., connection.Refresh()), we WANT inbound COM
+            // During long operations, we WANT inbound COM
             // callbacks to reach HandleInComingCall so we can reject them with
             // SERVERCALL_RETRYLATER. This triggers the caller's RetryRejectedCall
             // backoff mechanism (proper COM retry protocol).
@@ -228,17 +228,17 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
             // No EnsureScanDefinedEvents, no IDispatch.TryGetTypeInfoCount, no re-entrant
             // COM calls — the callback is rejected at the COM filter layer.
             //
-            // The FormatConditions deadlock (failure mode 1 of WAITDEFPROCESS) is NOT
+            // The re-entrancy deadlock (failure mode 1 of WAITDEFPROCESS) is NOT
             // reintroduced because HandleInComingCall rejects before dispatch.
             return 2; // PENDINGMSG_WAITDEFPROCESS — dispatch to HandleInComingCall
         }
 
         // PENDINGMSG_WAITDEFPROCESS (2) — dispatch inbound messages via HandleInComingCall.
         //
-        // PowerPoint operations like AddChart activate embedded Excel OLE servers,
-        // which send COM callbacks to our STA thread. These must be dispatched
-        // so the OLE activation can complete. HandleInComingCall returns
-        // SERVERCALL_ISHANDLED (0) for normal operations, accepting the callback.
+        // Visio operations that activate embedded OLE servers cause those servers to
+        // send COM callbacks to our STA thread. These must be dispatched so the OLE
+        // activation can complete. HandleInComingCall returns SERVERCALL_ISHANDLED (0)
+        // for normal operations, accepting the callback.
         return 2; // PENDINGMSG_WAITDEFPROCESS — dispatch inbound messages
     }
 

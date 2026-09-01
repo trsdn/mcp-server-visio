@@ -26,7 +26,7 @@ public sealed class ShapeAlignCommandTests(ITestOutputHelper output)
             var third = await AddRectangleShapeAsync(sessionId, 468, 108, 144, 72);
 
             var (alignResult, alignJson) = await CliProcessHelper.RunJsonAsync(
-                $"shapealign align --session {sessionId} --slide-index 1 --shape-names \"{first},{second}\" --align-type 0");
+                $"shapealign align --session {sessionId} --page-index 1 --shape-names \"{first},{second}\" --align-type 0");
             output.WriteLine($"shapealign align: {alignResult.Stdout}");
 
             Assert.Equal(0, alignResult.ExitCode);
@@ -37,7 +37,7 @@ public sealed class ShapeAlignCommandTests(ITestOutputHelper output)
             Assert.Equal(firstAfterAlign.GetProperty("left").GetSingle(), secondAfterAlign.GetProperty("left").GetSingle(), 3);
 
             var (distributeResult, distributeJson) = await CliProcessHelper.RunJsonAsync(
-                $"shapealign distribute --session {sessionId} --slide-index 1 --shape-names \"{first},{second},{third}\" --distribute-type 0");
+                $"shapealign distribute --session {sessionId} --page-index 1 --shape-names \"{first},{second},{third}\" --distribute-type 0");
             output.WriteLine($"shapealign distribute: {distributeResult.Stdout}");
 
             Assert.Equal(0, distributeResult.ExitCode);

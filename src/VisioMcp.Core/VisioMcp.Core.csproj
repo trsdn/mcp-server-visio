@@ -62,7 +62,6 @@
   <ItemGroup>
     <EmbeddedResource Include="Data\*.json" />
     <EmbeddedResource Include="Data\*.md" />
-    <EmbeddedResource Include="Data\archetypes\*.md" />
   </ItemGroup>
 
   <ItemGroup>
@@ -86,11 +85,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- PowerPoint COM Interop PIA - EmbedInteropTypes=true embeds only used types at compile time -->
-    <PackageReference Include="Microsoft.Office.Interop.PowerPoint">
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-      <NoWarn>NU1701</NoWarn>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.ObjectPool" />
     <!-- Required for generated CliSettings class (Spectre.Console.Cli.CommandSettings) -->
     <PackageReference Include="Spectre.Console.Cli" />

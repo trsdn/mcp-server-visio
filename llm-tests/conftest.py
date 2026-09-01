@@ -17,7 +17,6 @@ from pytest_aitest import Agent, CLIServer, MCPServer, Provider, Skill, Wait
 
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
-FIXTURES_DIR = TESTS_DIR / "Fixtures"
 TEST_RESULTS_DIR = TESTS_DIR / "TestResults"
 TEST_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -32,7 +31,7 @@ DEFAULT_MODEL = "gpt-4.1"
 DEFAULT_RPM = 10
 DEFAULT_TPM = 10000
 DEFAULT_MAX_TURNS = 20
-DEFAULT_RETRIES = 3  # PowerPoint COM operations need more retries than default (1)
+DEFAULT_RETRIES = 3  # Visio COM operations need more retries than default (1)
 DEFAULT_TIMEOUT_MS = 600000  # 10 min - Azure GlobalStandard can be slow under load
 
 
@@ -42,13 +41,13 @@ def pytest_configure(config: pytest.Config) -> None:
         config.option.llm_model = "azure/gpt-4.1"
 
 
-def unique_path(prefix: str, suffix: str = ".pptx") -> str:
+def unique_path(prefix: str, suffix: str = ".vsdx") -> str:
     temp_dir = Path(os.environ.get("TEMP", tempfile.gettempdir()))
     path = temp_dir / f"{prefix}-{uuid.uuid4()}{suffix}"
     return path.as_posix()
 
 
-def unique_results_path(prefix: str, suffix: str = ".pptx") -> str:
+def unique_results_path(prefix: str, suffix: str = ".vsdx") -> str:
     path = TEST_RESULTS_DIR / f"{prefix}-{uuid.uuid4()}{suffix}"
     return path.as_posix()
 
@@ -59,7 +58,7 @@ def assert_regex(text: str, pattern: str) -> None:
 
 
 def _parse_cli_results(result: Any) -> list[dict[str, Any]]:
-    calls = result.tool_calls_for("ppt_execute")
+    calls = result.tool_calls_for("visio_execute")
     outputs: list[dict[str, Any]] = []
     for call in calls:
         if call.result:
@@ -103,7 +102,7 @@ def assert_cli_exit_codes(result: Any, *, strict: bool = False) -> None:
 
 
 def assert_cli_args_contain(result: Any, token: str) -> None:
-    calls = result.tool_calls_for("ppt_execute")
+    calls = result.tool_calls_for("visio_execute")
     for call in calls:
         args = call.arguments.get("args", "")
         if token in args:
@@ -117,7 +116,7 @@ def _resolve_mcp_command() -> list[str]:
         return shlex.split(env_command)
 
     # Windows-specific build with COM interop support
-    exe_path = REPO_ROOT / "src/VisioMcp.McpServer/bin/Release/net10.0-windows/VisioMcp.McpServer.exe"
+    exe_path = REPO_ROOT / "src/VisioMcp.McpServer/bin/Release/net9.0-windows/VisioMcp.McpServer.exe"
     if exe_path.exists():
         return [str(exe_path)]
 
@@ -139,7 +138,7 @@ def _resolve_cli_command() -> str:
         return env_command
 
     # Windows-specific build with COM interop support
-    exe_path = REPO_ROOT / "src/VisioMcp.CLI/bin/Release/net10.0-windows/visiocli.exe"
+    exe_path = REPO_ROOT / "src/VisioMcp.CLI/bin/Release/net9.0-windows/visiocli.exe"
     if exe_path.exists():
         return str(exe_path)
 
@@ -156,18 +155,18 @@ def visio_mcp_server() -> MCPServer:
 
 
 @pytest.fixture(scope="session")
-def ppt_cli_server() -> CLIServer:
+def visio_cli_server() -> CLIServer:
     command = _resolve_cli_command()
     temp_dir = Path(os.environ.get("TEMP", tempfile.gettempdir()))
     return CLIServer(
         name="visio-cli",
         command=command,
-        tool_prefix="ppt",
+        tool_prefix="visio",
         shell="none",
         cwd=str(temp_dir),
         discover_help=False,  # Skill Rule 0 requires LLM to run --help first
-        description="PowerPoint CLI automation. Run 'visiocli --help' to discover available commands before use.",
-        timeout=120.0,  # PowerPoint COM operations (especially session close) can take >30s
+        description="Visio CLI automation. Run 'visiocli --help' to discover available commands before use.",
+        timeout=120.0,  # Visio COM operations (especially session close) can take >30s
     )
 
 
@@ -177,13 +176,8 @@ def visio_mcp_skill() -> Skill:
 
 
 @pytest.fixture(scope="session")
-def ppt_cli_skill() -> Skill:
+def visio_cli_skill() -> Skill:
     return Skill.from_path(REPO_ROOT / "skills/visio-cli")
-
-
-@pytest.fixture(scope="session")
-def fixtures_dir() -> Path:
-    return FIXTURES_DIR
 
 
 @pytest.fixture(scope="session")

@@ -6,13 +6,13 @@ namespace VisioMcp.Core.Commands.ShapeAlign;
 
 public class ShapeAlignCommands : IShapeAlignCommands
 {
-    public OperationResult Align(IVisioBatch batch, int slideIndex, string shapeNames, int alignType)
+    public OperationResult Align(IVisioBatch batch, int pageIndex, string shapeNames, int alignType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeNames);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, slideIndex);
+            dynamic page = GetPage(ctx, pageIndex);
             try
             {
                 var names = ParseShapeNames(shapeNames);
@@ -100,7 +100,7 @@ public class ShapeAlignCommands : IShapeAlignCommands
                 {
                     Success = true,
                     Action = "align",
-                    Message = $"Aligned {bounds.Count} shape(s) {alignName} on page {slideIndex}",
+                    Message = $"Aligned {bounds.Count} shape(s) {alignName} on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
             }
@@ -111,13 +111,13 @@ public class ShapeAlignCommands : IShapeAlignCommands
         });
     }
 
-    public OperationResult Distribute(IVisioBatch batch, int slideIndex, string shapeNames, int distributeType)
+    public OperationResult Distribute(IVisioBatch batch, int pageIndex, string shapeNames, int distributeType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeNames);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, slideIndex);
+            dynamic page = GetPage(ctx, pageIndex);
             try
             {
                 var names = ParseShapeNames(shapeNames);
@@ -173,7 +173,7 @@ public class ShapeAlignCommands : IShapeAlignCommands
                 {
                     Success = true,
                     Action = "distribute",
-                    Message = $"Distributed {bounds.Count} shape(s) {distName} on page {slideIndex}",
+                    Message = $"Distributed {bounds.Count} shape(s) {distName} on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
             }
@@ -184,10 +184,10 @@ public class ShapeAlignCommands : IShapeAlignCommands
         });
     }
 
-    private static dynamic GetPage(VisioContext ctx, int slideIndex)
+    private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(slideIndex);
-        return ((dynamic)ctx.Document).Pages.Item(slideIndex);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
+        return ctx.Document.Pages.Item(pageIndex);
     }
 
     private static List<string> ParseShapeNames(string shapeNames)

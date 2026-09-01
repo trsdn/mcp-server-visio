@@ -1,4 +1,3 @@
-// Copyright (c) Sbroenne.
 // Copyright (c) 2026 Torsten Mahr. All rights reserved.
 // Licensed under the MIT License.
 
@@ -12,7 +11,7 @@ namespace VisioMcp.McpServer.Tests.Unit;
 /// Regression tests for MCP Server configuration.
 ///
 /// Bug 8 (Feb 2026): Host.CreateApplicationBuilder() enables reloadOnChange:true by default,
-/// creating a FileSystemWatcher for appsettings.json. Under file I/O storms from PowerPoint
+/// creating a FileSystemWatcher for appsettings.json. Under file I/O storms from Visio
 /// (temp files, lock files), this watcher fires ParseEventBufferAndNotifyForEach in a tight
 /// loop on the threadpool, consuming ~85% CPU.
 ///

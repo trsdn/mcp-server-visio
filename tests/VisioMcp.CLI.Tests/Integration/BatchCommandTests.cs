@@ -8,13 +8,13 @@ namespace VisioMcp.CLI.Tests.Integration;
 /// <summary>
 /// Integration tests for the batch CLI command.
 /// Tests the full CLI pipeline: process launch → batch parsing → daemon dispatch → NDJSON output.
-/// Uses diag commands (ping, echo) to validate batch infrastructure without requiring PowerPoint.
+/// Uses diag commands (ping, echo) to validate batch infrastructure without requiring Visio.
 /// </summary>
 [Collection("Service")]
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Batch")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 [Trait("Speed", "Fast")]
 public sealed class BatchCommandTests : IDisposable
 {

@@ -1,4 +1,3 @@
-// Copyright (c) Sbroenne.
 // Copyright (c) 2026 Torsten Mahr. All rights reserved.
 // Licensed under the MIT License.
 
@@ -41,7 +40,7 @@ public class VisioFileToolTests(ITestOutputHelper output)
         var json = JsonDocument.Parse(result).RootElement;
         Assert.False(json.GetProperty("success").GetBoolean());
         Assert.True(json.TryGetProperty("errorMessage", out var errorMsg));
-        // Error message may vary based on PowerPoint version and system locale
+        // Error message may vary based on Visio version and system locale
         var msg = errorMsg.GetString();
         Assert.True(msg!.Contains("Failed") || msg.Contains("Cannot"), $"Expected failure message, got: {msg}");
         Assert.True(json.TryGetProperty("isError", out var isError));
@@ -70,7 +69,7 @@ public class VisioFileToolTests(ITestOutputHelper output)
         var json = JsonDocument.Parse(result).RootElement;
         Assert.False(json.GetProperty("success").GetBoolean());
         Assert.True(json.TryGetProperty("errorMessage", out var errorMsg));
-        // Error message may vary based on PowerPoint version and system locale
+        // Error message may vary based on Visio version and system locale
         var msg = errorMsg.GetString();
         Assert.True(msg!.Contains("Failed") || msg.Contains("Cannot"), $"Expected failure message, got: {msg}");
         Assert.True(json.TryGetProperty("isError", out var isError));

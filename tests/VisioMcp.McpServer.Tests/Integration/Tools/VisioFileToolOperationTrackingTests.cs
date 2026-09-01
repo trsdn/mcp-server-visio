@@ -1,4 +1,3 @@
-// Copyright (c) Sbroenne.
 // Copyright (c) 2026 Torsten Mahr. All rights reserved.
 // Licensed under the MIT License.
 
@@ -21,7 +20,7 @@ namespace VisioMcp.McpServer.Tests.Integration.Tools;
 [Trait("Speed", "Medium")]
 [Trait("Layer", "McpServer")]
 [Trait("Feature", "SessionManager")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -189,7 +188,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
             Assert.True(session.TryGetProperty("canClose", out var canClose));
             Assert.True(canClose.GetBoolean());
             Assert.True(session.TryGetProperty("isVisioVisible", out var isVisioVisible));
-            Assert.True(session.TryGetProperty("isPowerPointVisible", out var isVisible));
+            Assert.True(session.TryGetProperty("isVisioVisible", out var isVisible));
             Assert.Equal(isVisible.GetBoolean(), isVisioVisible.GetBoolean());
             Assert.False(isVisible.GetBoolean());
         }
@@ -206,10 +205,10 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
     }
 
     [Fact]
-    public async Task List_SessionWithShowPowerPointTrue_ReturnsIsPowerPointVisibleTrue()
+    public async Task List_SessionWithShowVisioTrue_ReturnsIsVisioVisibleTrue()
     {
         // Create a unique file with show=true for this test
-        var testFile = Path.Join(_tempDir, $"ShowPowerPointTest_{Guid.NewGuid():N}.vsdx");
+        var testFile = Path.Join(_tempDir, $"ShowVisioTest_{Guid.NewGuid():N}.vsdx");
         var openResult = await CallToolAsync("file", new Dictionary<string, object?>
         {
             ["action"] = "create",
@@ -230,7 +229,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
 
             var sessions = listResult.GetProperty("sessions");
             var session = sessions[0];
-            Assert.True(session.GetProperty("isPowerPointVisible").GetBoolean());
+            Assert.True(session.GetProperty("isVisioVisible").GetBoolean());
         }
         finally
         {
@@ -251,7 +250,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
     public async Task Close_NoOperationsRunning_ClosesSuccessfully()
     {
         // Create a unique file and session for this test
-        var testFile = Path.Join(_tempDir, $"CloseTest_{Guid.NewGuid():N}.pptx");
+        var testFile = Path.Join(_tempDir, $"CloseTest_{Guid.NewGuid():N}.vsdx");
         var openResult = await CallToolAsync("file", new Dictionary<string, object?>
         {
             ["action"] = "create",

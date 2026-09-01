@@ -1,6 +1,6 @@
 # VisioMcp Tests
 
-> **⚠️ No Traditional Unit Tests**: VisioMcp has no unit tests. Integration tests ARE our unit tests because PowerPoint COM cannot be meaningfully mocked. See [`docs/ADR-001-NO-UNIT-TESTS.md`](../docs/ADR-001-NO-UNIT-TESTS.md) for full architectural rationale.
+> **⚠️ No Traditional Unit Tests**: VisioMcp has no unit tests. Integration tests ARE our unit tests because Visio COM cannot be meaningfully mocked. See [`docs/ADR-001-NO-UNIT-TESTS.md`](../docs/ADR-001-NO-UNIT-TESTS.md) for full architectural rationale.
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ dotnet test --filter "(Feature=VBA|Feature=VBATrust)&RunType!=OnDemand"
 ```
 tests/
 ├── VisioMcp.Core.Tests/           # Core business logic (Integration)
-├── VisioMcp.Diagnostics.Tests/    # PowerPoint COM behavior research (OnDemand, Manual)
+├── VisioMcp.Diagnostics.Tests/    # Visio COM behavior research (OnDemand, Manual)
 ├── VisioMcp.McpServer.Tests/      # MCP protocol layer (Integration)
 ├── VisioMcp.CLI.Tests/            # CLI wrapper (Integration)
 └── VisioMcp.ComInterop.Tests/     # COM utilities (OnDemand)
@@ -42,19 +42,19 @@ llm-tests/                          # LLM tool behavior validation (Manual)
 
 | Category | Speed | Requirements | Run By Default |
 |----------|-------|--------------|----------------|
-| **Integration** | Medium (10-20 min) | PowerPoint + Windows | ✅ Yes (local) |
-| **OnDemand** | Slow (3-5 min) | PowerPoint + Windows | ❌ No (explicit only) |
-| **Diagnostics** | Slow (varies) | PowerPoint + Windows | ❌ No (manual, excluded from CI) |
-| **LLM Tests** | Slow (varies) | PowerPoint + Azure OpenAI | ❌ No (manual only) |
+| **Integration** | Medium (10-20 min) | Visio + Windows | ✅ Yes (local) |
+| **OnDemand** | Slow (3-5 min) | Visio + Windows | ❌ No (explicit only) |
+| **Diagnostics** | Slow (varies) | Visio + Windows | ❌ No (manual, excluded from CI) |
+| **LLM Tests** | Slow (varies) | Visio + Azure OpenAI | ❌ No (manual only) |
 
 ## Diagnostics Tests
 
-Diagnostics tests are research/exploratory tests in `VisioMcp.Diagnostics.Tests` that document the actual behavior of PowerPoint's COM APIs without our abstraction layer. These tests are **excluded from CI** to keep automation focused on core functionality.
+Diagnostics tests are research/exploratory tests in `VisioMcp.Diagnostics.Tests` that document the actual behavior of Visio's COM APIs without our abstraction layer. These tests are **excluded from CI** to keep automation focused on core functionality.
 
 **Purpose:**
-- Understand PowerPoint COM API behavior for Power Query, Data Model, PivotTables, etc.
+- Understand Visio COM API behavior for Power Query, Data Model, PivotTables, etc.
 - Document findings and edge cases for future implementation decisions
-- Test alternative approaches to complex PowerPoint operations
+- Test alternative approaches to complex Visio operations
 
 **Trait markers:**
 - `Layer=Diagnostics`  
@@ -98,7 +98,7 @@ dotnet test --filter "Feature=Connections&RunType!=OnDemand"
 
 ## LLM Tests
 
-The `llm-tests/` project validates that LLMs correctly use PowerPoint MCP Server and CLI tools using [pytest-aitest](https://github.com/trsdn/pytest-aitest).
+The `llm-tests/` project validates that LLMs correctly use Visio MCP Server and CLI tools using [pytest-aitest](https://github.com/trsdn/pytest-aitest).
 
 ### When to Run LLM Tests
 
@@ -127,7 +127,7 @@ The canonical gate runs three CLI scenarios plus the matching three MCP scenario
 ### Prerequisites
 
 - `AZURE_OPENAI_ENDPOINT` environment variable
-- Windows desktop with PowerPoint installed
+- Windows desktop with Visio installed
 - pytest-aitest dependency (local path via uv)
 
 **See [LLM Tests README](../llm-tests/README.md) for complete documentation.**
@@ -139,7 +139,7 @@ The canonical gate runs three CLI scenarios plus the matching three MCP scenario
 VBA tests are excluded from normal test runs because:
 1. **Stable codebase** - VBA features are mature with minimal changes
 2. **Performance** - Excluding VBA tests makes integration tests ~25% faster (10-15 min vs 15-20 min)
-3. **Special requirements** - VBA tests require VBA trust enabled in PowerPoint settings
+3. **Special requirements** - VBA tests require VBA trust enabled in Visio settings
 4. **Opt-in model** - Explicit testing when VBA code changes, rather than every commit
 
 ### When to Run VBA Tests
@@ -177,14 +177,14 @@ tests/VisioMcp.CLI.Tests/Integration/Commands/
 
 ### VBA Trust Setup
 
-VBA tests require VBA trust enabled in PowerPoint:
+VBA tests require VBA trust enabled in Visio:
 
 ```powershell
 # Enable VBA trust (required for VBA tests)
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\PowerPoint\Security" -Name "AccessVBOM" -Value 1
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\Visio\Security" -Name "AccessVBOM" -Value 1
 
 # Verify setting
-Get-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\PowerPoint\Security" -Name "AccessVBOM"
+Get-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\Visio\Security" -Name "AccessVBOM"
 ```
 
 **Security Note:** Only enable VBA trust in development environments. Production systems should keep this disabled.
@@ -193,12 +193,12 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\PowerPoint\Security
 
 - ✅ **File Isolation** - Each test creates unique file (no sharing)
 - ✅ **Binary Assertions** - Pass OR fail, never "accept both"
-- ✅ **Verify PowerPoint State** - Always verify actual PowerPoint state after operations
+- ✅ **Verify Visio State** - Always verify actual Visio state after operations
 - ❌ **No SaveAsync** - Unless testing persistence (see [Rule 14](../.github/instructions/critical-rules.instructions.md#rule-14-no-saveasync-unless-testing-persistence))
 
 ## Getting Help
 
 - **Test failures**: Check test output for detailed error messages
-- **PowerPoint issues**: Ensure PowerPoint 2016+ installed and activated
+- **Visio issues**: Ensure Visio 2016+ installed and activated
 - **Session/batch issues**: Run OnDemand tests to verify cleanup
 - **Writing tests**: See [Testing Strategy](../.github/instructions/testing-strategy.instructions.md)

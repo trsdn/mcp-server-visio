@@ -12,7 +12,7 @@ public sealed class ServiceInfo
     public string? XmlDocSummary { get; }
     public List<MethodInfo> Methods { get; }
 
-    /// <summary>Human-readable title for the MCP tool (e.g., "Slide Operations").</summary>
+    /// <summary>Human-readable title for the MCP tool (e.g., "Page Operations").</summary>
     public string? McpToolTitle { get; }
 
     /// <summary>Whether the tool is destructive (modifies data). Default: true.</summary>

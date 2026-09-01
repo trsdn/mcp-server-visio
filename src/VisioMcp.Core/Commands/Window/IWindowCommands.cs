@@ -23,19 +23,19 @@ public interface IWindowCommands
     WindowInfoResult GetInfo(IVisioBatch batch);
 
     /// <summary>
-    /// Minimize the PowerPoint window.
+    /// Minimize the Visio window.
     /// </summary>
     [ServiceAction("minimize")]
     OperationResult Minimize(IVisioBatch batch);
 
     /// <summary>
-    /// Restore the PowerPoint window to normal size.
+    /// Restore the Visio window to normal size.
     /// </summary>
     [ServiceAction("restore")]
     OperationResult Restore(IVisioBatch batch);
 
     /// <summary>
-    /// Maximize the PowerPoint window.
+    /// Maximize the Visio window.
     /// </summary>
     [ServiceAction("maximize")]
     OperationResult Maximize(IVisioBatch batch);
@@ -155,18 +155,4 @@ public interface IWindowCommands
     /// </summary>
     [ServiceAction("set-extensions-snap-strength")]
     OperationResult SetExtensionsSnapStrength(IVisioBatch batch, int strength);
-
-    /// <summary>
-    /// Legacy PowerPoint-era view switching. Kept only for compatibility.
-    /// </summary>
-    /// <param name="batch">Batch context</param>
-    /// <param name="viewType">1=Normal, 2=Outline, 3=SlideSorter, 4=NotesPage, 5=SlideMaster</param>
-    [ServiceAction("set-view")]
-    OperationResult SetView(IVisioBatch batch, int viewType);
-
-    /// <summary>
-    /// Legacy PowerPoint-era view query. Kept only for compatibility.
-    /// </summary>
-    [ServiceAction("get-view")]
-    OperationResult GetView(IVisioBatch batch);
 }

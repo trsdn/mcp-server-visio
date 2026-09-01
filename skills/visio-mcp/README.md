@@ -55,17 +55,17 @@ visio-mcp/
 └── references/        # Detailed domain-specific guidance
     ├── behavioral-rules.md
     ├── generation-pipeline.md
-    ├── ppt_agent_mode.md
-    ├── slide-design-principles.md
-    └── slide-design-review.md
+    ├── visio_agent_mode.md
+    ├── diagram-design-principles.md
+    └── diagram-design-review.md
 ```
 
 ## MCP Server Setup
 
-The skill works with the Visio MCP Server. See [Installation Guide](https://VisioMcpserver.dev/installation/) for setup instructions.
+The skill works with the Visio MCP Server. See [Installation Guide](https://github.com/trsdn/mcp-server-visio/blob/main/docs/INSTALLATION.md) for setup instructions.
 
 ## Related
 
 - [Visio CLI Skill](https://github.com/trsdn/mcp-server-visio/releases) - For coding agents preferring CLI tools
-- [Documentation](https://VisioMcpserver.dev/)
+- [Documentation](https://github.com/trsdn/mcp-server-visio)
 - [GitHub Repository](https://github.com/trsdn/mcp-server-visio)
