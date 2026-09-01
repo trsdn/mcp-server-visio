@@ -17,6 +17,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   masking CVE-2025-55247 (GHSA-w3q9-fxm7-j8fq); the advisory is now resolved rather than hidden, so
   the project no longer suppresses any dependency audit warnings.
 
+### Added
+
+- **Git hooks are now installable in one command** (#17). `.git/hooks` contained only the stock
+  `*.sample` files, so despite being documented, **no check ran on commit anywhere** — which,
+  combined with the failing gates (#16) and the dormant workflows (#12), meant nothing ran on
+  commit, on push, or in CI.
+  A committed `.githooks/pre-commit` plus `scripts/Install-GitHooks.ps1` replaces the manual
+  `Copy-Item scripts\pre-commit.ps1 .git\hooks\pre-commit`. Because the hook is version-controlled
+  and reached via `core.hooksPath`, a clone that bootstraps once also picks up later changes to the
+  hook — a copied file would not.
+  Verified end to end: the hook fires on commit, runs every gate, and **blocks** a commit carrying
+  an induced COM leak (naming the offending file), while a clean tree passes.
+
 ### Fixed
 
 - **`scripts/pre-commit.ps1` now exits 0 on a clean checkout** (#16). Six of the documented gates

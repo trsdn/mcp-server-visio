@@ -173,11 +173,14 @@ Pre-commit runs `scripts/pre-commit.ps1` which blocks commits if any check fails
 > the first two were deleted, the third is now wired in, and the fourth was deleted because its
 > premise — migrating to the PowerPoint PIA — does not apply to a Visio project.
 
-**Install hook:**
+**Install hook (one command, once per clone):**
 ```powershell
 # From repo root
-Copy-Item scripts\pre-commit.ps1 .git\hooks\pre-commit
+.\scripts\Install-GitHooks.ps1
 ```
+
+This sets `core.hooksPath` to the committed `.githooks` directory, so the hook is
+version-controlled and every clone that bootstraps once picks up later changes automatically.
 
 CI runs the same gates on every PR via the `quality-gates` job in `build-cli.yml`, so the hook is
 not the only line of defence.
