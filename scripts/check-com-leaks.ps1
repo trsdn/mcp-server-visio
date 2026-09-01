@@ -14,7 +14,10 @@ Get-ChildItem -Path (Join-Path $rootDir "src") -Recurse -Filter "*.cs" | ForEach
     $content = Get-Content $_.FullName -Raw
     $hasDynamic = $content -match "dynamic\s+\w+\s*=.*\."
     $hasRelease = $content -match "ComUtilities\.Release"
-    $isSessionFile = $_.FullName -match "PptBatch\.cs|PptSession\.cs"
+    # Session files own the Application/Document lifetime for the whole session, so they
+    # deliberately hold COM references outside any single operation and release them on
+    # dispose rather than in a finally block.
+    $isSessionFile = $_.FullName -match "VisioBatch\.cs|VisioSession\.cs"
 
     $relativePath = $_.FullName.Replace("$rootDir\", "")
 

@@ -114,6 +114,19 @@ $mcpObjRoot = Join-Path $rootDir 'src\VisioMcp.McpServer\obj'
 $dispatchFiles = Get-GeneratedFiles -SearchRoot $coreObjRoot -Filter 'ServiceRegistry.*.Dispatch.g.cs'
 $mcpToolFiles = Get-GeneratedFiles -SearchRoot $mcpObjRoot -Filter 'McpTool.*.g.cs'
 
+# The CLI surface is generated from the same [ServiceCategory] interfaces into
+# _CliCategories.g.cs. Reading it here means CLI coverage is checked by the same gate rather
+# than by a separate script parsing a hand-written model that no longer exists.
+$cliCategoryNames = @()
+$cliCategoriesFile = Get-GeneratedFiles -SearchRoot $coreObjRoot -Filter '_CliCategories.g.cs' | Select-Object -First 1
+if ($cliCategoriesFile) {
+    $cliContent = Get-Content $cliCategoriesFile.FullName -Raw
+    foreach ($m in [regex]::Matches($cliContent, '\(\s*"(?<name>[^"]+)"\s*,\s*"ServiceRegistry\.')) {
+        $cliCategoryNames += $m.Groups['name'].Value
+    }
+}
+$cliCategoryNames = @($cliCategoryNames | Sort-Object -Unique)
+
 # Not every public tool is generated. `file` is implemented by hand in VisioFileTool.cs because
 # session lifecycle cannot be expressed as a batch-scoped Core command. Discover hand-written
 # [McpServerToolType] classes so they are not reported as missing.
@@ -155,6 +168,10 @@ if ($dispatchFiles.Count -eq 0) {
 
 if ($mcpToolFiles.Count -eq 0) {
     $fatal += "Discovered 0 McpTool.*.g.cs files under $mcpObjRoot - run 'dotnet build VisioMcp.sln' first."
+}
+
+if ($cliCategoriesFile -eq $null) {
+    $fatal += "Could not find _CliCategories.g.cs under $coreObjRoot - run 'dotnet build VisioMcp.sln' first."
 }
 
 if ($fatal.Count -gt 0) {
@@ -201,6 +218,17 @@ foreach ($cat in $categories | Sort-Object Category) {
         $gaps += "[$($cat.Category)] is PublicSurface = false but an MCP tool exists - a suppressed domain leaked onto the public surface"
     }
 
+    # CLI and MCP are equal entry points: a public domain must reach both.
+    $hasCliCommand = $cliCategoryNames -contains $cat.Category
+
+    if ($cat.IsPublic -and -not $hasCliCommand) {
+        $gaps += "[$($cat.Category)] is PublicSurface but has no CLI command in _CliCategories.g.cs - MCP and CLI are equal entry points"
+    }
+
+    if (-not $cat.IsPublic -and $hasCliCommand) {
+        $gaps += "[$($cat.Category)] is PublicSurface = false but has a CLI command - a suppressed domain leaked onto the CLI surface"
+    }
+
     # Every declared interface method must appear in the dispatch switch.
     $dispatchFile = $dispatchFiles | Where-Object { $_.Name -eq "ServiceRegistry.$pascal.Dispatch.g.cs" } | Select-Object -First 1
     $dispatchContent = Get-Content $dispatchFile.FullName -Raw
@@ -226,6 +254,7 @@ Write-Host ("  Interface methods     : {0}" -f $totalActions)
 Write-Host ("  Dispatch files        : {0}" -f $dispatchCategories.Count)
 Write-Host ("  Generated MCP tools   : {0}" -f $mcpCategories.Count)
 Write-Host ("  Hand-written MCP tools: {0}{1}" -f $handWrittenToolNames.Count, $(if ($handWrittenToolNames.Count) { " ($($handWrittenToolNames -join ', '))" } else { '' }))
+Write-Host ("  Generated CLI commands: {0}" -f $cliCategoryNames.Count)
 Write-Host ''
 
 if ($ShowDetail) {

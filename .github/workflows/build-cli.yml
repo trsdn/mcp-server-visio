@@ -44,20 +44,23 @@ jobs:
         dotnet-version: 9.0.x
 
     - name: Restore dependencies
-      run: dotnet restore src/VisioMcp.CLI/VisioMcp.CLI.csproj
+      run: dotnet restore VisioMcp.sln
 
-    - name: Build CLI
-      run: dotnet build src/VisioMcp.CLI/VisioMcp.CLI.csproj --no-restore --configuration Release
+    - name: Build solution
+      # The coverage audit reads generated output from BOTH VisioMcp.Core (dispatch, CLI
+      # categories) and VisioMcp.McpServer (MCP tools), so the whole solution must be built.
+      # Building only the CLI project leaves McpTool.*.g.cs absent and the audit fails.
+      run: dotnet build VisioMcp.sln --no-restore --configuration Release
 
     - name: Verify Core Commands Coverage
       run: |
-        Write-Output "🔍 Verifying Core Commands coverage..."
+        Write-Output "Verifying Core Commands coverage..."
         & scripts/audit-core-coverage.ps1 -FailOnGaps
         if ($LASTEXITCODE -ne 0) {
-          Write-Error "❌ Coverage gaps detected! All Core methods must be exposed via MCP Server."
+          Write-Error "Coverage gaps detected."
           exit 1
         }
-        Write-Output "✅ Coverage audit passed - 100% coverage maintained"
+        Write-Output "Coverage audit passed"
       shell: pwsh
 
     - name: Verify CLI build
@@ -101,3 +104,48 @@ jobs:
       with:
         name: VisioMcp-CLI-${{ github.sha }}
         path: src/VisioMcp.CLI/bin/Release/net9.0-windows/
+
+  quality-gates:
+    # Runs the pre-commit gates that do NOT require Visio, so they cannot silently rot again.
+    # Test-CliWorkflow.ps1 and the MCP smoke test need a real Visio instance and therefore stay
+    # on the self-hosted integration runner; everything below is static or build-only.
+    name: Quality gates
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore VisioMcp.sln
+
+    - name: Build solution
+      run: dotnet build VisioMcp.sln --no-restore --configuration Release
+
+    - name: COM leak check
+      run: |
+        & scripts/check-com-leaks.ps1
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+      shell: pwsh
+
+    - name: Core Commands coverage audit
+      run: |
+        & scripts/audit-core-coverage.ps1 -FailOnGaps
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+      shell: pwsh
+
+    - name: Success flag check (Rule 0)
+      run: |
+        & scripts/check-success-flag.ps1
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+      shell: pwsh
+
+    - name: CLI Settings usage check
+      run: |
+        & scripts/check-cli-settings-usage.ps1
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+      shell: pwsh
