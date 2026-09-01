@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Shape Data parameters now have real descriptions in the generated CLI skill** (#29).
+  `--property-name` and `--property-value` shipped with empty description cells in
+  `skills/visio-cli/SKILL.md`, failing `SkillMdQualityTests.CliSkill_HasNoEmptyParameterDescriptions`.
+  Added `<param>` XML docs to `ListProperties`, `GetProperty`, `SetProperty` and `DeleteProperty` on
+  `IShapeCommands`. `propertyName` was also declared `string? = null` while every implementation
+  calls `ArgumentException.ThrowIfNullOrWhiteSpace` on it, so the generated surface described a
+  required parameter as optional; it is now non-nullable and the generators emit
+  `(required for: get-property, set-property, delete-property)`.
+  Whole non-integration suite: **645 passed / 1 failed → 646 passed / 0 failed**.
+
 - **`OleMessageFilterTests` PENDINGMSG constants were swapped** (#27). The test declared
   `PENDINGMSG_WAITDEFPROCESS = 1` and `PENDINGMSG_WAITNOPROCESS = 2`; the Win32 values
   (`objidl.h`, `tagPENDINGMSG`) are the reverse — `CANCELCALL = 0`, `WAITNOPROCESS = 1`,

@@ -334,7 +334,7 @@ public class ShapeCommands : IShapeCommands
         });
     }
 
-    public ShapePropertyResult GetProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null)
+    public ShapePropertyResult GetProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
@@ -369,7 +369,7 @@ public class ShapeCommands : IShapeCommands
         });
     }
 
-    public OperationResult SetProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null, string? propertyValue = null)
+    public OperationResult SetProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName, string? propertyValue = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
@@ -413,7 +413,7 @@ public class ShapeCommands : IShapeCommands
         });
     }
 
-    public OperationResult DeleteProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null)
+    public OperationResult DeleteProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);

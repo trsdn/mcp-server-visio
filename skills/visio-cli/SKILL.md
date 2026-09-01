@@ -193,8 +193,8 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--page-index` | (required) |
 | `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, list-connections, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-slide, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, set-action-settings, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
 | `--shape-names` | (required for: select-shapes, add-to-selection, remove-from-selection, group, merge) |
-| `--property-name` |  |
-| `--property-value` |  |
+| `--property-name` | Shape Data property name, matched against the row label or the underlying Prop.<row> name, case-insensitively (required for: get-property, set-property, delete-property) |
+| `--property-value` | Property value, stored as a string. Omit to store an empty value |
 | `--connector-end` | Connector endpoint selector: start or end (required for: disconnect-connector, reconnect-connector) |
 | `--target-shape-name` | Target shape name for the selected endpoint (required for: reconnect-connector, copy-formatting) |
 | `--left` | Position from left in points (required for: add-textbox, add-shape, add-text-effect) |
