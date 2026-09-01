@@ -19,6 +19,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`OleMessageFilterTests` PENDINGMSG constants were swapped** (#27). The test declared
+  `PENDINGMSG_WAITDEFPROCESS = 1` and `PENDINGMSG_WAITNOPROCESS = 2`; the Win32 values
+  (`objidl.h`, `tagPENDINGMSG`) are the reverse — `CANCELCALL = 0`, `WAITNOPROCESS = 1`,
+  `WAITDEFPROCESS = 2`. Its two assertions therefore contradicted each other, requiring the return
+  value to be `WAITDEFPROCESS` while simultaneously forbidding `2`. `OleMessageFilter` itself was
+  always correct.
+  Its rationale also described `FormatConditions.Add()`, `Calculate` and `SheetChange` — **Excel**
+  APIs attributed to PowerPoint, carried over from the `mcp-server-excel` ancestor, describing a
+  scenario that cannot occur in Visio. Replaced with the contract the filter actually enforces
+  (inbound calls must be dispatched so `HandleInComingCall` can accept with `SERVERCALL_ISHANDLED`
+  or reject with `SERVERCALL_RETRYLATER`). No unverified Visio deadlock is claimed in its place.
+  The same wrong-product rationale in `OleMessageFilter.cs` itself is corrected too.
+  `VisioMcp.ComInterop.Tests`: **23 passed / 1 failed → 24 passed / 0 failed**.
+
 - **The MCP smoke-test gate now derives its expected tool list from the assembly** (#26).
   `ExpectedToolNames` was a hand-maintained 12-entry allow-list that omitted `layer`, so
   `SmokeTest_AllTools_E2EWorkflow` and `ListTools_CanIterateAllTools` — the tests

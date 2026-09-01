@@ -7,7 +7,7 @@ namespace VisioMcp.ComInterop.Tests.Unit;
 /// Tests verify that the message filter can be registered/revoked without errors.
 ///
 /// NOTE: These tests verify the registration mechanism but don't test actual
-/// COM retry behavior (that requires PowerPoint and would be OnDemand tests).
+/// COM retry behavior (that requires Visio and would be OnDemand tests).
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Speed", "Fast")]
@@ -69,28 +69,32 @@ public class OleMessageFilterTests
     }
 
     /// <summary>
-    /// REGRESSION TEST for the STA deadlock bug (Feb 2026):
-    /// MessagePending MUST return PENDINGMSG_WAITDEFPROCESS (1), NOT PENDINGMSG_WAITNOPROCESS (2).
+    /// REGRESSION TEST: MessagePending MUST return PENDINGMSG_WAITDEFPROCESS (2),
+    /// NOT PENDINGMSG_WAITNOPROCESS (1).
     ///
-    /// Returning 2 (WAITNOPROCESS) blocks ALL inbound COM message processing while an outgoing
-    /// call is in progress. When PowerPoint fires a re-entrant callback (e.g., Calculate, SheetChange)
-    /// during FormatConditions.Add(), the callback is queued but WAITNOPROCESS prevents it from
-    /// being dispatched. PowerPoint waits for the callback → STA thread waits for PowerPoint → deadlock.
+    /// Win32 values (objidl.h, tagPENDINGMSG):
+    ///   PENDINGMSG_CANCELCALL     = 0 — cancel the outgoing call
+    ///   PENDINGMSG_WAITNOPROCESS  = 1 — wait for the return and do NOT dispatch the message
+    ///   PENDINGMSG_WAITDEFPROCESS = 2 — wait and dispatch the message
     ///
-    /// Returning 1 (WAITDEFPROCESS) allows COM to process the pending inbound call, letting
-    /// PowerPoint's callback complete so FormatConditions.Add() can return normally.
+    /// Returning WAITNOPROCESS would stop inbound COM callbacks from ever reaching
+    /// <c>HandleInComingCall</c> while an outgoing call is in flight. That would disable the
+    /// filter's entire retry protocol: the long-operation path deliberately dispatches so it can
+    /// reject callbacks with SERVERCALL_RETRYLATER and let the caller's RetryRejectedCall backoff
+    /// run, and the normal path dispatches so it can accept them with SERVERCALL_ISHANDLED.
+    /// With WAITNOPROCESS neither branch is ever consulted and the STA thread can wedge waiting on
+    /// a Visio callback it has refused to pump.
+    ///
+    /// This test asserts the value, not a specific reproduction. No specific Visio deadlock is
+    /// claimed here — see the note below on what this comment used to say.
     /// </summary>
     [Fact]
     public void MessagePending_ReturnValue_MustBe_WaitDefProcess()
     {
-        // The IOleMessageFilter interface is internal, so we verify the constant value via
-        // reflection on the compiled method body — simpler: we verify by checking the
-        // registered filter doesn't use the blocking value (2).
-        //
-        // We instantiate the filter and call MessagePending via the interface.
-        // Use reflection to access the internal interface implementation.
-        const int PENDINGMSG_WAITDEFPROCESS = 1;
-        const int PENDINGMSG_WAITNOPROCESS = 2;
+        // The IOleMessageFilter interface is internal, so reach the implementation by reflection
+        // and invoke MessagePending directly on an instance.
+        const int PENDINGMSG_WAITNOPROCESS = 1;
+        const int PENDINGMSG_WAITDEFPROCESS = 2;
 
         var returnValue = -1;
         Exception? threadException = null;
@@ -136,9 +140,16 @@ public class OleMessageFilterTests
 
         if (threadException != null) throw new InvalidOperationException($"Thread exception: {threadException.Message}", threadException);
 
-        // REGRESSION: If this returns 2 (WAITNOPROCESS), conditional formatting on cells
-        // with formulas will deadlock because PowerPoint's Calculate/SheetChange callbacks
-        // can't be delivered while the STA thread waits for FormatConditions.Add().
+        // The previous version of this comment claimed WAITNOPROCESS would deadlock
+        // "conditional formatting on cells with formulas ... because PowerPoint's
+        // Calculate/SheetChange callbacks can't be delivered while the STA thread waits for
+        // FormatConditions.Add()". FormatConditions, Calculate and SheetChange are Excel APIs,
+        // attributed to PowerPoint — second-hand carryover from the mcp-server-excel ancestor
+        // describing a scenario that cannot occur in Visio.
+        //
+        // No equivalent Visio reproduction is claimed. What is asserted is the contract: the
+        // filter must dispatch inbound calls so HandleInComingCall can decide whether to accept
+        // (SERVERCALL_ISHANDLED) or reject them (SERVERCALL_RETRYLATER).
         Assert.NotEqual(PENDINGMSG_WAITNOPROCESS, returnValue);
         Assert.Equal(PENDINGMSG_WAITDEFPROCESS, returnValue);
     }
