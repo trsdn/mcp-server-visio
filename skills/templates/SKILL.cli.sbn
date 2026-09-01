@@ -169,33 +169,23 @@ When using `--timeout`, the value must be a positive integer (seconds). `--timeo
 
 Shape names are case-sensitive and must match exactly. Use `shape list` to discover correct names before targeting shapes.
 
-### JSON Values Format
+### List Parameters Are Comma-Separated
 
-`--values` takes a JSON string wrapped in single quotes:
+`--shape-names` takes a comma-separated list, not a JSON array. Quote the whole value so the
+shell keeps it as one argument:
 ```powershell
-# CORRECT: JSON with single-quote wrapper
---values '{"text": "Hello World", "fontSize": 24}'
+# CORRECT
+--shape-names "Rectangle,Rectangle.5,Ellipse.7"
 
-# WRONG: Missing quotes
---values {text: Hello World}
-```
-
-### List Parameters Use JSON Arrays
-
-Parameters that accept lists require JSON array format:
-```powershell
-# CORRECT: JSON array with single-quote wrapper
---selected-items '["Slide 1","Slide 3"]'
-
-# WRONG: Comma-separated string (not valid)
---selected-items "Slide 1,Slide 3"
+# WRONG: a JSON array is not parsed
+--shape-names '["Rectangle","Ellipse.7"]'
 ```
 
 ## Reference Documentation
 
 - [Core execution rules and LLM guidelines](./references/behavioral-rules.md)
 - [Generation pipeline](./references/generation-pipeline.md)
-- [Agent mode patterns](./references/ppt_agent_mode.md)
+- [Visible session mode](./references/visible-session-mode.md)
 
 For design catalog data (archetypes, palettes, grids, and styles), use the `design` CLI command:
 - `visiocli design list-archetypes` / `visiocli design get-archetype --archetype-id ...` — primary unified archetype surface; includes learned subtypes and concrete sanitized example details when local reference data is available

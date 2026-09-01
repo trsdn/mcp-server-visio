@@ -10,5 +10,10 @@ This folder contains supporting guidance for the generated Visio CLI skill.
 
 - `behavioral-rules.md` — execution and verification rules
 - `generation-pipeline.md` — page-and-shape generation workflow
-- `ppt_agent_mode.md` — visible-session guidance for users who want to watch the work
-- `slide-design-principles.md` — page layout and diagram readability guidance
+- `visible-session-mode.md` — visible-session guidance for users who want to watch the work
+- `diagram-design-principles.md` — page layout and diagram readability guidance
+- `diagram-design-review.md` — self-review checklist and quality scorecard for finished diagrams
+
+The command reference lives in `SKILL.md`, which is generated from the CLI itself. There is no
+hand-maintained command list here: the previous one claimed to be auto-generated but had been
+committed by hand, and still listed commands from two migrations ago, none of which exist.

@@ -63,8 +63,8 @@ const PROMPTS_FILE = join(__dirname, "prompts", "test-prompts.json");
 const OUTPUT_DIR = EVAL_OUTPUT_ROOT;
 const RESULTS_DIR = EVAL_RESULTS_ROOT;
 const SKILL_FILES = [
-  "slide-design-principles.md",
-  "slide-design-review.md",
+  "diagram-design-principles.md",
+  "diagram-design-review.md",
   "generation-pipeline.md",
 ];
 const DEFAULT_RETRY_POLICY = Object.freeze({

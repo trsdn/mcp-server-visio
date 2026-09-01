@@ -8,7 +8,7 @@
   "builder": {
     "model": "claude-sonnet-4.5",
     "skillFiles": [
-      "slide-design-principles.md"
+      "diagram-design-principles.md"
     ],
     "instructionsFile": "agents/builder-instructions.md",
     "timeoutMs": 300000

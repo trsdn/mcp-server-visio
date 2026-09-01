@@ -308,8 +308,8 @@ Each JSON file in `eval/configs/` is the source of truth for one archetype run.
     "isolatedProcess": false,             // optional
     "executionMode": "reuse-session",     // optional alias in current code
     "skillFiles": [
-      "slide-design-principles.md",
-      "slide-design-review.md"
+      "diagram-design-principles.md",
+      "diagram-design-review.md"
     ],
     "instructionsFile": "agents/builder-instructions-mcp.md",
     "timeoutMs": 600000                   // optional; defaults depend on model/effort

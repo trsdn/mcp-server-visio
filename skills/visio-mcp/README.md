@@ -55,9 +55,9 @@ visio-mcp/
 └── references/        # Detailed domain-specific guidance
     ├── behavioral-rules.md
     ├── generation-pipeline.md
-    ├── ppt_agent_mode.md
-    ├── slide-design-principles.md
-    └── slide-design-review.md
+    ├── visible-session-mode.md
+    ├── diagram-design-principles.md
+    └── diagram-design-review.md
 ```
 
 ## MCP Server Setup
