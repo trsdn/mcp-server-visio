@@ -31,10 +31,12 @@ jobs:
         dotnet-version: 9.0.x
 
     - name: Restore dependencies
-      run: dotnet restore src/VisioMcp.McpServer/VisioMcp.McpServer.csproj
+      run: dotnet restore VisioMcp.sln
 
-    - name: Build MCP Server
-      run: dotnet build src/VisioMcp.McpServer/VisioMcp.McpServer.csproj --no-restore --configuration Release
+    - name: Build solution
+      # The coverage audit reads generated output from both VisioMcp.Core and VisioMcp.McpServer,
+      # so the whole solution must be built before it runs.
+      run: dotnet build VisioMcp.sln --no-restore --configuration Release
 
     - name: Verify Core Commands Coverage
       run: |

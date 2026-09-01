@@ -152,28 +152,35 @@ Modular approach = relevant context without overload.
 
 ---
 
-## 🔒 Pre-Commit Hooks (10 Automated Checks)
+## 🔒 Pre-Commit Hooks (7 Automated Checks)
 
 Pre-commit runs `scripts/pre-commit.ps1` which blocks commits if any check fails:
 
 | # | Check | Script | What It Validates |
 |---|-------|--------|-------------------|
 | 1 | Branch | (inline) | Never commit to `main` directly (Rule 6) |
-| 2 | COM Leaks | `check-com-leaks.ps1` | All `dynamic` COM objects have `ComUtilities.Release()` in finally |
-| 3 | Coverage Audit | `audit-core-coverage.ps1` | 100% Core methods exposed via MCP Server |
-| 4 | MCP-Core Implementation | `check-mcp-core-implementations.ps1` | All enum actions have Core method implementations |
+| 2 | Process cleanup | (inline) | Kills stale `VISIO`, `visiocli` and server processes so the build can replace locked binaries |
+| 3 | COM Leaks | `check-com-leaks.ps1` | All `dynamic` COM objects have `ComUtilities.Release()` in finally |
+| 4 | Coverage Audit | `audit-core-coverage.ps1` | Every Core action reaches dispatch; every public domain reaches both MCP and CLI; no suppressed domain leaks |
 | 5 | Success Flag | `check-success-flag.ps1` | Rule 0: Never `Success=true` with `ErrorMessage` |
-| 6 | CLI Coverage | `check-cli-coverage.ps1` | All action enums have CLI commands |
-| 7 | CLI Action Switch | `check-cli-action-coverage.ps1` | Actions requiring args have explicit switch cases |
-| 8 | CLI Settings Usage | `check-cli-settings-usage.ps1` | All Settings properties used in args |
-| 9 | CLI Workflow Test | `Test-CliWorkflow.ps1` | E2E CLI workflow smoke test |
-| 10 | MCP Smoke Test | `dotnet test --filter "...SmokeTest..."` | All MCP tools functional |
+| 6 | CLI Settings Usage | `check-cli-settings-usage.ps1` | Every Settings property on a hand-written CLI command is actually read |
+| 7 | CLI Workflow Test | `Test-CliWorkflow.ps1` | E2E CLI round-trip against a real `.vsdx` |
+| 8 | MCP Smoke Test | `dotnet test --filter "...SmokeTest..."` | All MCP tools functional |
+
+> The table previously claimed **10** checks. Three of them (`check-cli-coverage.ps1`,
+> `check-cli-action-coverage.ps1`, `check-cli-settings-usage.ps1`) were **never invoked** by the
+> hook, and one that *was* invoked (`check-dynamic-casts.ps1`) was not listed. Corrected in #16;
+> the first two were deleted, the third is now wired in, and the fourth was deleted because its
+> premise — migrating to the PowerPoint PIA — does not apply to a Visio project.
 
 **Install hook:**
 ```powershell
 # From repo root
 Copy-Item scripts\pre-commit.ps1 .git\hooks\pre-commit
 ```
+
+CI runs the same gates on every PR via the `quality-gates` job in `build-cli.yml`, so the hook is
+not the only line of defence.
 
 ---
 
