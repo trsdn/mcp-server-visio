@@ -151,6 +151,31 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
         throw new InvalidOperationException($"Unexpected response from {toolName}");
     }
 
+    /// <summary>
+    /// Reads a required property from a tool response, failing with the actual JSON when it is absent.
+    ///
+    /// Ad-hoc <see cref="JsonElement.GetProperty(string)"/> calls throw a bare
+    /// <c>KeyNotFoundException: The given key was not present in the dictionary</c>, which says
+    /// nothing about which property, which tool, or what the server actually returned. That is how
+    /// #28 presented: the real cause was a rejected <c>.pptx</c> path, but the symptom pointed at
+    /// the response contract. This makes contract drift and upstream failures self-describing.
+    /// </summary>
+    private static JsonElement RequireProperty(JsonElement response, string propertyName, string context)
+    {
+        if (response.TryGetProperty(propertyName, out var value))
+        {
+            return value;
+        }
+
+        var available = response.ValueKind == JsonValueKind.Object
+            ? string.Join(", ", response.EnumerateObject().Select(p => p.Name))
+            : "(response is not a JSON object)";
+
+        throw new InvalidOperationException(
+            $"{context}: response has no '{propertyName}' property. " +
+            $"Available properties: {available}. Full response: {response.GetRawText()}");
+    }
+
     #region List Action with Operation Tracking
 
     [Fact]
@@ -251,7 +276,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
     public async Task Close_NoOperationsRunning_ClosesSuccessfully()
     {
         // Create a unique file and session for this test
-        var testFile = Path.Join(_tempDir, $"CloseTest_{Guid.NewGuid():N}.pptx");
+        var testFile = Path.Join(_tempDir, $"CloseTest_{Guid.NewGuid():N}.vsdx");
         var openResult = await CallToolAsync("file", new Dictionary<string, object?>
         {
             ["action"] = "create",
@@ -259,7 +284,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
             ["show"] = false
         });
 
-        var sessionId = openResult.GetProperty("session_id").GetString();
+        var sessionId = RequireProperty(openResult, "session_id", "file create").GetString();
 
         // Close should succeed (no operations running)
         var closeResult = await CallToolAsync("file", new Dictionary<string, object?>
@@ -269,7 +294,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
             ["save"] = false
         });
 
-        Assert.True(closeResult.GetProperty("success").GetBoolean());
+        Assert.True(RequireProperty(closeResult, "success", "file close").GetBoolean());
 
         // Verify session is gone
         var listResult = await CallToolAsync("file", new Dictionary<string, object?>
@@ -277,7 +302,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
             ["action"] = "list"
         });
 
-        Assert.Equal(0, listResult.GetProperty("count").GetInt32());
+        Assert.Equal(0, RequireProperty(listResult, "count", "file list").GetInt32());
     }
 
     [Fact]
