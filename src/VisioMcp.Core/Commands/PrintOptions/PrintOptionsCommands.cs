@@ -10,7 +10,7 @@ public class PrintOptionsCommands : IPrintOptionsCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic printOptions = pres.PrintOptions;
             try
             {
@@ -26,7 +26,7 @@ public class PrintOptionsCommands : IPrintOptionsCommands
                     Success = true,
                     Action = "get",
                     Message = $"OutputType={outputType}, ColorType={colorType}, FrameSlides={frameSlides}, FitToPage={fitToPage}, PrintHiddenSlides={printHiddenSlides}, NumberOfCopies={numberOfCopies}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -40,7 +40,7 @@ public class PrintOptionsCommands : IPrintOptionsCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic printOptions = pres.PrintOptions;
             try
             {
@@ -79,7 +79,7 @@ public class PrintOptionsCommands : IPrintOptionsCommands
                     Message = changes.Count > 0
                         ? $"Updated print settings: {string.Join(", ", changes)}"
                         : "No print settings changed (all parameters were null)",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

@@ -19,6 +19,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- **The `VisioContext` and `IVisioBatch` PowerPoint aliases are gone** (#21). Both types exposed
+  every member twice — `Presentation`/`Document`, `PresentationPath`/`DocumentPath`, `App`/
+  `Application`, plus `Presentations` and `GetPresentation` on the batch. Because the properties
+  are `dynamic`, `ctx.Presentation.Slides` compiled cleanly and failed only when executed, so the
+  compiler could not help with the migration in progress. `IVisioBatch` is the first parameter of
+  every Core command, so leaving it aliased would have defeated the change; all of its aliases had
+  zero external callers. `VisioContextTests` now asserts by reflection that neither type exposes a
+  PowerPoint-named member.
+  Notably, the issue's step 3 — *"any code that then fails to compile is PowerPoint-era code
+  needing migration"* — produced **nothing**: zero compile errors across 18 renamed files. #20 had
+  already made `shape` and `text` Visio-native and #22 had deleted the 14 dead domains, so the
+  inventory this step was designed to generate had already been worked through.
+
 - **The 14 legacy domains with no Visio analogue are deleted** (#22). `animation`, `chart`,
   `customshow`, `media`, `notes`, `placeholder`, `proofing`, `section`, `slide`, `slideimport`,
   `slideshow`, `slidetable`, `smartart` and `transition` — **4,768 lines and 82 actions** — each
@@ -30,6 +43,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Core interface-method count from 281 to 199.
 
 ### Fixed
+
+- **The MCP server suggested a `.pptx` path to agents** (#21). When a caller passed a path that was
+  not fully qualified, `VisioToolsBase.ValidateWindowsPath` built a corrected suggestion ending in
+  `presentation.pptx` — so a Visio server told the LLM to retry with a PowerPoint file, which
+  Visio cannot open. Now `drawing.vsdx`.
 
 - **`shape(find-by-type)` documented the wrong constants** (#22, introduced in #20). The parameter
   description shipped into both SKILL.md and the MCP schema read *"MsoShapeType integer

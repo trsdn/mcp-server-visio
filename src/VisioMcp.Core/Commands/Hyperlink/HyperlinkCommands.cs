@@ -13,7 +13,7 @@ public class HyperlinkCommands : IHyperlinkCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             dynamic? actionSettings = null;
             dynamic? actionSetting = null;
@@ -36,7 +36,7 @@ public class HyperlinkCommands : IHyperlinkCommands
                     Success = true,
                     Action = "add",
                     Message = $"Added hyperlink '{address}' to shape '{shapeName}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -56,7 +56,7 @@ public class HyperlinkCommands : IHyperlinkCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             dynamic? actionSettings = null;
             dynamic? actionSetting = null;
@@ -83,7 +83,7 @@ public class HyperlinkCommands : IHyperlinkCommands
                 return new HyperlinkResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     SlideIndex = slideIndex,
                     ShapeName = shapeName,
                     HasHyperlink = hasHyperlink,
@@ -107,7 +107,7 @@ public class HyperlinkCommands : IHyperlinkCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             dynamic? actionSettings = null;
             dynamic? actionSetting = null;
@@ -123,7 +123,7 @@ public class HyperlinkCommands : IHyperlinkCommands
                     Success = true,
                     Action = "remove",
                     Message = $"Removed hyperlink from shape '{shapeName}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -140,7 +140,7 @@ public class HyperlinkCommands : IHyperlinkCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic slides = pres.Slides;
             try
             {
@@ -149,7 +149,7 @@ public class HyperlinkCommands : IHyperlinkCommands
                 var result = new HyperlinkListResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
 
                 int globalIndex = 1;
@@ -225,7 +225,7 @@ public class HyperlinkCommands : IHyperlinkCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic slides = pres.Slides;
             try
             {
@@ -327,7 +327,7 @@ public class HyperlinkCommands : IHyperlinkCommands
                     Success = true,
                     Action = "validate",
                     Message = summary,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

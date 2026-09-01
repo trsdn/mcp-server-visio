@@ -1,108 +1,161 @@
+using System.Reflection;
 using VisioMcp.ComInterop.Session;
 using Xunit;
 
 namespace VisioMcp.ComInterop.Tests.Unit;
 
 /// <summary>
-/// Unit tests for VisioContext - validates constructor and property behavior.
-/// This class is a simple data holder, so tests focus on path validation and immutability.
-/// Note: PowerPoint.Application and PowerPoint.Presentation COM objects cannot be mocked in unit tests,
-/// so these tests use null! for those parameters and verify only what is testable.
+/// Unit tests for <see cref="VisioContext"/>.
+///
+/// The class is a data holder over two COM objects, so the interesting assertions are not about
+/// behaviour but about the **shape of its public surface**. It used to expose every COM object
+/// twice — once under a Visio name and once under the PowerPoint name it was migrated from
+/// (<c>Presentation</c>, <c>PresentationPath</c>, <c>App</c>). Because the properties are
+/// <c>dynamic</c>, <c>ctx.Document.Slides</c> compiled cleanly and failed only at runtime, so
+/// the compiler could not help with the migration the repository was performing (#21).
+///
+/// The reflection test below is the guard that keeps them gone. COM is never touched, so these are
+/// unit tests under Rule 30.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Speed", "Fast")]
 [Trait("Layer", "ComInterop")]
+[Trait("RequiresVisio", "false")]
 public class VisioContextTests
 {
+    /// <summary>
+    /// Names that would reintroduce the ambiguity #21 removed.
+    /// </summary>
+    private static readonly string[] ForbiddenMemberNames =
+    [
+        "Presentation",
+        "PresentationPath",
+        "Presentations",
+        "GetPresentation",
+        "App",
+        "Slide",
+        "Slides"
+    ];
+
     [Fact]
-    public void Constructor_WithValidArguments_SetsPresentationPathCorrectly()
+    public void PublicSurface_ExposesNoPowerPointNamedMember()
     {
-        // Arrange
-        string presentationPath = @"C:\test\presentation.pptx";
+        var offenders = typeof(VisioContext)
+            .GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Select(m => m.Name)
+            .Where(n => ForbiddenMemberNames.Contains(n, StringComparer.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToList();
 
-        // Act & Assert - Constructor throws ArgumentNullException for null COM objects,
-        // which is expected behavior. PresentationPath validation is tested separately.
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+        Assert.True(
+            offenders.Count == 0,
+            $"VisioContext exposes PowerPoint-named member(s): {string.Join(", ", offenders)}. "
+            + "These are dynamic, so a call site using them compiles and fails only at runtime — "
+            + "which is exactly the class of silent failure #21 removed.");
+    }
 
-        // When null is passed, the constructor throws on the first null param (powerpoint)
-        Assert.NotNull(ex);
+    /// <summary>
+    /// <see cref="IVisioBatch"/> carried the same duplication — <c>PresentationPath</c>,
+    /// <c>Presentations</c> and <c>GetPresentation</c> beside their Document-named twins — and it
+    /// is the type every Core command takes as its first parameter, so leaving it aliased would
+    /// have defeated the point of removing the aliases from <see cref="VisioContext"/>.
+    /// </summary>
+    [Fact]
+    public void BatchSurface_ExposesNoPowerPointNamedMember()
+    {
+        var offenders = typeof(IVisioBatch)
+            .GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(m => m.Name)
+            .Where(n => ForbiddenMemberNames.Contains(n, StringComparer.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(
+            offenders.Count == 0,
+            $"IVisioBatch exposes PowerPoint-named member(s): {string.Join(", ", offenders)}.");
     }
 
     [Fact]
-    public void Constructor_WithNullPresentationPath_ThrowsArgumentNullException()
+    public void ConstructorParameters_AreNamedForVisio()
     {
-        // Arrange
-        string? presentationPath = null;
+        var parameters = typeof(VisioContext)
+            .GetConstructors()
+            .Single()
+            .GetParameters()
+            .Select(p => p.Name ?? string.Empty)
+            .ToArray();
 
-        // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath!, null!, null!));
-
-        Assert.Equal("presentationPath", ex.ParamName);
+        Assert.Equal(["documentPath", "application", "document"], parameters);
     }
 
     [Fact]
-    public void Constructor_WithNullPowerPoint_ThrowsArgumentNullException()
+    public void PublicSurface_ExposesTheVisioNames()
     {
-        // Arrange
-        string presentationPath = @"C:\test\presentation.pptx";
+        var names = typeof(VisioContext)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name)
+            .ToHashSet(StringComparer.Ordinal);
 
-        // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+        Assert.Contains("DocumentPath", names);
+        Assert.Contains("Document", names);
+        Assert.Contains("Application", names);
 
-        Assert.Equal("app", ex.ParamName);
+        // Exactly three properties: no alias may hide behind a fourth.
+        Assert.Equal(3, names.Count);
     }
 
     [Fact]
-    public void Constructor_WithNullPresentationPath_ThrowsBeforeNullPowerPoint()
+    public void Constructor_NullDocumentPath_ThrowsNamingThatParameter()
     {
-        // Arrange
-        string? presentationPath = null;
-
-        // Act & Assert - PresentationPath is validated first
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath!, null!, null!));
-
-        Assert.Equal("presentationPath", ex.ParamName);
-    }
-
-    [Fact]
-    public void Constructor_PresentationPathValidation_RejectsNull()
-    {
-        // Arrange & Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new VisioContext(null!, null!, null!));
 
-        Assert.Equal("presentationPath", ex.ParamName);
+        Assert.Equal("documentPath", ex.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_NullApplication_ThrowsNamingThatParameter()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new VisioContext(@"C:\test\drawing.vsdx", null!, null!));
+
+        Assert.Equal("application", ex.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_NullDocument_ThrowsNamingThatParameter()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new VisioContext(@"C:\test\drawing.vsdx", new object(), null!));
+
+        Assert.Equal("document", ex.ParamName);
     }
 
     [Theory]
-    [InlineData(@"C:\test\presentation.pptx")]
-    [InlineData(@"\\server\share\presentation.pptm")]
-    [InlineData(@"D:\Documents\My Presentation.pptx")]
-    [InlineData(@"presentation.pptx")] // Relative path
-    public void Constructor_WithNullPowerPointAnyPath_ThrowsArgumentNullException(string presentationPath)
+    [InlineData(@"C:\test\drawing.vsdx")]
+    [InlineData(@"\\server\share\drawing.vsdm")]
+    [InlineData(@"D:\Documents\My Drawing.vsdx")]
+    [InlineData("drawing.vsdx")]
+    public void Constructor_ValidatesDocumentPathBeforeComObjects(string documentPath)
     {
-        // Act & Assert - Path is validated, then PowerPoint COM object is validated
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(presentationPath, null!, null!));
+            new VisioContext(documentPath, null!, null!));
 
-        // app is the first COM parameter validated after presentationPath
-        Assert.Equal("app", ex.ParamName);
+        Assert.Equal("application", ex.ParamName);
     }
 
     [Fact]
-    public void Constructor_NullPresentationPath_ThrowsWithCorrectParamName()
+    public void Constructor_WithAllArguments_ExposesThemUnderTheVisioNames()
     {
-        // Arrange - Simulates null path being passed
-        Assert.Throws<ArgumentNullException>(() =>
-            new VisioContext(null!, null!, null!));
+        var application = new object();
+        var document = new object();
+
+        var context = new VisioContext(@"C:\test\drawing.vsdx", application, document);
+
+        Assert.Equal(@"C:\test\drawing.vsdx", context.DocumentPath);
+        Assert.Same(application, (object)context.Application);
+        Assert.Same(document, (object)context.Document);
     }
 }
-
-
-
-
-

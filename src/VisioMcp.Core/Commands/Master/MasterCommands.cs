@@ -10,8 +10,8 @@ public class MasterCommands : IMasterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            var result = new MasterListResult { Success = true, FilePath = ctx.PresentationPath };
-            dynamic pres = ctx.Presentation;
+            var result = new MasterListResult { Success = true, FilePath = ctx.DocumentPath };
+            dynamic pres = ctx.Document;
             dynamic masters = pres.SlideMasters;
             try
             {
@@ -74,7 +74,7 @@ public class MasterCommands : IMasterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic masters = ((dynamic)ctx.Presentation).SlideMasters;
+            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
             dynamic master = masters.Item(masterIndex);
             dynamic shapes = master.Shapes;
             try
@@ -105,7 +105,7 @@ public class MasterCommands : IMasterCommands
                     Message = count > 0
                         ? $"Master {masterIndex} has {count} shape(s):\n" + string.Join("\n", lines)
                         : $"Master {masterIndex} has no shapes.",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -123,7 +123,7 @@ public class MasterCommands : IMasterCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic masters = ((dynamic)ctx.Presentation).SlideMasters;
+            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
             dynamic master = masters.Item(masterIndex);
             dynamic shape = master.Shapes.Item(shapeName);
             try
@@ -138,7 +138,7 @@ public class MasterCommands : IMasterCommands
                     Success = true,
                     Action = "edit-shape-text",
                     Message = $"Set text on shape '{shapeName}' (master {masterIndex})",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -154,7 +154,7 @@ public class MasterCommands : IMasterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic masters = ((dynamic)ctx.Presentation).SlideMasters;
+            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
             dynamic master = masters.Item(masterIndex);
             dynamic layouts = master.CustomLayouts;
             try
@@ -192,7 +192,7 @@ public class MasterCommands : IMasterCommands
                         string.Join("\n", layoutInfos.Select(l => l.MatchingName != null
                             ? $"  {l.Index}. {l.Name} (matching: {l.MatchingName})"
                             : $"  {l.Index}. {l.Name}")),
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -208,7 +208,7 @@ public class MasterCommands : IMasterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic designs = pres.Designs;
             dynamic slides = pres.Slides;
             try
@@ -265,7 +265,7 @@ public class MasterCommands : IMasterCommands
                     Message = deletedCount > 0
                         ? $"Deleted {deletedCount} unused master(s)"
                         : "No unused masters found",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

@@ -207,8 +207,8 @@ public class SessionManagerTests : IDisposable
         Assert.NotNull(batch);
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Presentation.Slides;
-            dynamic layouts = ((dynamic)ctx.Presentation).SlideMaster.CustomLayouts;
+            dynamic slides = ctx.Document.Slides;
+            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
             dynamic layout = layouts[1];
             slides.AddSlide(slides.Count + 1, layout);
             return 0;
@@ -223,7 +223,7 @@ public class SessionManagerTests : IDisposable
         using var verifyBatch = VisioSession.BeginBatch(testFile);
         var slideCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Presentation.Slides.Count;
+            return (int)ctx.Document.Slides.Count;
         });
         Assert.True(slideCount > 1, $"Expected more than 1 slide after save, got {slideCount}");
     }
@@ -238,13 +238,13 @@ public class SessionManagerTests : IDisposable
         // Get initial slide count
         var batch = manager.GetSession(sessionId);
         Assert.NotNull(batch);
-        var initialCount = batch.Execute((ctx, ct) => (int)ctx.Presentation.Slides.Count);
+        var initialCount = batch.Execute((ctx, ct) => (int)ctx.Document.Slides.Count);
 
         // Add a slide but don't save
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Presentation.Slides;
-            dynamic layouts = ((dynamic)ctx.Presentation).SlideMaster.CustomLayouts;
+            dynamic slides = ctx.Document.Slides;
+            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
             dynamic layout = layouts[1];
             slides.AddSlide(slides.Count + 1, layout);
             return 0;
@@ -259,7 +259,7 @@ public class SessionManagerTests : IDisposable
         using var verifyBatch = VisioSession.BeginBatch(testFile);
         var slideCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Presentation.Slides.Count;
+            return (int)ctx.Document.Slides.Count;
         });
         Assert.Equal(initialCount, slideCount); // Should be same as before
     }
@@ -605,8 +605,8 @@ public class SessionManagerTests : IDisposable
 
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Presentation.Slides;
-            dynamic layouts = ((dynamic)ctx.Presentation).SlideMaster.CustomLayouts;
+            dynamic slides = ctx.Document.Slides;
+            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
             dynamic layout = layouts[1];
             slides.AddSlide(slides.Count + 1, layout);
             return 0;
@@ -620,7 +620,7 @@ public class SessionManagerTests : IDisposable
         using var verifyBatch = VisioSession.BeginBatch(testFile);
         var slideCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Presentation.Slides.Count;
+            return (int)ctx.Document.Slides.Count;
         });
 
         Assert.True(slideCount > 1, $"Expected more than 1 slide after save, got {slideCount}");
@@ -651,17 +651,14 @@ public class SessionManagerTests : IDisposable
 
     private sealed class FakeVisioBatch(string documentPath, bool throwOnDispose = false) : IVisioBatch
     {
-        public string PresentationPath => documentPath;
         public string DocumentPath => documentPath;
         public Microsoft.Extensions.Logging.ILogger Logger => NullLogger.Instance;
-        public IReadOnlyDictionary<string, object> Presentations { get; } = new Dictionary<string, object>();
-        public IReadOnlyDictionary<string, object> Documents => Presentations;
+        public IReadOnlyDictionary<string, object> Documents { get; } = new Dictionary<string, object>();
         public int? VisioProcessId => null;
         public TimeSpan OperationTimeout => TimeSpan.FromMinutes(5);
         public int SaveCallCount { get; private set; }
         public int DisposeCallCount { get; private set; }
 
-        public object GetPresentation(string filePath) => new object();
         public object GetDocument(string filePath) => new object();
         public void Execute(Action<VisioContext, CancellationToken> operation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public T Execute<T>(Func<VisioContext, CancellationToken, T> operation, CancellationToken cancellationToken = default) => throw new NotSupportedException();

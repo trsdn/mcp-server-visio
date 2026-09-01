@@ -10,7 +10,7 @@ public partial class DesignCommands : IDesignCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic designs = ((dynamic)ctx.Presentation).Designs;
+            dynamic designs = ((dynamic)ctx.Document).Designs;
             try
             {
                 int count = (int)designs.Count;
@@ -18,7 +18,7 @@ public partial class DesignCommands : IDesignCommands
                 var result = new DesignListResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
 
                 for (int i = 1; i <= count; i++)
@@ -62,14 +62,14 @@ public partial class DesignCommands : IDesignCommands
             if (!System.IO.File.Exists(themePath))
                 throw new System.IO.FileNotFoundException($"Theme file not found: {themePath}");
 
-            ((dynamic)ctx.Presentation).ApplyTheme(themePath);
+            ((dynamic)ctx.Document).ApplyTheme(themePath);
 
             return new OperationResult
             {
                 Success = true,
                 Action = "apply-theme",
                 Message = $"Applied theme from '{System.IO.Path.GetFileName(themePath)}'",
-                FilePath = ctx.PresentationPath
+                FilePath = ctx.DocumentPath
             };
         });
     }
@@ -78,7 +78,7 @@ public partial class DesignCommands : IDesignCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic designs = ((dynamic)ctx.Presentation).Designs;
+            dynamic designs = ((dynamic)ctx.Document).Designs;
             int idx = designIndex <= 0 ? 1 : designIndex;
             dynamic design = designs.Item(idx);
             dynamic? slideMaster = null;
@@ -117,7 +117,7 @@ public partial class DesignCommands : IDesignCommands
                 return new ThemeColorResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     DesignName = design.Name?.ToString() ?? "",
                     Colors = colors
                 };
@@ -137,10 +137,10 @@ public partial class DesignCommands : IDesignCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic colorSchemes = ((dynamic)ctx.Presentation).ColorSchemes;
+            dynamic colorSchemes = ((dynamic)ctx.Document).ColorSchemes;
             try
             {
-                var result = new ColorSchemeListResult { Success = true, FilePath = ctx.PresentationPath };
+                var result = new ColorSchemeListResult { Success = true, FilePath = ctx.DocumentPath };
                 int count = (int)colorSchemes.Count;
                 for (int i = 1; i <= count; i++)
                 {
@@ -182,7 +182,7 @@ public partial class DesignCommands : IDesignCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic designs = ((dynamic)ctx.Presentation).Designs;
+            dynamic designs = ((dynamic)ctx.Document).Designs;
             int idx = designIndex <= 0 ? 1 : designIndex;
             dynamic design = designs.Item(idx);
             dynamic? slideMaster = null;
@@ -205,7 +205,7 @@ public partial class DesignCommands : IDesignCommands
                 return new ThemeFontResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     DesignName = design.Name?.ToString() ?? "",
                     HeadingFont = headingFont,
                     BodyFont = bodyFont

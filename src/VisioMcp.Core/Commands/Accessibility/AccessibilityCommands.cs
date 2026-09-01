@@ -13,10 +13,10 @@ public class AccessibilityCommands : IAccessibilityCommands
             var result = new AccessibilityAuditResult
             {
                 Success = true,
-                FilePath = ctx.PresentationPath
+                FilePath = ctx.DocumentPath
             };
 
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic slides = pres.Slides;
             try
             {
@@ -60,13 +60,13 @@ public class AccessibilityCommands : IAccessibilityCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 var result = new ReadingOrderResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     SlideIndex = slideIndex
                 };
 
@@ -122,7 +122,7 @@ public class AccessibilityCommands : IAccessibilityCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 var names = shapeNames
@@ -171,7 +171,7 @@ public class AccessibilityCommands : IAccessibilityCommands
                         Success = true,
                         Action = "set-reading-order",
                         Message = $"Set reading order for {names.Count} shape(s) on slide {slideIndex}.",
-                        FilePath = ctx.PresentationPath
+                        FilePath = ctx.DocumentPath
                     };
                 }
                 finally

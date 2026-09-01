@@ -10,7 +10,7 @@ public class TagCommands : ITagCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 dynamic tags = GetTags(slide, shapeName);
@@ -19,7 +19,7 @@ public class TagCommands : ITagCommands
                     var result = new TagListResult
                     {
                         Success = true,
-                        FilePath = ctx.PresentationPath,
+                        FilePath = ctx.DocumentPath,
                         SlideIndex = slideIndex,
                         ShapeName = shapeName
                     };
@@ -54,7 +54,7 @@ public class TagCommands : ITagCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 dynamic tags = GetTags(slide, shapeName);
@@ -76,7 +76,7 @@ public class TagCommands : ITagCommands
                     Success = true,
                     Action = "set",
                     Message = $"Set tag '{tagName}' = '{tagValue}' on {target}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -92,7 +92,7 @@ public class TagCommands : ITagCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 dynamic tags = GetTags(slide, shapeName);
@@ -114,7 +114,7 @@ public class TagCommands : ITagCommands
                     Success = true,
                     Action = "delete",
                     Message = $"Deleted tag '{tagName}' from {target}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

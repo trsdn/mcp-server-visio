@@ -14,7 +14,7 @@ public class ImageCommands : IImageCommands
             if (!System.IO.File.Exists(fullImagePath))
                 throw new FileNotFoundException($"Image file not found: '{fullImagePath}'");
 
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 // AddPicture(FileName, LinkToFile, SaveWithDocument, Left, Top, Width, Height)
@@ -31,7 +31,7 @@ public class ImageCommands : IImageCommands
                     Success = true,
                     Action = "insert",
                     Message = $"Inserted image '{Path.GetFileName(fullImagePath)}' as '{name}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -47,7 +47,7 @@ public class ImageCommands : IImageCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             try
             {
@@ -69,7 +69,7 @@ public class ImageCommands : IImageCommands
                     Success = true,
                     Action = "crop",
                     Message = $"Cropped image '{shapeName}' on slide {slideIndex} (L:{cropLeft}, R:{cropRight}, T:{cropTop}, B:{cropBottom})",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -86,7 +86,7 @@ public class ImageCommands : IImageCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             try
             {
@@ -106,7 +106,7 @@ public class ImageCommands : IImageCommands
                     Success = true,
                     Action = "set-brightness-contrast",
                     Message = $"Set brightness={brightness:F2}, contrast={contrast:F2} on image '{shapeName}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -124,7 +124,7 @@ public class ImageCommands : IImageCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic shape = slide.Shapes.Item(shapeName);
             try
             {
@@ -145,7 +145,7 @@ public class ImageCommands : IImageCommands
                     Success = true,
                     Action = "set-transparent-color",
                     Message = $"Set transparent color '{colorHex}' on image '{shapeName}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

@@ -96,8 +96,8 @@ public class VisioBatchTests : IAsyncLifetime
                 _output.WriteLine($"Batch operation {operationCount}");
 
                 // Verify we have the same context
-                Assert.NotNull(ctx.App);
-                Assert.NotNull(ctx.Presentation);
+                Assert.NotNull(ctx.Application);
+                Assert.NotNull(ctx.Document);
 
                 return operationCount;
             });
@@ -123,7 +123,7 @@ public class VisioBatchTests : IAsyncLifetime
         batch.Execute((ctx, ct) =>
         {
             // Access slide count to verify COM is working
-            int slideCount = ctx.Presentation.Slides.Count;
+            int slideCount = ctx.Document.Slides.Count;
             _output.WriteLine($"Slide count: {slideCount}");
             return 0;
         });
@@ -163,7 +163,7 @@ public class VisioBatchTests : IAsyncLifetime
             batch.Execute((ctx, ct) =>
             {
                 // Add a slide and set its title text
-                dynamic slide = ctx.Presentation.Slides[1];
+                dynamic slide = ctx.Document.Slides[1];
                 dynamic shape = slide.Shapes[1];
                 shape.TextFrame.TextRange.Text = testValue;
                 return 0;
@@ -181,7 +181,7 @@ public class VisioBatchTests : IAsyncLifetime
         {
             readValue = batch.Execute((ctx, ct) =>
             {
-                dynamic slide = ctx.Presentation.Slides[1];
+                dynamic slide = ctx.Document.Slides[1];
                 dynamic shape = slide.Shapes[1];
                 string result = shape.TextFrame.TextRange.Text?.ToString() ?? "";
                 return result;
@@ -200,7 +200,7 @@ public class VisioBatchTests : IAsyncLifetime
         using var batch = VisioSession.BeginBatch(_testFileCopy!);
 
         // Assert
-        Assert.Equal(_testFileCopy, batch.PresentationPath);
+        Assert.Equal(_testFileCopy, batch.DocumentPath);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class VisioBatchTests : IAsyncLifetime
             // Step 1: Get initial slide count
             batch.Execute((ctx, ct) =>
             {
-                initialSlideCount = ctx.Presentation.Slides.Count;
+                initialSlideCount = ctx.Document.Slides.Count;
                 _output.WriteLine($"✓ Initial slide count: {initialSlideCount}");
                 return 0;
             });
@@ -225,7 +225,7 @@ public class VisioBatchTests : IAsyncLifetime
             // Step 2: Add a new slide
             batch.Execute((ctx, ct) =>
             {
-                dynamic pres = ctx.Presentation;
+                dynamic pres = ctx.Document;
                 // Use layout from first slide master
                 dynamic layout = pres.SlideMaster.CustomLayouts[1];
                 pres.Slides.AddSlide(pres.Slides.Count + 1, layout);
@@ -236,7 +236,7 @@ public class VisioBatchTests : IAsyncLifetime
             // Step 3: Write text to the new slide
             batch.Execute((ctx, ct) =>
             {
-                dynamic slide = ctx.Presentation.Slides[ctx.Presentation.Slides.Count];
+                dynamic slide = ctx.Document.Slides[ctx.Document.Slides.Count];
                 // Add a text box shape
                 dynamic shape = slide.Shapes.AddTextbox(1, 100, 100, 400, 200); // msoTextOrientationHorizontal=1
                 shape.TextFrame.TextRange.Text = testBody;
@@ -247,8 +247,8 @@ public class VisioBatchTests : IAsyncLifetime
             // Step 4: Read back to verify
             var readData = batch.Execute((ctx, ct) =>
             {
-                int currentCount = ctx.Presentation.Slides.Count;
-                dynamic lastSlide = ctx.Presentation.Slides[currentCount];
+                int currentCount = ctx.Document.Slides.Count;
+                dynamic lastSlide = ctx.Document.Slides[currentCount];
                 string text = "";
                 for (int i = 1; i <= lastSlide.Shapes.Count; i++)
                 {
@@ -280,8 +280,8 @@ public class VisioBatchTests : IAsyncLifetime
         {
             var verifyData = batch.Execute((ctx, ct) =>
             {
-                int slideCount = ctx.Presentation.Slides.Count;
-                dynamic lastSlide = ctx.Presentation.Slides[slideCount];
+                int slideCount = ctx.Document.Slides.Count;
+                dynamic lastSlide = ctx.Document.Slides[slideCount];
                 string text = "";
                 for (int i = 1; i <= lastSlide.Shapes.Count; i++)
                 {
