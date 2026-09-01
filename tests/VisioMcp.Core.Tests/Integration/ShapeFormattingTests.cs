@@ -312,6 +312,167 @@ public sealed class ShapeFormattingTests(ITestOutputHelper output) : IDisposable
         Assert.Contains("No shapes", none.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SetGlow_WritesGlowCells()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetGlow(batch, 1, shapeName, 8f, "#FFCC00").Success);
+
+        var colour = _cells.ReadFormula(batch, 1, shapeName, "GlowColor");
+        Assert.True(colour.Success, colour.ErrorMessage);
+        output.WriteLine($"GlowColor = {colour.Cell?.Formula}");
+        Assert.Contains("RGB(255,204,0)", colour.Cell?.Formula ?? string.Empty, StringComparison.Ordinal);
+
+        // GlowSize is a distance cell, so the internal result is inches: 8pt = 8/72 in.
+        Assert.Equal(8d / 72d, ReadCellNumber(batch, shapeName, "GlowSize"), precision: 4);
+    }
+
+    [Fact]
+    public void SetSoftEdge_WritesSoftEdgesSize()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetSoftEdge(batch, 1, shapeName, 5f).Success);
+        Assert.Equal(5d / 72d, ReadCellNumber(batch, shapeName, "SoftEdgesSize"), precision: 4);
+
+        Assert.True(_shapes.SetSoftEdge(batch, 1, shapeName, 0f).Success);
+        Assert.Equal(0d, ReadCellNumber(batch, shapeName, "SoftEdgesSize"), precision: 4);
+    }
+
+    [Fact]
+    public void SetReflection_ScalesReflectionSize()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetReflection(batch, 1, shapeName, 9).Success);
+        double full = ReadCellNumber(batch, shapeName, "ReflectionSize");
+        output.WriteLine($"ReflectionSize at 9 = {full}");
+        Assert.Equal(1d, full, precision: 3);
+
+        Assert.True(_shapes.SetReflection(batch, 1, shapeName, 0).Success);
+        Assert.Equal(0d, ReadCellNumber(batch, shapeName, "ReflectionSize"), precision: 3);
+    }
+
+    [Fact]
+    public void SetReflection_RejectsOutOfRange()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => _shapes.SetReflection(batch, 1, shapeName, 12));
+    }
+
+    [Fact]
+    public void Set3D_WritesRotationAndBevelCells()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        var result = _shapes.Set3D(batch, 1, shapeName, rotationX: 30f, rotationY: 15f, rotationZ: null, bevelType: 1, bevelDepth: 4f);
+        Assert.True(result.Success, result.ErrorMessage);
+        output.WriteLine(result.Message);
+
+        // Angles are stored in radians internally.
+        Assert.Equal(30d * Math.PI / 180d, ReadCellNumber(batch, shapeName, "RotationXAngle"), precision: 4);
+        Assert.Equal(15d * Math.PI / 180d, ReadCellNumber(batch, shapeName, "RotationYAngle"), precision: 4);
+        Assert.Equal(1d, ReadCellNumber(batch, shapeName, "BevelTopType"), precision: 3);
+
+        // rotationZ was null and must be left alone rather than zeroed.
+        Assert.DoesNotContain("RotationZAngle", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetTextFrame_WritesMarginsAndReportsUnsupported()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        var result = _shapes.SetTextFrame(batch, 1, shapeName, marginLeft: 6f, marginRight: 6f,
+            marginTop: null, marginBottom: null, wordWrap: true, autoSize: 1);
+        Assert.True(result.Success, result.ErrorMessage);
+        output.WriteLine(result.Message);
+
+        Assert.Equal(6d / 72d, ReadCellNumber(batch, shapeName, "LeftMargin"), precision: 4);
+        Assert.Equal(6d / 72d, ReadCellNumber(batch, shapeName, "RightMargin"), precision: 4);
+
+        // word_wrap and auto_size have no Visio equivalent and must be reported, not silently
+        // dropped - silent no-ops are how an agent ends up believing it changed something.
+        Assert.Contains("word_wrap", result.Message, StringComparison.Ordinal);
+        Assert.Contains("auto_size", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetGradientFill_EnablesGradient()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetGradientFill(batch, 1, shapeName, "#FF0000", "#0000FF", 1).Success);
+
+        Assert.Equal(1d, ReadCellNumber(batch, shapeName, "FillGradientEnabled"), precision: 3);
+
+        var fore = _cells.ReadFormula(batch, 1, shapeName, "FillForegnd");
+        var back = _cells.ReadFormula(batch, 1, shapeName, "FillBkgnd");
+        Assert.Contains("RGB(255,0,0)", fore.Cell?.Formula ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("RGB(0,0,255)", back.Cell?.Formula ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CopyFormatting_CopiesFillAndLineButNotGeometry()
+    {
+        using var batch = CreateDocument();
+        var source = AddRectangle(batch);
+        var target = AddRectangle(batch);
+
+        Assert.True(_shapes.SetFill(batch, 1, source, "#00AA00").Success);
+        Assert.True(_shapes.SetLine(batch, 1, source, "#AA0000", 4f).Success);
+
+        double targetWidthBefore = ReadCellNumber(batch, target, "Width");
+
+        var copied = _shapes.CopyFormatting(batch, 1, source, target);
+        Assert.True(copied.Success, copied.ErrorMessage);
+        output.WriteLine(copied.Message);
+
+        var targetFill = _cells.ReadFormula(batch, 1, target, "FillForegnd");
+        Assert.Contains("RGB(0,170,0)", targetFill.Cell?.Formula ?? string.Empty, StringComparison.Ordinal);
+
+        // Formatting must not move or resize the target.
+        Assert.Equal(targetWidthBefore, ReadCellNumber(batch, target, "Width"), precision: 4);
+    }
+
+    [Fact]
+    public void SetActionSettings_ReportsNoVisioEquivalent()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        // Previously threw RuntimeBinderException, which told the caller nothing. It must now
+        // explain why and name the alternative.
+        var ex = Assert.Throws<NotSupportedException>(
+            () => _shapes.SetActionSettings(batch, 1, shapeName, 7, "https://example.com"));
+
+        output.WriteLine(ex.Message);
+        Assert.Contains("no Visio equivalent", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("hyperlink", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddTextEffect_ReportsNoVisioEquivalent()
+    {
+        using var batch = CreateDocument();
+
+        var ex = Assert.Throws<NotSupportedException>(
+            () => _shapes.AddTextEffect(batch, 1, 1, "Title", "Calibri", 44f, 1f, 1f));
+
+        output.WriteLine(ex.Message);
+        Assert.Contains("no Visio equivalent", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("add-textbox", ex.Message, StringComparison.Ordinal);
+    }
+
     private string? ReadCellValue(IVisioBatch batch, string shapeName, string cellName)
     {
         var result = _cells.Read(batch, 1, shapeName, cellName);

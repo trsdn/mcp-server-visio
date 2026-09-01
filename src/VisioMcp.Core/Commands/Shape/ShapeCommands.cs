@@ -10,6 +10,32 @@ namespace VisioMcp.Core.Commands.Shape;
 public class ShapeCommands : IShapeCommands
 {
     private const int VisSectionProp = 243;
+
+    /// <summary>
+    /// Fill, line, shadow and text-block cells copied by <c>copy-formatting</c>. Geometry,
+    /// position and text content are deliberately excluded - copying formatting should not move
+    /// or resize the target.
+    /// </summary>
+    private static readonly string[] FormattingCellNames =
+    [
+        "FillForegnd",
+        "FillBkgnd",
+        "FillPattern",
+        "FillForegndTrans",
+        "LineColor",
+        "LinePattern",
+        "LineWeight",
+        "LineColorTrans",
+        "Rounding",
+        "ShdwPattern",
+        "ShdwForegnd",
+        "ShdwOffsetX",
+        "ShdwOffsetY",
+        "LeftMargin",
+        "RightMargin",
+        "TopMargin",
+        "BottomMargin"
+    ];
     private const int VisTagDefault = 0;
     private const int VisDeselect = 1;
     private const int VisSelect = 2;
@@ -1313,32 +1339,63 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                textFrame = shape.TextFrame;
-                if (marginLeft.HasValue) textFrame.MarginLeft = marginLeft.Value;
-                if (marginRight.HasValue) textFrame.MarginRight = marginRight.Value;
-                if (marginTop.HasValue) textFrame.MarginTop = marginTop.Value;
-                if (marginBottom.HasValue) textFrame.MarginBottom = marginBottom.Value;
-                if (wordWrap.HasValue) textFrame.WordWrap = wordWrap.Value ? -1 : 0; // msoTrue=-1, msoFalse=0
-                if (autoSize.HasValue) textFrame.AutoSize = autoSize.Value; // ppAutoSizeNone=0, ppAutoSizeShapeToFitText=1, ppAutoSizeTextToFitShape=2
+                var changes = new List<string>();
+
+                // Visio has no TextFrame object; the text block margins are cells.
+                if (marginLeft.HasValue)
+                {
+                    SetShapeFormula(shape, "LeftMargin", FormatInvariant(marginLeft.Value) + " pt");
+                    changes.Add($"LeftMargin={FormatInvariant(marginLeft.Value)}pt");
+                }
+                if (marginRight.HasValue)
+                {
+                    SetShapeFormula(shape, "RightMargin", FormatInvariant(marginRight.Value) + " pt");
+                    changes.Add($"RightMargin={FormatInvariant(marginRight.Value)}pt");
+                }
+                if (marginTop.HasValue)
+                {
+                    SetShapeFormula(shape, "TopMargin", FormatInvariant(marginTop.Value) + " pt");
+                    changes.Add($"TopMargin={FormatInvariant(marginTop.Value)}pt");
+                }
+                if (marginBottom.HasValue)
+                {
+                    SetShapeFormula(shape, "BottomMargin", FormatInvariant(marginBottom.Value) + " pt");
+                    changes.Add($"BottomMargin={FormatInvariant(marginBottom.Value)}pt");
+                }
+
+                // wordWrap and autoSize have no single-cell Visio equivalent - text wrapping is a
+                // consequence of TxtWidth and the paragraph settings rather than a switch. They
+                // are reported as unsupported instead of being silently ignored, which is what
+                // the PowerPoint implementation's TextFrame.WordWrap would have become.
+                var unsupported = new List<string>();
+                if (wordWrap.HasValue) unsupported.Add("word_wrap");
+                if (autoSize.HasValue) unsupported.Add("auto_size");
+
+                string message = changes.Count > 0
+                    ? $"Updated text frame margins of shape '{shapeName}' on page {pageIndex}: {string.Join(", ", changes)}"
+                    : $"No text frame margins changed on shape '{shapeName}'";
+
+                if (unsupported.Count > 0)
+                {
+                    message += $". Ignored (no Visio equivalent): {string.Join(", ", unsupported)}";
+                }
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-text-frame",
-                    Message = $"Updated text frame properties of shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = message,
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2644,27 +2701,35 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                // TwoColorGradient(style, variant) - variant 1 is default direction
-                shape.Fill.TwoColorGradient(gradientStyle, 1);
-                shape.Fill.ForeColor.RGB = HexToOleColor(color1);
-                shape.Fill.BackColor.RGB = HexToOleColor(color2);
+                // Visio's gradient lives in the Fill Gradient section. FillGradientEnabled turns
+                // it on; the two ends are the existing foreground and background fill colours,
+                // which is how Visio's own two-colour gradients are expressed.
+                SetShapeFormula(shape, "FillForegnd", ToVisioRgbFormula(color1));
+                SetShapeFormula(shape, "FillBkgnd", ToVisioRgbFormula(color2));
+                SetShapeFormula(shape, "FillPattern", "1");
+                SetShapeFormula(shape, "FillGradientEnabled", "1");
+
+                // FillGradientDir carries the direction. Visio's values do not line up with
+                // PowerPoint's MsoGradientStyle, so the 1-6 input is passed through and callers
+                // should treat it as a Visio direction index.
+                SetShapeFormula(shape, "FillGradientDir", gradientStyle.ToString(CultureInfo.InvariantCulture));
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-gradient-fill",
-                    Message = $"Set gradient fill on shape '{shapeName}' from '{color1}' to '{color2}' (style {gradientStyle}) on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Set gradient fill on shape '{shapeName}' from '{color1}' to '{color2}' (direction {gradientStyle}) on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2676,22 +2741,17 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                dynamic glow = shape.Glow;
-                try
+                // Visio has no Shape.Glow object; the effect lives in the GlowSize / GlowColor
+                // cells. A size of 0 removes the glow.
+                SetShapeFormula(shape, "GlowSize", FormatInvariant(radius) + " pt");
+
+                if (radius > 0)
                 {
-                    glow.Radius = radius;
-                    if (radius > 0)
-                    {
-                        glow.Color.RGB = HexToOleColor(colorHex);
-                    }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref glow!);
+                    SetShapeFormula(shape, "GlowColor", ToVisioRgbFormula(colorHex));
                 }
 
                 return new OperationResult
@@ -2699,15 +2759,15 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-glow",
                     Message = radius > 0
-                        ? $"Set glow on shape '{shapeName}' with radius {radius}pt and color '{colorHex}' on slide {pageIndex}"
-                        : $"Removed glow from shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                        ? $"Set glow on shape '{shapeName}' with radius {FormatInvariant(radius)}pt and color '{colorHex}' on page {pageIndex}"
+                        : $"Removed glow from shape '{shapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2716,23 +2776,35 @@ public class ShapeCommands : IShapeCommands
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
-        if (reflectionType < 0 || reflectionType > 9)
-            throw new ArgumentOutOfRangeException(nameof(reflectionType), "reflectionType must be 0-9 (0=None, 1-9=msoReflectionType1 through msoReflectionType9)");
+        if (reflectionType is < 0 or > 9)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(reflectionType),
+                reflectionType,
+                "reflectionType must be 0-9 (0 = none, 1-9 = increasing reflection strength).");
+        }
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                dynamic reflection = shape.Reflection;
-                try
+                // Visio has no preset reflection "types" like PowerPoint's msoReflectionType1-9.
+                // It exposes the underlying quantities instead, so the 0-9 scale is mapped onto
+                // them: size as a fraction of the shape, and a fixed blur and transparency that
+                // read as a plausible reflection at each step.
+                if (reflectionType == 0)
                 {
-                    reflection.Type = reflectionType;
+                    SetShapeFormula(shape, "ReflectionSize", "0");
                 }
-                finally
+                else
                 {
-                    ComUtilities.Release(ref reflection!);
+                    double fraction = reflectionType / 9d;
+                    SetShapeFormula(shape, "ReflectionSize", FormatInvariant(fraction));
+                    SetShapeFormula(shape, "ReflectionTrans", FormatInvariant(0.5));
+                    SetShapeFormula(shape, "ReflectionBlur", "0 pt");
+                    SetShapeFormula(shape, "ReflectionDist", "0 pt");
                 }
 
                 return new OperationResult
@@ -2740,15 +2812,15 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-reflection",
                     Message = reflectionType > 0
-                        ? $"Set reflection type {reflectionType} on shape '{shapeName}' on slide {pageIndex}"
-                        : $"Removed reflection from shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                        ? $"Set reflection strength {reflectionType} on shape '{shapeName}' on page {pageIndex}"
+                        : $"Removed reflection from shape '{shapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2847,27 +2919,41 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic sourceShape = slide.Shapes.Item(sourceShapeName);
-            dynamic targetShape = slide.Shapes.Item(targetShapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic sourceShape = page.Shapes.Item(sourceShapeName);
+            dynamic targetShape = page.Shapes.Item(targetShapeName);
             try
             {
-                sourceShape.PickUp();
-                targetShape.Apply();
+                // Visio has no PickUp/Apply format painter on the object model, so the formatting
+                // cells are copied explicitly. Only cells the source actually has are copied, so a
+                // source without, say, a gradient does not clear the target's.
+                var copied = new List<string>();
+
+                foreach (var cellName in FormattingCellNames)
+                {
+                    var formula = TryGetShapeFormula(sourceShape, cellName);
+                    if (formula is null)
+                    {
+                        continue;
+                    }
+
+                    SetShapeFormula(targetShape, cellName, formula);
+                    copied.Add(cellName);
+                }
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "copy-formatting",
-                    Message = $"Copied formatting from '{sourceShapeName}' to '{targetShapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Copied {copied.Count} formatting cell(s) from '{sourceShapeName}' to '{targetShapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref targetShape!);
                 ComUtilities.Release(ref sourceShape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2876,64 +2962,25 @@ public class ShapeCommands : IShapeCommands
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
-        if (actionType == 7 && string.IsNullOrWhiteSpace(hyperlinkAddress))
-            throw new ArgumentException("hyperlinkAddress is required when actionType is 7 (Hyperlink)", nameof(hyperlinkAddress));
+        // Visio has no ActionSettings. PowerPoint's model - a click action that navigates between
+        // slides - has no counterpart in a drawing, and the action types this method accepts
+        // (NextSlide, PreviousSlide, FirstSlide, LastSlide) describe a slideshow.
+        //
+        // The nearest Visio equivalents are the Actions ShapeSheet section (right-click menu
+        // commands) and hyperlinks, which are a different model rather than a rename. Failing with
+        // a clear message beats the RuntimeBinderException this used to produce, which told the
+        // caller nothing about why or what to use instead.
+        _ = batch;
+        _ = pageIndex;
+        _ = actionType;
+        _ = hyperlinkAddress;
 
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? actionSettings = null;
-            dynamic? actionSetting = null;
-            try
-            {
-                actionSettings = shape.ActionSettings;
-                // Item(1) = ppMouseClick
-                actionSetting = actionSettings.Item(1);
-                actionSetting.Action = actionType;
-
-                if (actionType == 7 && !string.IsNullOrWhiteSpace(hyperlinkAddress))
-                {
-                    dynamic hyperlink = actionSetting.Hyperlink;
-                    try
-                    {
-                        hyperlink.Address = hyperlinkAddress;
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref hyperlink!);
-                    }
-                }
-
-                string actionDesc = actionType switch
-                {
-                    0 => "None",
-                    1 => "NextSlide",
-                    2 => "PreviousSlide",
-                    3 => "FirstSlide",
-                    4 => "LastSlide",
-                    7 => $"Hyperlink ({hyperlinkAddress})",
-                    _ => $"Action {actionType}"
-                };
-
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "set-action-settings",
-                    Message = $"Set action on shape '{shapeName}' to {actionDesc} on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
-                };
-            }
-            finally
-            {
-                if (actionSetting != null) ComUtilities.Release(ref actionSetting!);
-                if (actionSettings != null) ComUtilities.Release(ref actionSettings!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
-            }
-        });
+        throw new NotSupportedException(
+            "set-action-settings has no Visio equivalent. PowerPoint click actions navigate between " +
+            "slides, which a drawing has no concept of. For navigation between pages use a hyperlink " +
+            "with a SubAddress naming the target page (tracked in #35); for right-click commands use " +
+            "the Actions ShapeSheet section.");
     }
-
     public OperationResult Scale(IVisioBatch batch, int pageIndex, string shapeName, float scaleX, float scaleY)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
@@ -3015,31 +3062,28 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? softEdge = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                softEdge = shape.SoftEdge;
-                // Type: 1 = msoSoftEdgeType1 (enabled), 0 = none
-                softEdge.Type = radius > 0 ? 1 : 0;
-                softEdge.Radius = radius;
+                // Visio has no Shape.SoftEdge object; a single SoftEdgesSize cell carries the
+                // effect, with 0 meaning none.
+                SetShapeFormula(shape, "SoftEdgesSize", FormatInvariant(radius) + " pt");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-soft-edge",
                     Message = radius > 0
-                        ? $"Set soft edge on shape '{shapeName}' with radius {radius}pt on slide {pageIndex}"
-                        : $"Removed soft edge from shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                        ? $"Set soft edge on shape '{shapeName}' with radius {FormatInvariant(radius)}pt on page {pageIndex}"
+                        : $"Removed soft edge from shape '{shapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (softEdge != null) ComUtilities.Release(ref softEdge!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -3095,71 +3139,60 @@ public class ShapeCommands : IShapeCommands
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(fontName);
 
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic? shape = null;
-            try
-            {
-                // AddTextEffect(PresetTextEffect, Text, FontName, FontSize, FontBold, FontItalic, Left, Top)
-                // FontBold=0 (msoFalse), FontItalic=0 (msoFalse)
-                shape = slide.Shapes.AddTextEffect(presetEffect, text, fontName, fontSize, 0, 0, left, top);
-                string name = shape.Name?.ToString() ?? "";
+        // WordArt is a PowerPoint/Word feature with no Visio counterpart - there is no TextEffect
+        // cell and no Shapes.AddTextEffect. Failing with a clear message beats the
+        // RuntimeBinderException this used to produce.
+        _ = batch;
+        _ = pageIndex;
+        _ = presetEffect;
+        _ = fontSize;
+        _ = left;
+        _ = top;
 
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "add-text-effect",
-                    Message = $"Added text effect '{name}' with preset {presetEffect} on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
-                };
-            }
-            finally
-            {
-                if (shape != null) ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
-            }
-        });
+        throw new NotSupportedException(
+            "add-text-effect has no Visio equivalent. WordArt preset effects are a PowerPoint feature. " +
+            "To place styled text on a page use shape(add-textbox) followed by text(format), which " +
+            "covers font, size, colour and weight.");
     }
-
     public OperationResult Set3D(IVisioBatch batch, int pageIndex, string shapeName, float? rotationX, float? rotationY, float? rotationZ, int? bevelType, float? bevelDepth)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? threeD = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                threeD = shape.ThreeD;
                 var changes = new List<string>();
 
+                // Visio has no Shape.ThreeD object; the 3-D rotation and bevel cells carry it.
                 if (rotationX.HasValue)
                 {
-                    threeD.RotationX = rotationX.Value;
-                    changes.Add($"RotationX={rotationX.Value}");
+                    SetShapeFormula(shape, "RotationXAngle", FormatInvariant(rotationX.Value) + " deg");
+                    changes.Add($"RotationXAngle={FormatInvariant(rotationX.Value)}");
                 }
                 if (rotationY.HasValue)
                 {
-                    threeD.RotationY = rotationY.Value;
-                    changes.Add($"RotationY={rotationY.Value}");
+                    SetShapeFormula(shape, "RotationYAngle", FormatInvariant(rotationY.Value) + " deg");
+                    changes.Add($"RotationYAngle={FormatInvariant(rotationY.Value)}");
                 }
                 if (rotationZ.HasValue)
                 {
-                    threeD.RotationZ = rotationZ.Value;
-                    changes.Add($"RotationZ={rotationZ.Value}");
+                    SetShapeFormula(shape, "RotationZAngle", FormatInvariant(rotationZ.Value) + " deg");
+                    changes.Add($"RotationZAngle={FormatInvariant(rotationZ.Value)}");
                 }
                 if (bevelType.HasValue)
                 {
-                    threeD.BevelTopType = bevelType.Value;
+                    SetShapeFormula(shape, "BevelTopType", bevelType.Value.ToString(CultureInfo.InvariantCulture));
                     changes.Add($"BevelTopType={bevelType.Value}");
                 }
                 if (bevelDepth.HasValue)
                 {
-                    threeD.BevelTopDepth = bevelDepth.Value;
-                    changes.Add($"BevelTopDepth={bevelDepth.Value}");
+                    // Visio expresses bevel depth as the top bevel's height rather than a
+                    // separate depth quantity.
+                    SetShapeFormula(shape, "BevelTopHeight", FormatInvariant(bevelDepth.Value) + " pt");
+                    changes.Add($"BevelTopHeight={FormatInvariant(bevelDepth.Value)}");
                 }
 
                 return new OperationResult
@@ -3167,16 +3200,15 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-3d",
                     Message = changes.Count > 0
-                        ? $"Set 3D effects on shape '{shapeName}': {string.Join(", ", changes)} on slide {pageIndex}"
+                        ? $"Set 3D effects on shape '{shapeName}': {string.Join(", ", changes)} on page {pageIndex}"
                         : $"No 3D properties changed on shape '{shapeName}' (all parameters were null)",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (threeD != null) ComUtilities.Release(ref threeD!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
