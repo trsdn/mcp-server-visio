@@ -3,4 +3,24 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <!--
+    xunit.runner.json disables all parallelism, which is mandatory: the suite drives a single
+    Visio COM instance on one STA thread, so concurrent collections produce phantom failures
+    that look like flakiness but are a configuration bug.
+
+    xunit reads this file from the *output* directory. If it is not copied there, the settings
+    are silently ignored - no warning, no error. Previously each test project carried its own
+    copy and only one of them set CopyToOutputDirectory, so three projects ran in parallel
+    regardless (see #24).
+
+    Linking one canonical file here means every current and future project under tests/ gets it
+    automatically and cannot opt out by omission.
+  -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)xunit.runner.json"
+          Link="xunit.runner.json"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
 </Project>
