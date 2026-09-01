@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
-using VisioMcp.Core.Commands.Slide;
 using VisioMcp.Core.Models;
 
 namespace VisioMcp.Core.Commands.Shape;
@@ -1008,23 +1007,27 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                shape.AlternativeText = altText;
+                // Visio has no AlternativeText property. The Comment cell is what surfaces as a
+                // shape's screen tip and is what accessibility tooling reads, so it is the closest
+                // equivalent. Its content is a formula, so the text must be quoted and escaped.
+                SetShapeFormula(shape, "Comment", ToVisioStringFormula(altText));
+
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-alt-text",
-                    Message = $"Set alt text of shape '{shapeName}' to '{altText}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Set alt text of shape '{shapeName}' to '{altText}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1035,32 +1038,38 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
-            dynamic srcSlide = pres.Slides.Item(pageIndex);
-            dynamic shape = srcSlide.Shapes.Item(shapeName);
+            dynamic sourcePage = GetPage(ctx, pageIndex);
+            dynamic shape = sourcePage.Shapes.Item(shapeName);
+            dynamic? targetPage = null;
+            dynamic? dropped = null;
             try
             {
-                shape.Copy();
-                dynamic targetSlide = pres.Slides.Item(targetSlideIndex);
-                dynamic pasted = targetSlide.Shapes.Paste();
-                string newName = "";
-                try { newName = pasted.Item(1).Name?.ToString() ?? ""; } catch { }
-                ComUtilities.Release(ref pasted!);
-                ComUtilities.Release(ref targetSlide!);
+                targetPage = GetPage(ctx, targetSlideIndex);
+
+                // Page.Drop copies the shape directly between pages. The clipboard round trip the
+                // PowerPoint version used (Copy + Shapes.Paste) is both slower and vulnerable to
+                // anything else touching the clipboard mid-operation.
+                double pinX = TryGetShapeResult(shape, "PinX") ?? 0d;
+                double pinY = TryGetShapeResult(shape, "PinY") ?? 0d;
+
+                dropped = targetPage.Drop(shape, pinX, pinY);
+                string newName = dropped.NameU?.ToString() ?? string.Empty;
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "copy-to-slide",
-                    Message = $"Copied shape '{shapeName}' from slide {pageIndex} to slide {targetSlideIndex}" +
+                    Message = $"Copied shape '{shapeName}' from page {pageIndex} to page {targetSlideIndex}" +
                               (string.IsNullOrEmpty(newName) ? "" : $" as '{newName}'"),
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
+                if (dropped != null) ComUtilities.Release(ref dropped!);
+                if (targetPage != null) ComUtilities.Release(ref targetPage!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref srcSlide!);
+                ComUtilities.Release(ref sourcePage!);
             }
         });
     }
@@ -1071,23 +1080,21 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                dynamic shadow = shape.Shadow;
-                try
+                if (visible)
                 {
-                    shadow.Visible = visible ? -1 : 0;
-                    if (visible)
-                    {
-                        shadow.OffsetX = offsetX;
-                        shadow.OffsetY = offsetY;
-                    }
+                    // ShdwPattern 0 = none, 1 = solid. Offsets are distance cells, so the unit is
+                    // stated explicitly rather than left to the document default.
+                    SetShapeFormula(shape, "ShdwPattern", "1");
+                    SetShapeFormula(shape, "ShdwOffsetX", FormatInvariant(offsetX) + " pt");
+                    SetShapeFormula(shape, "ShdwOffsetY", FormatInvariant(offsetY) + " pt");
                 }
-                finally
+                else
                 {
-                    ComUtilities.Release(ref shadow!);
+                    SetShapeFormula(shape, "ShdwPattern", "0");
                 }
 
                 return new OperationResult
@@ -1095,15 +1102,15 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-shadow",
                     Message = visible
-                        ? $"Set shadow on shape '{shapeName}' (offset {offsetX},{offsetY})"
+                        ? $"Set shadow on shape '{shapeName}' (offset {FormatInvariant(offsetX)},{FormatInvariant(offsetY)} pt)"
                         : $"Removed shadow from shape '{shapeName}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1531,6 +1538,36 @@ public class ShapeCommands : IShapeCommands
 
     private static string FormatInvariant(double value) =>
         value.ToString("0.############", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Wraps text as a quoted ShapeSheet string formula, escaping embedded quotes.
+    /// </summary>
+    private static string ToVisioStringFormula(string? value)
+    {
+        var text = value ?? string.Empty;
+        return "\"" + text.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+    }
+
+    /// <summary>
+    /// Maps a Visio <c>visType*</c> constant to a readable name.
+    /// </summary>
+    /// <remarks>
+    /// Values confirmed against a live instance: a drawn rectangle reports 3 and a grouped
+    /// selection reports 2. These are <c>VisShapeTypes</c>, not the <c>MsoShapeType</c> values the
+    /// PowerPoint implementation compared against, so callers passing the old numbers will match
+    /// nothing.
+    /// </remarks>
+    private static string GetVisioShapeTypeName(int shapeType) => shapeType switch
+    {
+        0 => "Invalid",
+        1 => "Page",
+        2 => "Group",
+        3 => "Shape",
+        4 => "ForeignObject",
+        5 => "Guide",
+        6 => "Document",
+        _ => "Unknown"
+    };
 
     private static void EnsureWindowPage(dynamic window, dynamic page)
     {
@@ -2756,8 +2793,8 @@ public class ShapeCommands : IShapeCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shapes = slide.Shapes;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shapes = page.Shapes;
             try
             {
                 int count = (int)shapes.Count;
@@ -2767,10 +2804,13 @@ public class ShapeCommands : IShapeCommands
                     dynamic shape = shapes.Item(i);
                     try
                     {
+                        // Visio's Shape.Type reports visType* values (1 = Group, 2 = Shape,
+                        // 3 = Guide, 4 = ForeignObject, 6 = Ink), not the MsoShapeType values
+                        // the PowerPoint version compared against.
                         int type = Convert.ToInt32(shape.Type);
                         if (type == shapeType)
                         {
-                            matches.Add(shape.Name?.ToString() ?? $"Shape{i}");
+                            matches.Add(shape.NameU?.ToString() ?? $"Shape{i}");
                         }
                     }
                     finally
@@ -2779,23 +2819,23 @@ public class ShapeCommands : IShapeCommands
                     }
                 }
 
-                string typeName = ShapeHelpers.GetShapeTypeName(shapeType);
+                string typeName = GetVisioShapeTypeName(shapeType);
                 string message = matches.Count > 0
                     ? $"Found {matches.Count} shape(s) of type {typeName} ({shapeType}): {string.Join(", ", matches)}"
-                    : $"No shapes of type {typeName} ({shapeType}) found on slide {pageIndex}";
+                    : $"No shapes of type {typeName} ({shapeType}) found on page {pageIndex}";
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "find-by-type",
                     Message = message,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shapes!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -3010,26 +3050,24 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? shadow = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                shadow = shape.Shadow;
-                bool visible = Convert.ToInt32(shadow.Visible) != 0;
+                double pattern = TryGetShapeResult(shape, "ShdwPattern") ?? 0d;
+                bool visible = pattern != 0d;
 
                 string message;
                 if (visible)
                 {
-                    float offsetX = Convert.ToSingle(shadow.OffsetX);
-                    float offsetY = Convert.ToSingle(shadow.OffsetY);
-                    float blur = Convert.ToSingle(shadow.Blur);
-                    int rgb = Convert.ToInt32(shadow.ForeColor.RGB);
-                    int r = rgb & 0xFF;
-                    int g = (rgb >> 8) & 0xFF;
-                    int b = (rgb >> 16) & 0xFF;
-                    string colorHex = $"#{r:X2}{g:X2}{b:X2}";
-                    message = $"Visible: true, OffsetX: {offsetX:F2}, OffsetY: {offsetY:F2}, Blur: {blur:F2}, Color: {colorHex}";
+                    // Offset cells are stored in internal units (inches); report points, which is
+                    // what the setter accepts.
+                    double offsetX = (TryGetShapeResult(shape, "ShdwOffsetX") ?? 0d) * 72d;
+                    double offsetY = (TryGetShapeResult(shape, "ShdwOffsetY") ?? 0d) * 72d;
+                    string colorFormula = TryGetShapeFormula(shape, "ShdwForegnd") ?? string.Empty;
+
+                    message = $"Visible: true, OffsetX: {FormatInvariant(offsetX)}pt, " +
+                              $"OffsetY: {FormatInvariant(offsetY)}pt, Color: {colorFormula}";
                 }
                 else
                 {
@@ -3041,14 +3079,13 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "read-shadow",
                     Message = message,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (shadow != null) ComUtilities.Release(ref shadow!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }

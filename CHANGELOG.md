@@ -220,6 +220,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Four more shape actions reimplemented against Visio** (#20), bringing the total to 13 of 23.
+  `set-shadow` and `read-shadow` now use `ShdwPattern`/`ShdwForegnd`/`ShdwOffsetX`/`ShdwOffsetY`;
+  `set-alt-text` writes the `Comment` cell, quoting and escaping the text as a ShapeSheet string
+  formula; `copy-to-slide` uses `Page.Drop` between pages instead of a clipboard round trip, which
+  is faster and immune to anything else touching the clipboard mid-operation; `find-by-type`
+  compares against Visio's `VisShapeTypes` rather than PowerPoint's `MsoShapeType`.
+  **`Shape.Type` values were confirmed against a live instance rather than assumed** — a drawn
+  rectangle reports **3** (`visTypeShape`) and a grouped selection **2** (`visTypeGroup`). Callers
+  passing the old `MsoShapeType` numbers will now match nothing, which is correct: they previously
+  matched nothing *and* threw.
+  Six more integration tests, including one pinning quote-escaping in the `Comment` formula.
+
 - **Nine shape formatting actions reimplemented against Visio's ShapeSheet** (#20). `set-fill`,
   `set-line`, `set-rotation`, `flip`, `scale`, `set-opacity`, `lock-aspect-ratio`, `read-fill` and
   `read-line` were written against PowerPoint COM (`Shape.Fill`, `Shape.Line`, `Shape.Rotation`,

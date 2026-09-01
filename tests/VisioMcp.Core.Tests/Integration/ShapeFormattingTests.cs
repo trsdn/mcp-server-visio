@@ -202,6 +202,116 @@ public sealed class ShapeFormattingTests(ITestOutputHelper output) : IDisposable
         Assert.NotEqual(locked, unlocked);
     }
 
+    [Fact]
+    public void SetShadow_ThenReadShadow_RoundTripsOffsets()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetShadow(batch, 1, shapeName, visible: true, offsetX: 6f, offsetY: 4f).Success);
+
+        var read = _shapes.ReadShadow(batch, 1, shapeName);
+        Assert.True(read.Success, read.ErrorMessage);
+        output.WriteLine(read.Message);
+
+        Assert.Contains("Visible: true", read.Message, StringComparison.Ordinal);
+        // Offsets are stored in inches internally; points must survive the round trip.
+        Assert.Contains("OffsetX: 6pt", read.Message, StringComparison.Ordinal);
+        Assert.Contains("OffsetY: 4pt", read.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetShadow_Hidden_ReportsNotVisible()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetShadow(batch, 1, shapeName, visible: true, offsetX: 3f, offsetY: 3f).Success);
+        Assert.True(_shapes.SetShadow(batch, 1, shapeName, visible: false, offsetX: 0f, offsetY: 0f).Success);
+
+        var read = _shapes.ReadShadow(batch, 1, shapeName);
+        Assert.True(read.Success, read.ErrorMessage);
+        Assert.Equal("Visible: false", read.Message);
+    }
+
+    [Fact]
+    public void SetAltText_WritesCommentCell()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        Assert.True(_shapes.SetAltText(batch, 1, shapeName, "Process step").Success);
+
+        // Comment is a string cell, so its numeric ResultIU is always 0. The formula is where the
+        // text lives, which is why this reads the formula rather than the value.
+        var comment = _cells.ReadFormula(batch, 1, shapeName, "Comment");
+        Assert.True(comment.Success, comment.ErrorMessage);
+        output.WriteLine($"Comment formula = {comment.Cell?.Formula}");
+
+        Assert.Equal("\"Process step\"", comment.Cell?.Formula);
+    }
+
+    [Fact]
+    public void SetAltText_EscapesEmbeddedQuotes()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        // An unescaped quote would terminate the ShapeSheet string formula early and either throw
+        // or silently truncate, so this is the case worth pinning.
+        Assert.True(_shapes.SetAltText(batch, 1, shapeName, "The \"main\" step").Success);
+
+        var comment = _cells.ReadFormula(batch, 1, shapeName, "Comment");
+        Assert.True(comment.Success, comment.ErrorMessage);
+        output.WriteLine($"Comment formula = {comment.Cell?.Formula}");
+
+        // Visio doubles embedded quotes inside a string formula.
+        Assert.Equal("\"The \"\"main\"\" step\"", comment.Cell?.Formula);
+    }
+
+    [Fact]
+    public void CopyToSlide_CopiesShapeToAnotherPage()
+    {
+        using var batch = CreateDocument();
+        var shapeName = AddRectangle(batch);
+
+        var pages = new Commands.Page.PageCommands();
+        Assert.True(pages.Create(batch, 0, "Target").Success);
+
+        var before = _shapes.List(batch, 2);
+        Assert.True(before.Success, before.ErrorMessage);
+        int beforeCount = before.Shapes.Count;
+
+        var copied = _shapes.CopyToSlide(batch, 1, shapeName, 2);
+        Assert.True(copied.Success, copied.ErrorMessage);
+        output.WriteLine(copied.Message);
+
+        var after = _shapes.List(batch, 2);
+        Assert.True(after.Success, after.ErrorMessage);
+        Assert.Equal(beforeCount + 1, after.Shapes.Count);
+    }
+
+    [Fact]
+    public void FindByType_MatchesVisioShapeTypes()
+    {
+        using var batch = CreateDocument();
+        AddRectangle(batch);
+
+        // visTypeShape = 3, confirmed against a live instance. The PowerPoint original compared
+        // against MsoShapeType values, where 3 means something else entirely.
+        var found = _shapes.FindByType(batch, 1, 3);
+        Assert.True(found.Success, found.ErrorMessage);
+        output.WriteLine(found.Message);
+        Assert.Contains("Found", found.Message, StringComparison.Ordinal);
+        Assert.Contains("Shape (3)", found.Message, StringComparison.Ordinal);
+
+        // visTypeGroup = 2; nothing on the page is grouped.
+        var none = _shapes.FindByType(batch, 1, 2);
+        Assert.True(none.Success, none.ErrorMessage);
+        output.WriteLine(none.Message);
+        Assert.Contains("No shapes", none.Message, StringComparison.Ordinal);
+    }
+
     private string? ReadCellValue(IVisioBatch batch, string shapeName, string cellName)
     {
         var result = _cells.Read(batch, 1, shapeName, cellName);
