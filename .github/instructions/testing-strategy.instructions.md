@@ -13,8 +13,6 @@ applyTo: "tests/**/*.cs"
 # Development (fast - excludes VBA and Screenshot)
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust&Feature!=Screenshot"
 
-# Diagnostic tests (validate patterns, slow ~20s each)
-dotnet test tests/VisioMcp.Diagnostics.Tests/VisioMcp.Diagnostics.Tests.csproj --filter "RunType=OnDemand&Layer=Diagnostics"
 
 # VBA tests (manual only - requires VBA trust)
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "(Feature=VBA|Feature=VBATrust)&RunType!=OnDemand"

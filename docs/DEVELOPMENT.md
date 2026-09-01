@@ -130,8 +130,6 @@ tests/
 │   ├── Unit/           # Fast tests, no PowerPoint required (~2-5 sec)
 │   ├── Integration/    # Medium speed, requires PowerPoint (~1-15 min)
 │   └── RoundTrip/      # Slow, comprehensive workflows (~3-10 min each)
-├── VisioMcp.Diagnostics.Tests/
-│   └── Integration/Diagnostics/ # Research tests, manual only (excluded from CI)
 ├── VisioMcp.McpServer.Tests/
 │   ├── Unit/           # Fast tests, no server required  
 │   ├── Integration/    # Medium speed, requires MCP server
