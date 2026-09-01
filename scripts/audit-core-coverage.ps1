@@ -202,7 +202,6 @@ foreach ($cat in $categories | Sort-Object Category) {
     $pascal = (Get-Culture).TextInfo.ToTitleCase($cat.Category)
 
     $hasDispatch = $dispatchCategories -contains $pascal
-    $hasMcpTool = $mcpCategories -contains $pascal
     $hasHandWrittenTool = $handWrittenToolNames -contains $cat.Category
 
     if (-not $hasDispatch) {
@@ -210,23 +209,21 @@ foreach ($cat in $categories | Sort-Object Category) {
         continue
     }
 
-    if ($cat.IsPublic -and -not $hasMcpTool -and -not $hasHandWrittenTool) {
-        $gaps += "[$($cat.Category)] is PublicSurface but has neither a generated McpTool.$pascal.g.cs nor a hand-written [McpServerTool(Name = `"$($cat.Category)`")] - the tool is invisible to MCP clients"
+    # _CliCategories.g.cs is the authoritative public-surface list. It is regenerated in place on
+    # every build and contains exactly the categories that survive the PublicSurface filter.
+    #
+    # Deliberately NOT using the presence of McpTool.<Cat>.g.cs: Roslyn source generators do not
+    # delete files they have stopped emitting, so a category that was public in an earlier build
+    # leaves a stale .g.cs in obj/ forever. Checking for it reports a suppressed domain as leaked
+    # when nothing is wrong. Observed while suppressing master and hyperlink in #19.
+    $isOnPublicSurface = $cliCategoryNames -contains $cat.Category
+
+    if ($cat.IsPublic -and -not $isOnPublicSurface -and -not $hasHandWrittenTool) {
+        $gaps += "[$($cat.Category)] is PublicSurface but does not appear in the generated public surface - it is invisible to MCP and CLI clients"
     }
 
-    if (-not $cat.IsPublic -and ($hasMcpTool -or $hasHandWrittenTool)) {
-        $gaps += "[$($cat.Category)] is PublicSurface = false but an MCP tool exists - a suppressed domain leaked onto the public surface"
-    }
-
-    # CLI and MCP are equal entry points: a public domain must reach both.
-    $hasCliCommand = $cliCategoryNames -contains $cat.Category
-
-    if ($cat.IsPublic -and -not $hasCliCommand) {
-        $gaps += "[$($cat.Category)] is PublicSurface but has no CLI command in _CliCategories.g.cs - MCP and CLI are equal entry points"
-    }
-
-    if (-not $cat.IsPublic -and $hasCliCommand) {
-        $gaps += "[$($cat.Category)] is PublicSurface = false but has a CLI command - a suppressed domain leaked onto the CLI surface"
+    if (-not $cat.IsPublic -and $isOnPublicSurface) {
+        $gaps += "[$($cat.Category)] is PublicSurface = false but appears in the generated public surface - a suppressed domain leaked"
     }
 
     # Every declared interface method must appear in the dispatch switch.
@@ -252,9 +249,9 @@ Write-Host '-------'
 Write-Host ("  Categories discovered : {0} ({1} public, {2} suppressed)" -f $categories.Count, $publicCount, $hiddenCount)
 Write-Host ("  Interface methods     : {0}" -f $totalActions)
 Write-Host ("  Dispatch files        : {0}" -f $dispatchCategories.Count)
-Write-Host ("  Generated MCP tools   : {0}" -f $mcpCategories.Count)
+Write-Host ("  Public surface        : {0}" -f $cliCategoryNames.Count)
+Write-Host ("    {0}" -f ($cliCategoryNames -join ', '))
 Write-Host ("  Hand-written MCP tools: {0}{1}" -f $handWrittenToolNames.Count, $(if ($handWrittenToolNames.Count) { " ($($handWrittenToolNames -join ', '))" } else { '' }))
-Write-Host ("  Generated CLI commands: {0}" -f $cliCategoryNames.Count)
 Write-Host ''
 
 if ($ShowDetail) {

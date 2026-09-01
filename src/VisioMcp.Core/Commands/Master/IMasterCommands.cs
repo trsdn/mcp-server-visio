@@ -5,14 +5,18 @@ using VisioMcp.Core.Models;
 namespace VisioMcp.Core.Commands.Master;
 
 /// <summary>
-/// Slide master and layout operations: list masters, list layouts, get placeholders.
+/// Legacy PowerPoint slide master and layout operations.
+///
+/// SUPPRESSED (#19): every action is implemented against PowerPoint COM (<c>SlideMasters</c>,
+/// <c>CustomLayouts</c>) and throws <c>RuntimeBinderException</c> on a Visio Document, which has
+/// <c>Masters</c> instead. Kept off the public surface until reimplemented against
+/// <c>Document.Masters</c> (#34).
 /// </summary>
 [ServiceCategory("master")]
 [McpTool("master", Title = "Master & Layout Operations", Destructive = false, Category = "design",
-    Description = "Inspect and edit slide masters and layouts. Use 'list' to see all masters with their layouts. "
-    + "'list-layouts' for layouts of a specific master. 'list-shapes' to see shapes on a master. "
-    + "'edit-shape-text' to change text on master shapes (e.g. company name in footer). "
-    + "'delete-unused' removes masters not referenced by any slide. master_index: 1-based.")]
+    PublicSurface = false,
+    Description = "Legacy PowerPoint slide master operations. Not exposed: throws on Visio documents. "
+    + "Pending reimplementation against Document.Masters (#34).")]
 public interface IMasterCommands
 {
     /// <summary>List all slide masters and their custom layouts.</summary>

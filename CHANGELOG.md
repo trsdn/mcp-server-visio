@@ -220,6 +220,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`master` and `hyperlink` removed from the public surface** (#19). Both were advertised MCP
+  tools and CLI commands implemented entirely against PowerPoint COM, and **failed on every
+  invocation** against a Visio document:
+  ```
+  $ visiocli master list -s <sid>
+  {"success":false,"error":"RuntimeBinderException: 'System.__ComObject' does not contain
+   a definition for 'SlideMasters'"}
+  ```
+  Unlike the 24 already-suppressed legacy domains, these were published to LLMs and CLI users with
+  confident descriptions — `master` described itself as *"Inspect and edit slide masters and
+  layouts"*, inviting an agent to select it and receive an opaque binder error.
+  `PublicSurface = false` on each `[McpTool]` attribute removes them from the MCP schema, the CLI
+  and both shipped skill packages at once, because all three generators already filter on that
+  flag. The generated MCP skill's advertised operation count self-corrected from **149 to 139**.
+  They return when reimplemented against `Document.Masters` (#34) and `Shape.Hyperlinks` (#35).
+  A new regression test, `AllPublicTools_DoNotThrowRuntimeBinderException_AgainstVsdx`, sweeps
+  every publicly listed tool against a real `.vsdx` session and fails if any returns a
+  `RuntimeBinderException`.
+
 - **ADR-001 and Rule 30 rewritten to state the policy the repository actually follows** (#31).
   Both previously forbade unit tests outright — ADR-001 said *"We do NOT write traditional unit
   tests"* and *"❌ Write unit tests for business logic"*, Rule 30 said *"NEVER write unit tests"* —
