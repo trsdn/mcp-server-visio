@@ -1489,27 +1489,6 @@ public class ShapeCommands : IShapeCommands
     }
 
 
-    /// <summary>
-    /// Maps a Visio <c>visType*</c> constant to a readable name.
-    /// </summary>
-    /// <remarks>
-    /// Values confirmed against a live instance: a drawn rectangle reports 3 and a grouped
-    /// selection reports 2. These are <c>VisShapeTypes</c>, not the <c>MsoShapeType</c> values the
-    /// PowerPoint implementation compared against, so callers passing the old numbers will match
-    /// nothing.
-    /// </remarks>
-    private static string GetVisioShapeTypeName(int shapeType) => shapeType switch
-    {
-        0 => "Invalid",
-        1 => "Page",
-        2 => "Group",
-        3 => "Shape",
-        4 => "ForeignObject",
-        5 => "Guide",
-        6 => "Document",
-        _ => "Unknown"
-    };
-
     private static void EnsureWindowPage(dynamic window, dynamic page)
     {
         dynamic? currentPage = null;
@@ -2760,9 +2739,8 @@ public class ShapeCommands : IShapeCommands
                     dynamic shape = shapes.Item(i);
                     try
                     {
-                        // Visio's Shape.Type reports visType* values (1 = Group, 2 = Shape,
-                        // 3 = Guide, 4 = ForeignObject, 6 = Ink), not the MsoShapeType values
-                        // the PowerPoint version compared against.
+                        // Shape.Type reports VisShapeTypes, not MsoShapeType. See VisioShapeTypes
+                        // for the values, confirmed against a live instance.
                         int type = Convert.ToInt32(shape.Type);
                         if (type == shapeType)
                         {
@@ -2775,7 +2753,7 @@ public class ShapeCommands : IShapeCommands
                     }
                 }
 
-                string typeName = GetVisioShapeTypeName(shapeType);
+                string typeName = VisioShapeTypes.GetName(shapeType);
                 string message = matches.Count > 0
                     ? $"Found {matches.Count} shape(s) of type {typeName} ({shapeType}): {string.Join(", ", matches)}"
                     : $"No shapes of type {typeName} ({shapeType}) found on page {pageIndex}";

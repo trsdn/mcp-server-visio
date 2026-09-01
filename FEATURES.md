@@ -36,8 +36,9 @@ The recommended sequence today is:
 
 ## Domains in migration backlog
 
-Twenty-six command domains inherited from the PowerPoint ancestor are compiled but suppressed from
-the public surface via `[McpTool(..., PublicSurface = false)]` — roughly 7,700 lines and 132 actions.
+Twelve command domains inherited from the PowerPoint ancestor remain compiled but suppressed from
+the public surface via `[McpTool(..., PublicSurface = false)]`. A further fourteen were probed,
+found to have no Visio analogue at all, and **deleted** — 4,768 lines and 82 actions removed in #22.
 
 Every row below carries a disposition backed by **an actual probe of a live Visio 16.0 instance**,
 not by inference from the name. That distinction matters: `Document.Theme` and `Document.Sections`
@@ -46,7 +47,15 @@ PowerPoint-only concepts and both do.
 
 - **Port** — a real Visio equivalent exists; reimplement in place and republish
 - **Remap** — the concept exists under a different name and belongs in an already-public tool
-- **Delete** — probed and absent; no Visio analogue
+
+The **Delete** verdict is still valid for this table, and a domain may be added back under it; it
+simply has no members left. The fourteen removed were `animation`, `chart`, `customshow`, `media`,
+`notes`, `placeholder`, `proofing`, `section`, `slide`, `slideimport`, `slideshow`, `slidetable`,
+`smartart` and `transition`.
+
+Note that `section` was deleted rather than ported: `Document.Sections` does not exist, and the
+word collides with the *unrelated* ShapeSheet sections tracked in
+[#33](https://github.com/trsdn/mcp-server-visio/issues/33).
 
 <!-- BEGIN:LEGACY-DOMAIN-CLASSIFICATION -->
 
@@ -64,20 +73,6 @@ PowerPoint-only concepts and both do.
 | `pagesetup` | Remap | @trsdn | All settings are `PageSheet` cells: `PageWidth`, `PageHeight`, `PrintPageOrientation`, `PageScale`, `DrawingScale`, `PageLeftMargin`, `PaperKind`, `CenterX` | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
 | `design` | Remap | @trsdn | **`Document.Theme` does not exist.** `Document.Styles` does (6 built-ins); themes are `DocumentSheet` cells `ThemeIndex`, `VariationColorIndex`, `VariationStyleIndex` | [#36](https://github.com/trsdn/mcp-server-visio/issues/36) |
 | `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
-| `animation` | Delete | @trsdn | `Shape.AnimationSettings` missing | #22 |
-| `chart` | Delete | @trsdn | `Document.Charts` missing; Visio charts are embedded OLE with no automatable object model | #22 |
-| `customshow` | Delete | @trsdn | No analogue; the concept presupposes an ordered slide show | #22 |
-| `media` | Delete | @trsdn | No audio or video object model; media can only arrive as an OLE foreign object | #22 |
-| `notes` | Delete | @trsdn | `Page.NotesPage` missing | #22 |
-| `placeholder` | Delete | @trsdn | Visio pages have no layout inheritance, so there is nothing to place or audit | #22 |
-| `proofing` | Delete | @trsdn | `Document.SpellCheck`, `Document.LanguageSettings` and `Application.CustomDictionaries` all missing; only `Document.Language` and the `Char.LangID` cell survive, and those belong to `cell` | #22 |
-| `section` | Delete | @trsdn | `Document.Sections` missing. **Not** the ShapeSheet section of #33 — same word, unrelated concept | #22 |
-| `slide` | Delete | @trsdn | Superseded by the public `page` tool | #22 |
-| `slideimport` | Delete | @trsdn | Slide-import semantics have no page analogue; `Page.Paste` already covers what is meaningful | #22 |
-| `slideshow` | Delete | @trsdn | `Document.SlideShowSettings` missing | #22 |
-| `slidetable` | Delete | @trsdn | Visio has no table object; tables are drawn as grouped shapes | #22 |
-| `smartart` | Delete | @trsdn | `Page.SmartArt` missing | #22 |
-| `transition` | Delete | @trsdn | `Page.Transition` missing | #22 |
 
 <!-- END:LEGACY-DOMAIN-CLASSIFICATION -->
 

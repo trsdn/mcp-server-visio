@@ -1,6 +1,5 @@
 using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
-using VisioMcp.Core.Commands.Slide;
 using VisioMcp.Core.Models;
 
 namespace VisioMcp.Core.Commands.Master;
@@ -90,7 +89,7 @@ public class MasterCommands : IMasterCommands
                     {
                         string name = shape.Name?.ToString() ?? $"Shape {i}";
                         int shapeType = Convert.ToInt32(shape.Type);
-                        string typeName = ShapeHelpers.GetShapeTypeName(shapeType);
+                        string typeName = VisioShapeTypes.GetName(shapeType);
                         lines.Add($"{name} ({typeName})");
                     }
                     finally

@@ -17,6 +17,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   masking CVE-2025-55247 (GHSA-w3q9-fxm7-j8fq); the advisory is now resolved rather than hidden, so
   the project no longer suppresses any dependency audit warnings.
 
+### Removed
+
+- **The 14 legacy domains with no Visio analogue are deleted** (#22). `animation`, `chart`,
+  `customshow`, `media`, `notes`, `placeholder`, `proofing`, `section`, `slide`, `slideimport`,
+  `slideshow`, `slidetable`, `smartart` and `transition` — **4,768 lines and 82 actions** — each
+  probed against a live Visio instance and confirmed to have no equivalent COM surface
+  (`Shape.AnimationSettings`, `Document.Charts`, `Page.NotesPage`, `Page.SmartArt`,
+  `Page.Transition`, `Document.SlideShowSettings` and `Document.Sections` are all absent).
+  Ten of them were still routed by `VisioMcpService`, so an internal caller could reach a
+  PowerPoint code path against a `.vsdx`. The suppressed-domain count drops from 26 to 12 and the
+  Core interface-method count from 281 to 199.
+
+### Fixed
+
+- **`shape(find-by-type)` documented the wrong constants** (#22, introduced in #20). The parameter
+  description shipped into both SKILL.md and the MCP schema read *"MsoShapeType integer
+  (1=AutoShape, 6=Group, 13=Picture, 14=Placeholder, 17=TextBox, etc.)"* while the implementation
+  compared against Visio's `VisShapeTypes`. Every documented value overlapped a real Visio value
+  with a different meaning, so an agent following the schema matched nothing — silently, because
+  the action returns "no shapes found" rather than an error.
+
+- **`ShapeHelpers.GetShapeTypeName` reported wrong shape-type names** (#22). It mapped
+  `MsoShapeType`, so a Visio rectangle (`Type = 3`) was named **"Chart"**, a group (`2`)
+  **"Callout"**, and an imported image (`4`) **"Comment"**. Replaced by `VisioShapeTypes`, one
+  authoritative mapping confirmed against a live instance, now shared by `ShapeCommands`,
+  `MasterCommands` and `AccessibilityCommands`. `ShapeHelpersTests` verified the PowerPoint table
+  was reproduced faithfully — it was, and it was the wrong table; `VisioShapeTypesTests` replaces
+  it and asserts the three previously misreported values by name.
+
+- **`shape(add-shape)` promised auto-shapes it does not draw** (#22). The description advertised
+  *"MsoAutoShapeType integer (1=Rectangle, 9=Oval, etc.)"*, but the implementation only
+  distinguishes `9` (ellipse); every other value silently produces a rectangle **and reports
+  success naming the requested type**. The description now states exactly what is supported and
+  points at stencil masters for richer shapes.
+
 ### Added
 
 - **Every suppressed legacy domain now carries a disposition, an owner and Visio evidence** (#22).
