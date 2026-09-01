@@ -839,12 +839,12 @@ public class ShapeCommands : IShapeCommands
                 {
                     // FillPattern 0 = no fill. The foreground colour is left untouched so it is
                     // restored if the pattern is turned back on.
-                    SetShapeFormula(shape, "FillPattern", "0");
+                    ShapeSheetHelpers.SetFormula(shape, "FillPattern", "0");
                 }
                 else
                 {
-                    SetShapeFormula(shape, "FillForegnd", ToVisioRgbFormula(colorHex));
-                    SetShapeFormula(shape, "FillPattern", "1");
+                    ShapeSheetHelpers.SetFormula(shape, "FillForegnd", ShapeSheetHelpers.ToRgbFormula(colorHex, nameof(colorHex)));
+                    ShapeSheetHelpers.SetFormula(shape, "FillPattern", "1");
                 }
 
                 return new OperationResult
@@ -877,18 +877,18 @@ public class ShapeCommands : IShapeCommands
                 if (colorHex.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
                     // LinePattern 0 = no line.
-                    SetShapeFormula(shape, "LinePattern", "0");
+                    ShapeSheetHelpers.SetFormula(shape, "LinePattern", "0");
                 }
                 else
                 {
-                    SetShapeFormula(shape, "LineColor", ToVisioRgbFormula(colorHex));
-                    SetShapeFormula(shape, "LinePattern", "1");
+                    ShapeSheetHelpers.SetFormula(shape, "LineColor", ShapeSheetHelpers.ToRgbFormula(colorHex, nameof(colorHex)));
+                    ShapeSheetHelpers.SetFormula(shape, "LinePattern", "1");
 
                     if (lineWidth > 0)
                     {
                         // LineWeight is a distance cell; state the unit so the value is not
                         // reinterpreted in the document's default units.
-                        SetShapeFormula(shape, "LineWeight", FormatInvariant(lineWidth) + " pt");
+                        ShapeSheetHelpers.SetFormula(shape, "LineWeight", ShapeSheetHelpers.FormatInvariant(lineWidth) + " pt");
                     }
                 }
 
@@ -921,7 +921,7 @@ public class ShapeCommands : IShapeCommands
                 // Visio rotates about PinX/PinY and measures anticlockwise; PowerPoint's Rotation
                 // property was clockwise. The sign is negated so a positive value keeps the
                 // clockwise sense callers already expect.
-                SetShapeFormula(shape, "Angle", FormatInvariant(-degrees) + " deg");
+                ShapeSheetHelpers.SetFormula(shape, "Angle", ShapeSheetHelpers.FormatInvariant(-degrees) + " deg");
 
                 return new OperationResult
                 {
@@ -1040,7 +1040,7 @@ public class ShapeCommands : IShapeCommands
                 // Visio has no AlternativeText property. The Comment cell is what surfaces as a
                 // shape's screen tip and is what accessibility tooling reads, so it is the closest
                 // equivalent. Its content is a formula, so the text must be quoted and escaped.
-                SetShapeFormula(shape, "Comment", ToVisioStringFormula(altText));
+                ShapeSheetHelpers.SetFormula(shape, "Comment", ShapeSheetHelpers.ToStringFormula(altText));
 
                 return new OperationResult
                 {
@@ -1075,8 +1075,8 @@ public class ShapeCommands : IShapeCommands
                 // Page.Drop copies the shape directly between pages. The clipboard round trip the
                 // PowerPoint version used (Copy + Shapes.Paste) is both slower and vulnerable to
                 // anything else touching the clipboard mid-operation.
-                double pinX = TryGetShapeResult(shape, "PinX") ?? 0d;
-                double pinY = TryGetShapeResult(shape, "PinY") ?? 0d;
+                double pinX = ShapeSheetHelpers.TryGetResult(shape, "PinX") ?? 0d;
+                double pinY = ShapeSheetHelpers.TryGetResult(shape, "PinY") ?? 0d;
 
                 dropped = targetPage.Drop(shape, pinX, pinY);
                 string newName = dropped.NameU?.ToString() ?? string.Empty;
@@ -1114,13 +1114,13 @@ public class ShapeCommands : IShapeCommands
                 {
                     // ShdwPattern 0 = none, 1 = solid. Offsets are distance cells, so the unit is
                     // stated explicitly rather than left to the document default.
-                    SetShapeFormula(shape, "ShdwPattern", "1");
-                    SetShapeFormula(shape, "ShdwOffsetX", FormatInvariant(offsetX) + " pt");
-                    SetShapeFormula(shape, "ShdwOffsetY", FormatInvariant(offsetY) + " pt");
+                    ShapeSheetHelpers.SetFormula(shape, "ShdwPattern", "1");
+                    ShapeSheetHelpers.SetFormula(shape, "ShdwOffsetX", ShapeSheetHelpers.FormatInvariant(offsetX) + " pt");
+                    ShapeSheetHelpers.SetFormula(shape, "ShdwOffsetY", ShapeSheetHelpers.FormatInvariant(offsetY) + " pt");
                 }
                 else
                 {
-                    SetShapeFormula(shape, "ShdwPattern", "0");
+                    ShapeSheetHelpers.SetFormula(shape, "ShdwPattern", "0");
                 }
 
                 return new OperationResult
@@ -1128,7 +1128,7 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-shadow",
                     Message = visible
-                        ? $"Set shadow on shape '{shapeName}' (offset {FormatInvariant(offsetX)},{FormatInvariant(offsetY)} pt)"
+                        ? $"Set shadow on shape '{shapeName}' (offset {ShapeSheetHelpers.FormatInvariant(offsetX)},{ShapeSheetHelpers.FormatInvariant(offsetY)} pt)"
                         : $"Removed shadow from shape '{shapeName}'",
                     FilePath = ctx.DocumentPath
                 };
@@ -1313,8 +1313,8 @@ public class ShapeCommands : IShapeCommands
                 // Visio holds flip state in the FlipX / FlipY ShapeSheet cells rather than
                 // offering a Flip() method, so this toggles the current value.
                 string cellName = flipType == 0 ? "FlipX" : "FlipY";
-                bool current = (TryGetShapeResult(shape, cellName) ?? 0d) != 0d;
-                SetShapeFormula(shape, cellName, current ? "FALSE" : "TRUE");
+                bool current = (ShapeSheetHelpers.TryGetResult(shape, cellName) ?? 0d) != 0d;
+                ShapeSheetHelpers.SetFormula(shape, cellName, current ? "FALSE" : "TRUE");
 
                 string dir = flipType == 0 ? "horizontally" : "vertically";
                 return new OperationResult
@@ -1348,23 +1348,23 @@ public class ShapeCommands : IShapeCommands
                 // Visio has no TextFrame object; the text block margins are cells.
                 if (marginLeft.HasValue)
                 {
-                    SetShapeFormula(shape, "LeftMargin", FormatInvariant(marginLeft.Value) + " pt");
-                    changes.Add($"LeftMargin={FormatInvariant(marginLeft.Value)}pt");
+                    ShapeSheetHelpers.SetFormula(shape, "LeftMargin", ShapeSheetHelpers.FormatInvariant(marginLeft.Value) + " pt");
+                    changes.Add($"LeftMargin={ShapeSheetHelpers.FormatInvariant(marginLeft.Value)}pt");
                 }
                 if (marginRight.HasValue)
                 {
-                    SetShapeFormula(shape, "RightMargin", FormatInvariant(marginRight.Value) + " pt");
-                    changes.Add($"RightMargin={FormatInvariant(marginRight.Value)}pt");
+                    ShapeSheetHelpers.SetFormula(shape, "RightMargin", ShapeSheetHelpers.FormatInvariant(marginRight.Value) + " pt");
+                    changes.Add($"RightMargin={ShapeSheetHelpers.FormatInvariant(marginRight.Value)}pt");
                 }
                 if (marginTop.HasValue)
                 {
-                    SetShapeFormula(shape, "TopMargin", FormatInvariant(marginTop.Value) + " pt");
-                    changes.Add($"TopMargin={FormatInvariant(marginTop.Value)}pt");
+                    ShapeSheetHelpers.SetFormula(shape, "TopMargin", ShapeSheetHelpers.FormatInvariant(marginTop.Value) + " pt");
+                    changes.Add($"TopMargin={ShapeSheetHelpers.FormatInvariant(marginTop.Value)}pt");
                 }
                 if (marginBottom.HasValue)
                 {
-                    SetShapeFormula(shape, "BottomMargin", FormatInvariant(marginBottom.Value) + " pt");
-                    changes.Add($"BottomMargin={FormatInvariant(marginBottom.Value)}pt");
+                    ShapeSheetHelpers.SetFormula(shape, "BottomMargin", ShapeSheetHelpers.FormatInvariant(marginBottom.Value) + " pt");
+                    changes.Add($"BottomMargin={ShapeSheetHelpers.FormatInvariant(marginBottom.Value)}pt");
                 }
 
                 // wordWrap and autoSize have no single-cell Visio equivalent - text wrapping is a
@@ -1410,9 +1410,9 @@ public class ShapeCommands : IShapeCommands
             dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                double pattern = TryGetShapeResult(shape, "FillPattern") ?? 0d;
-                string colorFormula = TryGetShapeFormula(shape, "FillForegnd") ?? string.Empty;
-                double transparency = TryGetShapeResult(shape, "FillForegndTrans") ?? 0d;
+                double pattern = ShapeSheetHelpers.TryGetResult(shape, "FillPattern") ?? 0d;
+                string colorFormula = ShapeSheetHelpers.TryGetFormula(shape, "FillForegnd") ?? string.Empty;
+                double transparency = ShapeSheetHelpers.TryGetResult(shape, "FillForegndTrans") ?? 0d;
 
                 // FillPattern 0 = no fill, 1 = solid, anything higher is one of Visio's
                 // hatch/gradient patterns.
@@ -1420,12 +1420,12 @@ public class ShapeCommands : IShapeCommands
                 {
                     0d => "None",
                     1d => "Solid",
-                    _ => $"Pattern {FormatInvariant(pattern)}"
+                    _ => $"Pattern {ShapeSheetHelpers.FormatInvariant(pattern)}"
                 };
 
                 string message = pattern == 0d
                     ? "Fill: None"
-                    : $"Fill: {patternName}, Color: {colorFormula}, Transparency: {FormatInvariant(transparency)}";
+                    : $"Fill: {patternName}, Color: {colorFormula}, Transparency: {ShapeSheetHelpers.FormatInvariant(transparency)}";
 
                 return new OperationResult
                 {
@@ -1453,17 +1453,17 @@ public class ShapeCommands : IShapeCommands
             dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                double pattern = TryGetShapeResult(shape, "LinePattern") ?? 0d;
+                double pattern = ShapeSheetHelpers.TryGetResult(shape, "LinePattern") ?? 0d;
                 bool visible = pattern != 0d;
 
-                string colorFormula = TryGetShapeFormula(shape, "LineColor") ?? string.Empty;
+                string colorFormula = ShapeSheetHelpers.TryGetFormula(shape, "LineColor") ?? string.Empty;
 
                 // LineWeight's ResultIU is in inches; Visio's internal drawing unit. Points are
                 // what the setter accepts, so report the same unit.
-                double weightPoints = (TryGetShapeResult(shape, "LineWeight") ?? 0d) * 72d;
+                double weightPoints = (ShapeSheetHelpers.TryGetResult(shape, "LineWeight") ?? 0d) * 72d;
 
                 string message = visible
-                    ? $"Visible: true, Color: {colorFormula}, Weight: {FormatInvariant(weightPoints)}pt"
+                    ? $"Visible: true, Color: {colorFormula}, Weight: {ShapeSheetHelpers.FormatInvariant(weightPoints)}pt"
                     : "Visible: false";
 
                 return new OperationResult
@@ -1488,122 +1488,6 @@ public class ShapeCommands : IShapeCommands
         return ((dynamic)ctx.Document).Pages.Item(pageIndex);
     }
 
-    /// <summary>
-    /// Writes a ShapeSheet formula by universal cell name, releasing the cell afterwards.
-    /// </summary>
-    private static void SetShapeFormula(dynamic shape, string cellName, string formula)
-    {
-        dynamic? cell = null;
-        try
-        {
-            cell = shape.CellsU[cellName];
-            cell.FormulaU = formula;
-        }
-        finally
-        {
-            if (cell != null)
-            {
-                ComUtilities.Release(ref cell!);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reads a ShapeSheet formula by universal cell name, or null when the cell does not exist.
-    /// </summary>
-    private static string? TryGetShapeFormula(dynamic shape, string cellName)
-    {
-        dynamic? cell = null;
-        try
-        {
-            if (!ShapeCellExists(shape, cellName))
-            {
-                return null;
-            }
-
-            cell = shape.CellsU[cellName];
-            return cell.FormulaU?.ToString();
-        }
-        finally
-        {
-            if (cell != null)
-            {
-                ComUtilities.Release(ref cell!);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reads a ShapeSheet cell's evaluated result, or null when the cell does not exist.
-    /// </summary>
-    private static double? TryGetShapeResult(dynamic shape, string cellName)
-    {
-        dynamic? cell = null;
-        try
-        {
-            if (!ShapeCellExists(shape, cellName))
-            {
-                return null;
-            }
-
-            cell = shape.CellsU[cellName];
-            return Convert.ToDouble(cell.ResultIU, CultureInfo.InvariantCulture);
-        }
-        finally
-        {
-            if (cell != null)
-            {
-                ComUtilities.Release(ref cell!);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Whether a shape exposes the named ShapeSheet cell.
-    /// </summary>
-    /// <remarks>
-    /// <c>CellExistsU</c> returns a VBA-style <c>short</c> (0 or -1), not a <c>bool</c>. Casting
-    /// it directly to <c>bool</c> throws <c>RuntimeBinderException: Cannot convert type 'short'
-    /// to 'bool'</c>, so the comparison is done numerically.
-    /// </remarks>
-    private static bool ShapeCellExists(dynamic shape, string cellName)
-    {
-        // visExistsAnywhere = 0: report the cell whether it is local or inherited from the master.
-        return Convert.ToInt32(shape.CellExistsU[cellName, 0], CultureInfo.InvariantCulture) != 0;
-    }
-
-    /// <summary>
-    /// Converts "#RRGGBB", "RRGGBB" or a Visio colour-index string into a ShapeSheet colour formula.
-    /// </summary>
-    private static string ToVisioRgbFormula(string colorHex)
-    {
-        var trimmed = colorHex.Trim().TrimStart('#');
-
-        if (trimmed.Length != 6 || !int.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var packed))
-        {
-            throw new ArgumentException(
-                $"Colour '{colorHex}' is not a 6-digit hex value such as '#FF0000' or 'FF0000'.",
-                nameof(colorHex));
-        }
-
-        int r = (packed >> 16) & 0xFF;
-        int g = (packed >> 8) & 0xFF;
-        int b = packed & 0xFF;
-
-        return $"RGB({r},{g},{b})";
-    }
-
-    private static string FormatInvariant(double value) =>
-        value.ToString("0.############", CultureInfo.InvariantCulture);
-
-    /// <summary>
-    /// Wraps text as a quoted ShapeSheet string formula, escaping embedded quotes.
-    /// </summary>
-    private static string ToVisioStringFormula(string? value)
-    {
-        var text = value ?? string.Empty;
-        return "\"" + text.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
-    }
 
     /// <summary>
     /// Maps a Visio <c>visType*</c> constant to a readable name.
@@ -2708,15 +2592,15 @@ public class ShapeCommands : IShapeCommands
                 // Visio's gradient lives in the Fill Gradient section. FillGradientEnabled turns
                 // it on; the two ends are the existing foreground and background fill colours,
                 // which is how Visio's own two-colour gradients are expressed.
-                SetShapeFormula(shape, "FillForegnd", ToVisioRgbFormula(color1));
-                SetShapeFormula(shape, "FillBkgnd", ToVisioRgbFormula(color2));
-                SetShapeFormula(shape, "FillPattern", "1");
-                SetShapeFormula(shape, "FillGradientEnabled", "1");
+                ShapeSheetHelpers.SetFormula(shape, "FillForegnd", ShapeSheetHelpers.ToRgbFormula(color1, nameof(color1)));
+                ShapeSheetHelpers.SetFormula(shape, "FillBkgnd", ShapeSheetHelpers.ToRgbFormula(color2, nameof(color2)));
+                ShapeSheetHelpers.SetFormula(shape, "FillPattern", "1");
+                ShapeSheetHelpers.SetFormula(shape, "FillGradientEnabled", "1");
 
                 // FillGradientDir carries the direction. Visio's values do not line up with
                 // PowerPoint's MsoGradientStyle, so the 1-6 input is passed through and callers
                 // should treat it as a Visio direction index.
-                SetShapeFormula(shape, "FillGradientDir", gradientStyle.ToString(CultureInfo.InvariantCulture));
+                ShapeSheetHelpers.SetFormula(shape, "FillGradientDir", gradientStyle.ToString(CultureInfo.InvariantCulture));
 
                 return new OperationResult
                 {
@@ -2747,11 +2631,11 @@ public class ShapeCommands : IShapeCommands
             {
                 // Visio has no Shape.Glow object; the effect lives in the GlowSize / GlowColor
                 // cells. A size of 0 removes the glow.
-                SetShapeFormula(shape, "GlowSize", FormatInvariant(radius) + " pt");
+                ShapeSheetHelpers.SetFormula(shape, "GlowSize", ShapeSheetHelpers.FormatInvariant(radius) + " pt");
 
                 if (radius > 0)
                 {
-                    SetShapeFormula(shape, "GlowColor", ToVisioRgbFormula(colorHex));
+                    ShapeSheetHelpers.SetFormula(shape, "GlowColor", ShapeSheetHelpers.ToRgbFormula(colorHex, nameof(colorHex)));
                 }
 
                 return new OperationResult
@@ -2759,7 +2643,7 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "set-glow",
                     Message = radius > 0
-                        ? $"Set glow on shape '{shapeName}' with radius {FormatInvariant(radius)}pt and color '{colorHex}' on page {pageIndex}"
+                        ? $"Set glow on shape '{shapeName}' with radius {ShapeSheetHelpers.FormatInvariant(radius)}pt and color '{colorHex}' on page {pageIndex}"
                         : $"Removed glow from shape '{shapeName}' on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
@@ -2796,15 +2680,15 @@ public class ShapeCommands : IShapeCommands
                 // read as a plausible reflection at each step.
                 if (reflectionType == 0)
                 {
-                    SetShapeFormula(shape, "ReflectionSize", "0");
+                    ShapeSheetHelpers.SetFormula(shape, "ReflectionSize", "0");
                 }
                 else
                 {
                     double fraction = reflectionType / 9d;
-                    SetShapeFormula(shape, "ReflectionSize", FormatInvariant(fraction));
-                    SetShapeFormula(shape, "ReflectionTrans", FormatInvariant(0.5));
-                    SetShapeFormula(shape, "ReflectionBlur", "0 pt");
-                    SetShapeFormula(shape, "ReflectionDist", "0 pt");
+                    ShapeSheetHelpers.SetFormula(shape, "ReflectionSize", ShapeSheetHelpers.FormatInvariant(fraction));
+                    ShapeSheetHelpers.SetFormula(shape, "ReflectionTrans", ShapeSheetHelpers.FormatInvariant(0.5));
+                    ShapeSheetHelpers.SetFormula(shape, "ReflectionBlur", "0 pt");
+                    ShapeSheetHelpers.SetFormula(shape, "ReflectionDist", "0 pt");
                 }
 
                 return new OperationResult
@@ -2841,15 +2725,15 @@ public class ShapeCommands : IShapeCommands
                 // Visio's FillForegndTrans is transparency (0 = opaque, 1 = fully transparent),
                 // the inverse of opacity. Setting the line to match keeps the shape visually
                 // coherent, which is what callers of a single "opacity" knob expect.
-                string transparency = FormatInvariant(1.0f - opacity);
-                SetShapeFormula(shape, "FillForegndTrans", transparency);
-                SetShapeFormula(shape, "LineColorTrans", transparency);
+                string transparency = ShapeSheetHelpers.FormatInvariant(1.0f - opacity);
+                ShapeSheetHelpers.SetFormula(shape, "FillForegndTrans", transparency);
+                ShapeSheetHelpers.SetFormula(shape, "LineColorTrans", transparency);
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-opacity",
-                    Message = $"Set opacity of shape '{shapeName}' to {FormatInvariant(opacity)} on page {pageIndex}",
+                    Message = $"Set opacity of shape '{shapeName}' to {ShapeSheetHelpers.FormatInvariant(opacity)} on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
             }
@@ -2931,13 +2815,13 @@ public class ShapeCommands : IShapeCommands
 
                 foreach (var cellName in FormattingCellNames)
                 {
-                    var formula = TryGetShapeFormula(sourceShape, cellName);
+                    var formula = ShapeSheetHelpers.TryGetFormula(sourceShape, cellName);
                     if (formula is null)
                     {
                         continue;
                     }
 
-                    SetShapeFormula(targetShape, cellName, formula);
+                    ShapeSheetHelpers.SetFormula(targetShape, cellName, formula);
                     copied.Add(cellName);
                 }
 
@@ -2994,19 +2878,19 @@ public class ShapeCommands : IShapeCommands
                 // Visio has no ScaleWidth/ScaleHeight; Width and Height are ShapeSheet cells, so
                 // scaling is multiplication against the current result. The shape's pin is
                 // unchanged, so it grows about its centre rather than its top-left.
-                double width = TryGetShapeResult(shape, "Width")
+                double width = ShapeSheetHelpers.TryGetResult(shape, "Width")
                     ?? throw new InvalidOperationException($"Shape '{shapeName}' has no Width cell.");
-                double height = TryGetShapeResult(shape, "Height")
+                double height = ShapeSheetHelpers.TryGetResult(shape, "Height")
                     ?? throw new InvalidOperationException($"Shape '{shapeName}' has no Height cell.");
 
-                SetShapeFormula(shape, "Width", FormatInvariant(width * scaleX) + " in");
-                SetShapeFormula(shape, "Height", FormatInvariant(height * scaleY) + " in");
+                ShapeSheetHelpers.SetFormula(shape, "Width", ShapeSheetHelpers.FormatInvariant(width * scaleX) + " in");
+                ShapeSheetHelpers.SetFormula(shape, "Height", ShapeSheetHelpers.FormatInvariant(height * scaleY) + " in");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "scale",
-                    Message = $"Scaled shape '{shapeName}' by {FormatInvariant(scaleX)}x width, {FormatInvariant(scaleY)}x height on page {pageIndex}",
+                    Message = $"Scaled shape '{shapeName}' by {ShapeSheetHelpers.FormatInvariant(scaleX)}x width, {ShapeSheetHelpers.FormatInvariant(scaleY)}x height on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
             }
@@ -3030,13 +2914,13 @@ public class ShapeCommands : IShapeCommands
             {
                 // LockAspect lives in the Protection section, which shapes do not always carry.
                 // visSectionObject = 1, visRowLock = 20.
-                if (TryGetShapeResult(shape, "LockAspect") is null)
+                if (ShapeSheetHelpers.TryGetResult(shape, "LockAspect") is null)
                 {
                     shape.AddSection(1);
                     shape.AddRow(1, 20, 0);
                 }
 
-                SetShapeFormula(shape, "LockAspect", locked ? "1" : "0");
+                ShapeSheetHelpers.SetFormula(shape, "LockAspect", locked ? "1" : "0");
 
                 return new OperationResult
                 {
@@ -3068,14 +2952,14 @@ public class ShapeCommands : IShapeCommands
             {
                 // Visio has no Shape.SoftEdge object; a single SoftEdgesSize cell carries the
                 // effect, with 0 meaning none.
-                SetShapeFormula(shape, "SoftEdgesSize", FormatInvariant(radius) + " pt");
+                ShapeSheetHelpers.SetFormula(shape, "SoftEdgesSize", ShapeSheetHelpers.FormatInvariant(radius) + " pt");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-soft-edge",
                     Message = radius > 0
-                        ? $"Set soft edge on shape '{shapeName}' with radius {FormatInvariant(radius)}pt on page {pageIndex}"
+                        ? $"Set soft edge on shape '{shapeName}' with radius {ShapeSheetHelpers.FormatInvariant(radius)}pt on page {pageIndex}"
                         : $"Removed soft edge from shape '{shapeName}' on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
@@ -3098,7 +2982,7 @@ public class ShapeCommands : IShapeCommands
             dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                double pattern = TryGetShapeResult(shape, "ShdwPattern") ?? 0d;
+                double pattern = ShapeSheetHelpers.TryGetResult(shape, "ShdwPattern") ?? 0d;
                 bool visible = pattern != 0d;
 
                 string message;
@@ -3106,12 +2990,12 @@ public class ShapeCommands : IShapeCommands
                 {
                     // Offset cells are stored in internal units (inches); report points, which is
                     // what the setter accepts.
-                    double offsetX = (TryGetShapeResult(shape, "ShdwOffsetX") ?? 0d) * 72d;
-                    double offsetY = (TryGetShapeResult(shape, "ShdwOffsetY") ?? 0d) * 72d;
-                    string colorFormula = TryGetShapeFormula(shape, "ShdwForegnd") ?? string.Empty;
+                    double offsetX = (ShapeSheetHelpers.TryGetResult(shape, "ShdwOffsetX") ?? 0d) * 72d;
+                    double offsetY = (ShapeSheetHelpers.TryGetResult(shape, "ShdwOffsetY") ?? 0d) * 72d;
+                    string colorFormula = ShapeSheetHelpers.TryGetFormula(shape, "ShdwForegnd") ?? string.Empty;
 
-                    message = $"Visible: true, OffsetX: {FormatInvariant(offsetX)}pt, " +
-                              $"OffsetY: {FormatInvariant(offsetY)}pt, Color: {colorFormula}";
+                    message = $"Visible: true, OffsetX: {ShapeSheetHelpers.FormatInvariant(offsetX)}pt, " +
+                              $"OffsetY: {ShapeSheetHelpers.FormatInvariant(offsetY)}pt, Color: {colorFormula}";
                 }
                 else
                 {
@@ -3169,30 +3053,30 @@ public class ShapeCommands : IShapeCommands
                 // Visio has no Shape.ThreeD object; the 3-D rotation and bevel cells carry it.
                 if (rotationX.HasValue)
                 {
-                    SetShapeFormula(shape, "RotationXAngle", FormatInvariant(rotationX.Value) + " deg");
-                    changes.Add($"RotationXAngle={FormatInvariant(rotationX.Value)}");
+                    ShapeSheetHelpers.SetFormula(shape, "RotationXAngle", ShapeSheetHelpers.FormatInvariant(rotationX.Value) + " deg");
+                    changes.Add($"RotationXAngle={ShapeSheetHelpers.FormatInvariant(rotationX.Value)}");
                 }
                 if (rotationY.HasValue)
                 {
-                    SetShapeFormula(shape, "RotationYAngle", FormatInvariant(rotationY.Value) + " deg");
-                    changes.Add($"RotationYAngle={FormatInvariant(rotationY.Value)}");
+                    ShapeSheetHelpers.SetFormula(shape, "RotationYAngle", ShapeSheetHelpers.FormatInvariant(rotationY.Value) + " deg");
+                    changes.Add($"RotationYAngle={ShapeSheetHelpers.FormatInvariant(rotationY.Value)}");
                 }
                 if (rotationZ.HasValue)
                 {
-                    SetShapeFormula(shape, "RotationZAngle", FormatInvariant(rotationZ.Value) + " deg");
-                    changes.Add($"RotationZAngle={FormatInvariant(rotationZ.Value)}");
+                    ShapeSheetHelpers.SetFormula(shape, "RotationZAngle", ShapeSheetHelpers.FormatInvariant(rotationZ.Value) + " deg");
+                    changes.Add($"RotationZAngle={ShapeSheetHelpers.FormatInvariant(rotationZ.Value)}");
                 }
                 if (bevelType.HasValue)
                 {
-                    SetShapeFormula(shape, "BevelTopType", bevelType.Value.ToString(CultureInfo.InvariantCulture));
+                    ShapeSheetHelpers.SetFormula(shape, "BevelTopType", bevelType.Value.ToString(CultureInfo.InvariantCulture));
                     changes.Add($"BevelTopType={bevelType.Value}");
                 }
                 if (bevelDepth.HasValue)
                 {
                     // Visio expresses bevel depth as the top bevel's height rather than a
                     // separate depth quantity.
-                    SetShapeFormula(shape, "BevelTopHeight", FormatInvariant(bevelDepth.Value) + " pt");
-                    changes.Add($"BevelTopHeight={FormatInvariant(bevelDepth.Value)}");
+                    ShapeSheetHelpers.SetFormula(shape, "BevelTopHeight", ShapeSheetHelpers.FormatInvariant(bevelDepth.Value) + " pt");
+                    changes.Add($"BevelTopHeight={ShapeSheetHelpers.FormatInvariant(bevelDepth.Value)}");
                 }
 
                 return new OperationResult
