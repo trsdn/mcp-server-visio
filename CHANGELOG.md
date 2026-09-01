@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- **Scriban upgraded 6.6.0 → 7.2.6** (#13): 6.6.0 carried one critical and four moderate advisories
+  (GHSA-5wr9-m6jw-xx44, GHSA-6q7j-xr26-3h2c, GHSA-m2p3-hwv5-xpqw, GHSA-q6rr-fm2g-g5x8,
+  GHSA-xw6w-9jjh-p9cr). With `TreatWarningsAsErrors`, `NuGetAudit` turned these into five hard build
+  errors, so `main` did not build at all.
+- **Microsoft.Build.Framework / Microsoft.Build.Utilities.Core upgraded 17.14.8 → 17.14.28** and the
+  blanket `<NoWarn>NU1903</NoWarn>` removed from `VisioMcp.Build.Tasks` (#13). The suppression was
+  masking CVE-2025-55247 (GHSA-w3q9-fxm7-j8fq); the advisory is now resolved rather than hidden, so
+  the project no longer suppresses any dependency audit warnings.
+
+### Fixed
+
+- **`main` now builds from a clean clone with no extra flags** (#13). `dotnet build VisioMcp.sln -c Release`
+  previously failed with 5 `NU1904`/`NU1902` errors and only succeeded with `-p:NuGetAudit=false`.
+  This also unblocks CodeQL (#18) and `release.yml`, both of which run an unflagged `dotnet build`.
+
 ### Added
 
 - Official source-side Copilot SDK agent client under `src\VisioMcp.Agent`, including local planner tests and documentation for the agent architecture
