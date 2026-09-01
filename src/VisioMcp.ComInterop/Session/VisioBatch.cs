@@ -336,7 +336,7 @@ internal sealed class VisioBatch : IVisioBatch
     {
         Execute((ctx, ct) =>
         {
-            VisioShutdownService.SavePresentationWithTimeout(_presentation!, Path.GetFileName(_documentPath), _logger, ct);
+            VisioShutdownService.SaveDocumentWithTimeout(_presentation!, Path.GetFileName(_documentPath), _logger, ct);
             return 0;
         }, cancellationToken);
     }

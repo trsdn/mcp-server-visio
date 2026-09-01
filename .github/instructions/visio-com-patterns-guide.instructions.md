@@ -2,16 +2,16 @@
 applyTo: "src/VisioMcp.Core/Commands/**/*.cs,tests/**/*.cs"
 ---
 
-# PowerPoint COM Patterns - Quick Reference
+# Visio COM Patterns - Quick Reference
 
-> **Essential patterns for PowerPoint COM automation via late binding**
+> **Essential patterns for Visio COM automation via late binding**
 
 ## Core Principles
 
-1. **Use Late Binding** - `dynamic` types with `Type.GetTypeFromProgID("PowerPoint.Application")`
-2. **1-Based Indexing** - All PowerPoint collections (Slides, Shapes, Paragraphs) start at 1
+1. **Use Late Binding** - `dynamic` types with `Type.GetTypeFromProgID("Visio.Application")`
+2. **1-Based Indexing** - All Visio collections (Pages, Shapes, Rows) start at 1
 3. **Exception Propagation** - Never wrap in try-catch; let `batch.Execute()` handle exceptions
-4. **msoTrue / msoFalse** - PowerPoint uses `MsoTriState`: `msoTrue = -1`, `msoFalse = 0`, `msoCTrue = 1`
+4. **msoTrue / msoFalse** - Office COM uses `MsoTriState`: `msoTrue = -1`, `msoFalse = 0`, `msoCTrue = 1`
 5. **Points as Units** - Positions and sizes are in points (1 inch = 72 points)
 
 ---
@@ -46,7 +46,7 @@ Working with presentations?
 ### Adding Slides
 
 ```csharp
-// Get a slide layout from the first slide master
+// Get a slide layout from the first stencil master
 dynamic slideMaster = presentation.SlideMasters.Item(1);
 dynamic customLayout = slideMaster.CustomLayouts.Item(layoutIndex); // 1-based
 
@@ -58,7 +58,7 @@ dynamic newSlide = presentation.Slides.AddSlide(position, customLayout);
 
 ```csharp
 // By index (1-based)
-dynamic slide = presentation.Slides.Item(slideIndex);
+dynamic slide = presentation.Slides.Item(pageIndex);
 
 // By SlideID (stable across reorders)
 dynamic slide = presentation.Slides.FindBySlideID(slideId);
@@ -317,7 +317,7 @@ for (int i = slide.Shapes.Count; i >= 1; i--)
 
 ---
 
-## Common PowerPoint COM Quirks
+## Common Visio COM Quirks
 
 | Quirk | Detail |
 |-------|--------|
@@ -338,10 +338,10 @@ for (int i = slide.Shapes.Count; i >= 1; i--)
 
 | Mistake | Fix |
 |---------|-----|
-| 0-based indexing | PowerPoint is 1-based |
+| 0-based indexing | Visio is 1-based |
 | `bool` for tri-state | Use `int`: -1 (true), 0 (false) |
 | Pixel measurements | Use points (72pt = 1 inch) |
-| RGB color order | PowerPoint COM uses BGR |
+| RGB color order | Visio COM uses BGR |
 | `int x = shape.Left` | Use `Convert.ToSingle()` or `float` for position properties |
 | Missing HasTextFrame check | Always check before accessing TextFrame |
 | Forward-loop deletion | Iterate in reverse when deleting |

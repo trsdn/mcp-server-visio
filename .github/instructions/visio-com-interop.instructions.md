@@ -2,23 +2,23 @@
 applyTo: "src/VisioMcp.Core/**/*.cs"
 ---
 
-# PowerPoint COM Interop Patterns
+# Visio COM Interop Patterns
 
-> **Essential patterns for PowerPoint COM automation**
+> **Essential patterns for Visio COM automation**
 
 ## Core Principles
 
 1. **Use Late Binding** - `dynamic` types with `Type.GetTypeFromProgID()`
-2. **1-Based Indexing** - PowerPoint collections start at 1, not 0
+2. **1-Based Indexing** - Visio collections start at 1, not 0
 3. **Exception Propagation** - Never wrap in try-catch, let batch.Execute() handle exceptions (see Exception Propagation section)
 
 ## Reference Resources
 
-**NetOffice Library** - THE BEST source for ALL PowerPoint COM Interop patterns:
+**NetOffice Library** - THE BEST source for ALL Visio COM Interop patterns:
 - GitHub: https://github.com/NetOfficeFw/NetOffice
 - **Use for ALL COM Interop work** - slides, shapes, presentations, charts, tables, VBA, everything
 - NetOffice wraps Office COM APIs in strongly-typed C# - study their patterns for dynamic interop conversion
-- Search NetOffice repository BEFORE implementing any PowerPoint COM automation
+- Search NetOffice repository BEFORE implementing any Visio COM automation
 - Particularly valuable for: Shapes, Slide layouts, Masters, Animations, complex COM scenarios
 
 ## Exception Propagation Pattern (CRITICAL)
@@ -27,7 +27,7 @@ applyTo: "src/VisioMcp.Core/**/*.cs"
 
 ```csharp
 // ❌ WRONG: Catching and wrapping exceptions
-public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
+public async Task<OperationResult> CreateAsync(IVisioBatch batch, string name)
 {
     try
     {
@@ -44,7 +44,7 @@ public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
 }
 
 // ✅ CORRECT: Let batch.Execute() handle exceptions via TaskCompletionSource
-public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
+public async Task<OperationResult> CreateAsync(IVisioBatch batch, string name)
 {
     return await batch.Execute((ctx, ct) => {
         var item = ctx.Create(name);
@@ -55,7 +55,7 @@ public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
 }
 
 // ✅ CORRECT: Finally blocks are the right place for COM resource cleanup
-public async Task<OperationResult> ComplexAsync(IPptBatch batch, string name)
+public async Task<OperationResult> ComplexAsync(IVisioBatch batch, string name)
 {
     dynamic? temp = null;
     try
@@ -106,55 +106,55 @@ Core Command (NO try-catch wrapping)
 
 ### ✅ Unified Shutdown Pattern (Current Standard)
 
-**All presentation close and PowerPoint quit operations use `PptShutdownService` with resilient retry:**
+**All presentation close and Visio quit operations use `VisioShutdownService` with resilient retry:**
 
 ```csharp
-// In PptBatch, PptSession, FileCommands:
-PptShutdownService.CloseAndQuit(presentation, powerpoint, save: false, filePath, logger);
+// In VisioBatch, VisioSession, FileCommands:
+VisioShutdownService.CloseAndQuit(document, visio, save: false, filePath, logger);
 ```
 
 **Shutdown Order:**
 1. **Optional Save** - If `save=true`, calls `presentation.Save()` explicitly before close
-2. **Close Presentation** - Calls `presentation.Close()` (save param controls PowerPoint's prompt behavior)
+2. **Close Document** - Calls `document.Close()` (save param controls Visio's prompt behaviour)
 3. **Release Presentation** - Releases COM reference via `ComUtilities.Release()`
-4. **Quit PowerPoint** - Calls `powerpoint.Quit()` with exponential backoff retry (6 attempts, 200ms base delay)
-5. **Release PowerPoint** - Releases COM reference via `ComUtilities.Release()`
+4. **Quit Visio** - Calls `visio.Quit()` with exponential backoff retry (6 attempts, 200ms base delay)
+5. **Release Visio** - Releases COM reference via `ComUtilities.Release()`
 6. **Automatic GC** - RCW finalizers handle final cleanup automatically (no forced GC needed per Microsoft guidance)
 
 **Resilience Features:**
 - Uses `Microsoft.Extensions.Resilience` retry pipeline
-- **Outer timeout (30s)**: Overall cancellation for PowerPoint.Quit() - catches hung PowerPoint (modal dialogs, deadlocks)
+- **Outer timeout (30s)**: Overall cancellation for Application.Quit() - catches a hung Visio (modal dialogs, deadlocks)
 - **Inner retry**: Exponential backoff (200ms base, 2x factor, 6 attempts) for transient COM busy errors
 - Retries on: `RPC_E_SERVERCALL_RETRYLATER` (-2147417851), `RPC_E_CALL_REJECTED` (-2147418111)
 - Structured logging for diagnostics (attempt number, HResult, elapsed time)
 - Continues with COM cleanup even if Quit fails/times out
-- **STA thread join (45s)**: Must be >= PowerPointQuitTimeout + margin (currently 30s + 15s) to ensure Dispose() waits for full cleanup
+- **STA thread join (45s)**: Must be >= VisioQuitTimeout + margin (currently 30s + 15s) to ensure Dispose() waits for full cleanup
 
 **Save Semantics:**
 ```csharp
 // Discard changes (default for disposal paths)
-PptShutdownService.CloseAndQuit(presentation, powerpoint, save: false, filePath, logger);
+VisioShutdownService.CloseAndQuit(document, visio, save: false, filePath, logger);
 
 // Save before close (for explicit save operations)
-PptShutdownService.CloseAndQuit(presentation, powerpoint, save: true, filePath, logger);
+VisioShutdownService.CloseAndQuit(document, visio, save: true, filePath, logger);
 ```
 
 **Why Unified Service:**
-- Eliminates duplicated try/catch blocks across `PptBatch`, `PptSession`, `FileCommands`
-- Consistent retry behavior for all PowerPoint quit operations
+- Eliminates duplicated try/catch blocks across `VisioBatch`, `VisioSession`, `FileCommands`
+- Consistent retry behavior for all Visio quit operations
 - Centralized logging and diagnostics
-- Handles edge cases: disconnected COM proxies, hung PowerPoint, modal dialogs
+- Handles edge cases: disconnected COM proxies, a hung Visio, modal dialogs
 
 **Timeout Architecture (Proper Layering):**
 ```
 Overall Quit Timeout: 30 seconds (outer)
   └─> Resilient Retry: 6 attempts with exponential backoff (inner, ~6s max)
       └─> Individual Quit() calls
-  └─> STA Thread Join: 45 seconds (PowerPointQuitTimeout + 15s margin)
+  └─> STA Thread Join: 45 seconds (VisioQuitTimeout + 15s margin)
 ```
-- **30s quit timeout**: Catches truly hung PowerPoint (modal dialogs, deadlocks) via CancellationToken
+- **30s quit timeout**: Catches truly a hung Visio (modal dialogs, deadlocks) via CancellationToken
 - **6-attempt retry**: Handles transient COM busy states within the 30s window
-- **45s thread join**: Must be >= PowerPointQuitTimeout + margin to ensure Dispose() waits for full cleanup
+- **45s thread join**: Must be >= VisioQuitTimeout + margin to ensure Dispose() waits for full cleanup
 
 ## COM Object Cleanup Pattern (CRITICAL)
 
@@ -232,7 +232,7 @@ finally
 
 ## Critical COM Issues
 
-### 1. PowerPoint Collections Are 1-Based
+### 1. Visio Collections Are 1-Based
 ```csharp
 // ❌ WRONG: collection.Item(0)  
 // ✅ CORRECT: collection.Item(1)
@@ -241,30 +241,30 @@ for (int i = 1; i <= collection.Count; i++) { var item = collection.Item(i); }
 
 ### 2. Numeric Property Type Conversions
 
-**⚠️ ALL PowerPoint COM numeric properties return `double`, NOT `int`!**
+**⚠️ ALL Visio COM numeric properties return `double`, NOT `int`!**
 
 ```csharp
 // ❌ WRONG: Implicit conversion fails at runtime
-int slideIndex = slide.SlideIndex;    // Runtime error: Cannot convert double to int
+int pageIndex = slide.SlideIndex;    // Runtime error: Cannot convert double to int
 int shapeCount = slide.Shapes.Count;  // Runtime error: Cannot convert double to int
 
 // ✅ CORRECT: Explicit conversion required
-int slideIndex = Convert.ToInt32(slide.SlideIndex);
+int pageIndex = Convert.ToInt32(slide.SlideIndex);
 int shapeCount = Convert.ToInt32(slide.Shapes.Count);
 ```
 
 **Common Properties Affected:**
 - `Slide.SlideIndex` → `double` (not `int`)
 - `Shape.Left`, `Shape.Top`, `Shape.Width`, `Shape.Height` → `double` (not `float`)
-- Any numeric property from PowerPoint COM → assume `double`
+- Any numeric property from Visio COM → assume `double`
 
-**Why:** PowerPoint COM uses `VARIANT` types internally, which represent numbers as `double`. C# `dynamic` binding preserves this type.
+**Why:** Visio COM uses `VARIANT` types internally, which represent numbers as `double`. C# `dynamic` binding preserves this type.
 
-### 3. PowerPoint Busy Handling
+### 3. Visio Busy Handling
 ```csharp
 catch (COMException ex) when (ex.HResult == -2147417851)
 {
-    // RPC_E_SERVERCALL_RETRYLATER - PowerPoint is busy
+    // RPC_E_SERVERCALL_RETRYLATER - Visio is busy
 }
 ```
 
@@ -289,9 +289,9 @@ shape.TextFrame.TextRange.Text = "Hello";
 
 | Mistake | Fix |
 |---------|-----|
-| 0-based indexing | PowerPoint is 1-based |
+| 0-based indexing | Visio is 1-based |
 | Not releasing objects | `try/finally` + `ReleaseComObject()` |
 | `int x = shape.Property` | Use `Convert.ToInt32()` for ALL numeric properties |
 | Assuming enum types | Numeric properties return `double`, convert to enum |
 
-**📚 Reference:** [PowerPoint Object Model](https://docs.microsoft.com/en-us/office/vba/api/overview/powerpoint)
+**📚 Reference:** [Visio Object Model](https://docs.microsoft.com/en-us/office/vba/api/overview/visio)

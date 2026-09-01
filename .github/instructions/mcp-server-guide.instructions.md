@@ -23,7 +23,7 @@ applyTo: "src/VisioMcp.McpServer/**/*.cs"
 
 ```csharp
 [McpServerTool]
-public async Task<string> PptSlide(string action, string pptPath, ...)
+public async Task<string> VisioPage(string action, string documentPath, ...)
 {
     return action.ToLowerInvariant() switch
     {
@@ -51,7 +51,7 @@ private static string ForwardSomeAction(string sessionId, string? param)
         throw new ModelContextProtocol.McpException("param is required for action");
 
     // 2. Forward to in-process VisioMcpService (direct call, no pipe)
-    return PptToolsBase.ForwardToService("category.action", sessionId, new { param });
+    return VisioToolsBase.ForwardToService("category.action", sessionId, new { param });
 }
 ```
 
@@ -71,7 +71,7 @@ private static string ForwardSomeAction(string sessionId, string? param)
 ```csharp
 // Core returns: { Success = false, ErrorMessage = "Table 'Sales' not found" }
 // MCP Tool: Return this as-is
-return JsonSerializer.Serialize(result, PptToolsBase.JsonOptions);
+return JsonSerializer.Serialize(result, VisioToolsBase.JsonOptions);
 // Client receives via MCP protocol:
 // {
 //   "jsonrpc": "2.0",
@@ -99,7 +99,7 @@ if (string.IsNullOrWhiteSpace(tableName))
 
 ```csharp
 [McpServerTool]
-public static async Task<string> PptTool(ToolAction action, ...)
+public static async Task<string> VisioTool(ToolAction action, ...)
 {
     try
     {
@@ -120,11 +120,11 @@ public static async Task<string> PptTool(ToolAction action, ...)
         {
             Success = false,
             ErrorMessage = ex.Message,
-            FilePath = pptPath,
+            FilePath = documentPath,
             Action = action.ToActionString(),
             SuggestedNextActions = new List<string>
             {
-                "Check if PowerPoint is showing a dialog or prompt",
+                "Check if Visio is showing a dialog or prompt",
                 "Verify data source connectivity",
                 "For large datasets, operation may need more time"
             },
@@ -138,11 +138,11 @@ public static async Task<string> PptTool(ToolAction action, ...)
                 ? "Maximum timeout reached. Check connectivity manually."
                 : "Retry acceptable if issue is transient."
         };
-        return JsonSerializer.Serialize(result, PptToolsBase.JsonOptions);
+        return JsonSerializer.Serialize(result, VisioToolsBase.JsonOptions);
     }
     catch (Exception ex)
     {
-        PptToolsBase.ThrowInternalError(ex, action.ToActionString(), pptPath);
+        VisioToolsBase.ThrowInternalError(ex, action.ToActionString(), documentPath);
         throw; // Unreachable but satisfies compiler
     }
 }
@@ -155,7 +155,7 @@ public static async Task<string> PptTool(ToolAction action, ...)
 ```csharp
 // Tool signature: async Task<string> (MCP SDK requirement)
 [McpServerTool]
-public static async Task<string> PptSlide(string action, ...)
+public static async Task<string> VisioPage(string action, ...)
 {
     // Action methods: synchronous (no await!)
     return action.ToLowerInvariant() switch
@@ -169,14 +169,14 @@ public static async Task<string> PptSlide(string action, ...)
 // Action methods forward to in-process VisioMcpService:
 private static string ForwardList(string sessionId)
 {
-    return PptToolsBase.ForwardToService("slide.list", sessionId);
+    return VisioToolsBase.ForwardToService("page.list", sessionId);
 }
 
-private static string ForwardView(string sessionId, string slideIndex)
+private static string ForwardView(string sessionId, string pageIndex)
 {
-    if (string.IsNullOrEmpty(slideIndex))
-        PptToolsBase.ThrowMissingParameter("slideIndex", "view");
-    return PptToolsBase.ForwardToService("slide.view", sessionId, new { slideIndex });
+    if (string.IsNullOrEmpty(pageIndex))
+        VisioToolsBase.ThrowMissingParameter("pageIndex", "view");
+    return VisioToolsBase.ForwardToService("page.read", sessionId, new { pageIndex });
 }
 ```
 
@@ -191,7 +191,7 @@ return JsonSerializer.Serialize(result, JsonOptions);
 
 ## JSON Deserialization & COM Marshalling
 
-**⚠️ CRITICAL:** MCP deserializes JSON arrays to `JsonElement`, NOT primitives. PowerPoint COM requires proper types.
+**⚠️ CRITICAL:** MCP deserializes JSON arrays to `JsonElement`, NOT primitives. Visio COM requires proper types.
 
 **Problem:** `values: [["text", 123, true]]` → `List<List<object?>>` where each object is `JsonElement`.
 
@@ -337,7 +337,7 @@ Before committing MCP tool changes:
 **Example - Good tool description:**
 ```csharp
 /// <summary>
-/// Manage slides in a PowerPoint presentation.
+/// Manage slides in a Visio document.
 /// 
 /// LAYOUT OPTIONS (non-enum parameter):
 /// - 'blank': Empty slide with no placeholders (DEFAULT)

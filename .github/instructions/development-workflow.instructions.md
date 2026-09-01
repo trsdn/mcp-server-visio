@@ -55,9 +55,9 @@ mcp_github_github_pull_request_read(method="get_review_comments", owner="trsdn",
 **See testing-strategy.instructions.md for complete test commands.**
 
 Quick reference:
-- Development: `Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust`
+- Development: `Category=Integration&RunType!=OnDemand&Feature!=Export`
 - Session/batch changes: `RunType=OnDemand`
-- VBA tests: `(Feature=VBA|Feature=VBATrust)&RunType!=OnDemand`
+- VBA tests: `(Feature=Cell|Feature=Cell)&RunType!=OnDemand`
 
 ## CI/CD Workflows
 
@@ -70,7 +70,7 @@ Quick reference:
 
 **Manual/on-demand gates:**
 - `scripts\Test-LlmRegressionGate.ps1` - Canonical LLM regression gate
-- `integration-tests.yml` `workflow_dispatch` inputs can opt into `RunType=OnDemand` and the LLM gate when the PowerPoint runner is available
+- `integration-tests.yml` `workflow_dispatch` inputs can opt into `RunType=OnDemand` and the LLM gate when the Visio runner is available
 
 **Note:** The workflow file is active, but the Visio job is skipped unless `ENABLE_VISIO_INTEGRATION_CI=true`. See `docs/AZURE_SELFHOSTED_RUNNER_SETUP.md`.
 

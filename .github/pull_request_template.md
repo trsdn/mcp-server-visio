@@ -18,22 +18,22 @@ Relates to #[issue number]
 - Change 3
 
 ## Testing Performed
-- [ ] Tested manually with various PowerPoint files
-- [ ] Verified PowerPoint process cleanup (no powerpnt.exe remains after 5 seconds)
+- [ ] Tested manually with various Visio documents
+- [ ] Verified Visio process cleanup (no VISIO.EXE remains after 5 seconds)
 - [ ] Tested error conditions (missing files, invalid arguments, etc.)
 - [ ] All existing commands still work
-- [ ] If PowerPoint CI runner was inactive, ran the required PowerPoint integration tests locally
+- [ ] If the Visio CI runner was inactive, ran the required Visio integration tests locally
 - [ ] If LLM-facing help/docs changed, ran `scripts\Test-LlmRegressionGate.ps1` or explained why not
 - [ ] VBA script execution tested (if applicable)
-- [ ] PPTM file format validation tested (if applicable)
+- [ ] Macro-enabled (.vsdm) format validation tested (if applicable)
 - [ ] VBA trust setup tested (if applicable)
 - [ ] Build produces zero warnings
 
 ## Test Commands
 ```powershell
 # Commands used for testing
-VisioMcp command1 "test.pptx"
-VisioMcp command2 "test.pptx" "param"
+VisioMcp command1 "test.vsdx"
+VisioMcp command2 "test.vsdx" "param"
 ```
 
 ## Screenshots (if applicable)
@@ -49,7 +49,7 @@ If YES, verify all steps completed:
 - [ ] Implemented method in Core Commands class (e.g., `PowerQueryCommands.NewMethodAsync()`)
 - [ ] Added enum value to `ToolActions.cs` (e.g., `PowerQueryAction.NewMethod`)
 - [ ] Added `ToActionString` mapping to `ActionExtensions.cs` (e.g., `PowerQueryAction.NewMethod => "new-method"`)
-- [ ] Added switch case to appropriate MCP Tool (e.g., `PptPowerQueryTool.cs`)
+- [ ] Added switch case to appropriate MCP Tool (e.g., `VisioShapeTool.cs`)
 - [ ] Implemented MCP method that calls Core method
 - [ ] Build succeeds with 0 warnings (CS8524 compiler enforcement verified)
 - [ ] Updated `CORE-COMMANDS-AUDIT.md` (if significant addition)
@@ -66,9 +66,9 @@ If YES, verify all steps completed:
 - [ ] Appropriate error handling added
 - [ ] Updated help text (if adding new commands)
 - [ ] Updated README.md (if needed)
-- [ ] Follows PowerPoint COM best practices from copilot-instructions.md
+- [ ] Follows Visio COM best practices from copilot-instructions.md
 - [ ] Uses batch API with proper disposal (`using var batch` or `await using var batch`)
-- [ ] Properly handles 1-based PowerPoint indexing
+- [ ] Properly handles 1-based Visio indexing
 - [ ] Escapes user input with `.EscapeMarkup()`
 - [ ] Returns consistent exit codes (0 = success, 1+ = error)
 
