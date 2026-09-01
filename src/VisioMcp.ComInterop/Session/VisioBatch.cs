@@ -23,7 +23,7 @@ internal sealed class VisioBatch : IVisioBatch
     private readonly Thread _staThread;
     private readonly CancellationTokenSource _shutdownCts;
     private int _disposed;
-    private int? _powerPointProcessId;
+    private int? _VisioProcessId;
     private bool _operationTimedOut;
 
     private dynamic? _powerPoint;
@@ -200,18 +200,18 @@ internal sealed class VisioBatch : IVisioBatch
 
     public ILogger Logger => _logger;
 
-    public int? PowerPointProcessId => _powerPointProcessId;
+    public int? VisioProcessId => _VisioProcessId;
 
     public TimeSpan OperationTimeout => _operationTimeout;
 
-    public bool IsPowerPointProcessAlive()
+    public bool IsVisioProcessAlive()
     {
         if (_disposed != 0) return false;
-        if (!_powerPointProcessId.HasValue) return false;
+        if (!_VisioProcessId.HasValue) return false;
 
         try
         {
-            using var proc = System.Diagnostics.Process.GetProcessById(_powerPointProcessId.Value);
+            using var proc = System.Diagnostics.Process.GetProcessById(_VisioProcessId.Value);
             return !proc.HasExited;
         }
         catch (ArgumentException)
@@ -268,7 +268,7 @@ internal sealed class VisioBatch : IVisioBatch
                 $"A previous operation timed out or was cancelled for '{Path.GetFileName(_presentationPath)}'. The Visio COM thread may be unresponsive. Please close this session and create a new one.");
         }
 
-        if (!IsPowerPointProcessAlive())
+        if (!IsVisioProcessAlive())
         {
             _logger.LogError("Visio process is no longer running for document {FileName}", Path.GetFileName(_presentationPath));
             throw new InvalidOperationException(
@@ -362,12 +362,12 @@ internal sealed class VisioBatch : IVisioBatch
         _workQueue.Writer.Complete();
         _logger.LogDebug("[Thread {CallingThread}] Waiting for STA thread (Id={STAThread}) to exit for {FileName}", callingThread, _staThread?.ManagedThreadId ?? -1, Path.GetFileName(_presentationPath));
 
-        if (_operationTimedOut && _powerPointProcessId.HasValue && _staThread.IsAlive)
+        if (_operationTimedOut && _VisioProcessId.HasValue && _staThread.IsAlive)
         {
             _logger.LogWarning(
                 "[Thread {CallingThread}] Operation timed out - force-killing Visio process {ProcessId} before waiting for STA thread for {FileName}",
-                callingThread, _powerPointProcessId.Value, Path.GetFileName(_presentationPath));
-            TryKillProcess(_powerPointProcessId.Value, callingThread, "pre-emptive, before STA join");
+                callingThread, _VisioProcessId.Value, Path.GetFileName(_presentationPath));
+            TryKillProcess(_VisioProcessId.Value, callingThread, "pre-emptive, before STA join");
         }
 
         if (_staThread.IsAlive)
@@ -379,9 +379,9 @@ internal sealed class VisioBatch : IVisioBatch
                     "[Thread {CallingThread}] STA thread (Id={STAThread}) did NOT exit within {Timeout} for {FileName}. Attempting force-kill.",
                     callingThread, _staThread.ManagedThreadId, joinTimeout, Path.GetFileName(_presentationPath));
 
-                if (_powerPointProcessId.HasValue)
+                if (_VisioProcessId.HasValue)
                 {
-                    TryKillProcess(_powerPointProcessId.Value, callingThread, Path.GetFileName(_presentationPath));
+                    TryKillProcess(_VisioProcessId.Value, callingThread, Path.GetFileName(_presentationPath));
                     _staThread.Join(TimeSpan.FromSeconds(5));
                 }
                 else
@@ -391,16 +391,16 @@ internal sealed class VisioBatch : IVisioBatch
             }
         }
 
-        if (_powerPointProcessId.HasValue)
+        if (_VisioProcessId.HasValue)
         {
             try
             {
-                using var process = System.Diagnostics.Process.GetProcessById(_powerPointProcessId.Value);
+                using var process = System.Diagnostics.Process.GetProcessById(_VisioProcessId.Value);
                 if (!process.HasExited && !process.WaitForExit(5000))
                 {
                     _logger.LogWarning(
                         "[Thread {CallingThread}] Visio process {ProcessId} did not exit within 5s for {FileName}. Force-killing lingering process.",
-                        callingThread, _powerPointProcessId.Value, Path.GetFileName(_presentationPath));
+                        callingThread, _VisioProcessId.Value, Path.GetFileName(_presentationPath));
                     process.Kill();
                     process.WaitForExit(3000);
                 }
@@ -434,16 +434,16 @@ internal sealed class VisioBatch : IVisioBatch
                 _ = GetWindowThreadProcessId(new IntPtr(hwnd), out uint processId);
                 if (processId != 0)
                 {
-                    _powerPointProcessId = (int)processId;
-                    _logger.LogDebug("Captured Visio process ID via HWND: {ProcessId}", _powerPointProcessId);
+                    _VisioProcessId = (int)processId;
+                    _logger.LogDebug("Captured Visio process ID via HWND: {ProcessId}", _VisioProcessId);
                     return;
                 }
             }
 
-            _powerPointProcessId = TryFindNewestVisioProcessId();
-            if (_powerPointProcessId.HasValue)
+            _VisioProcessId = TryFindNewestVisioProcessId();
+            if (_VisioProcessId.HasValue)
             {
-                _logger.LogDebug("Captured Visio process ID via process scan: {ProcessId}", _powerPointProcessId);
+                _logger.LogDebug("Captured Visio process ID via process scan: {ProcessId}", _VisioProcessId);
             }
             else
             {

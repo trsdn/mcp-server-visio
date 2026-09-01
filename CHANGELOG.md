@@ -19,6 +19,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **All 14 OnDemand session/batch tests now pass** (#25). They created `.pptx` files, which
+  `SessionManager` correctly rejects, so the suite that Rule 3 makes mandatory before touching
+  session or batch code had **zero** working coverage of STA threading, COM lifetime, timeout
+  handling, message pumping and disposal.
+  `SessionManagerTimeoutTests`, `VisioBatchTimeoutTests` and `VisioBatchMessagePumpTests` are
+  migrated to a new `batch-test-static.vsdx` template, `ctx.Document.Pages` instead of
+  `ctx.Presentation.Slides`, and `VISIO` instead of `POWERPNT` process assertions. Every assertion
+  is preserved; none was weakened to make a test pass.
+  `dotnet test tests/VisioMcp.ComInterop.Tests --filter "RunType=OnDemand"`: **0 passed / 14 failed
+  → 14 passed / 0 failed**.
+
 - **`Close_NoOperationsRunning_ClosesSuccessfully` was failing on a stale `.pptx` path, not a
   response-contract mismatch** (#28). The test created `CloseTest_<guid>.pptx`; `file create`
   correctly rejects a non-Visio extension and returns an error object with no `session_id`, so the
@@ -99,6 +110,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updated root, CLI, MCP, extension, and installation docs to describe the current Visio-first state more truthfully
 
 ### Changed
+
+- **`IVisioBatch.PowerPointProcessId` renamed to `VisioProcessId`, and `IsPowerPointProcessAlive()`
+  to `IsVisioProcessAlive()`** (#25). Both implementations were already Visio-correct —
+  `VisioBatch` captures the PID via `Process.GetProcessesByName("VISIO")` — only the names were
+  PowerPoint-era. Callers in `SessionManager` and `VisioMcpService` updated.
 
 - Reframed feature documentation around validated Visio functionality instead of inherited PowerPoint inventory
 - Updated package and extension metadata from PowerPoint language to Visio language

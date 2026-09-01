@@ -256,7 +256,7 @@ public sealed class SessionManager : IDisposable
         }
 
         // Check if PowerPoint process is still alive
-        if (!batch.IsPowerPointProcessAlive())
+        if (!batch.IsVisioProcessAlive())
         {
             _logger?.LogWarning("Session {SessionId} has dead PowerPoint process, auto-cleaning up", sessionId);
             CleanupDeadSession(sessionId, batch);
@@ -512,7 +512,7 @@ public sealed class SessionManager : IDisposable
         if (string.IsNullOrWhiteSpace(sessionId)) return false;
         if (!_activeSessions.TryGetValue(sessionId, out var batch)) return false;
 
-        if (batch.IsPowerPointProcessAlive())
+        if (batch.IsVisioProcessAlive())
         {
             return true;
         }
@@ -548,7 +548,7 @@ public sealed class SessionManager : IDisposable
             // Check if session is still alive
             if (_activeSessions.TryGetValue(sessionId, out var batch))
             {
-                if (batch.IsPowerPointProcessAlive())
+                if (batch.IsVisioProcessAlive())
                 {
                     // Get origin and createdAt metadata (defaults for legacy sessions)
                     _sessionOrigins.TryGetValue(sessionId, out var origin);
