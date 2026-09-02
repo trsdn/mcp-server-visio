@@ -9,7 +9,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "File")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Trait("Speed", "Medium")]
 public sealed class SessionCommandTests(ITestOutputHelper output)
 {
@@ -46,7 +46,7 @@ public sealed class SessionCommandTests(ITestOutputHelper output)
                 .First(session => session.GetProperty("sessionId").GetString() == sessionId);
 
             Assert.True(matchingSession.GetProperty("isVisioVisible").GetBoolean());
-            Assert.True(matchingSession.GetProperty("isPowerPointVisible").GetBoolean());
+            Assert.True(matchingSession.GetProperty("isVisioVisible").GetBoolean());
         }
         finally
         {

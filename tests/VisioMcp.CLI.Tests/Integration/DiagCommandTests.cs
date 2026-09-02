@@ -15,7 +15,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Diag")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 [Trait("Speed", "Fast")]
 public sealed class DiagCommandTests
 {

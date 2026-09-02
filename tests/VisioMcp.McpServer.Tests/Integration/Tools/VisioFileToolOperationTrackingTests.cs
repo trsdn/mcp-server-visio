@@ -21,7 +21,7 @@ namespace VisioMcp.McpServer.Tests.Integration.Tools;
 [Trait("Speed", "Medium")]
 [Trait("Layer", "McpServer")]
 [Trait("Feature", "SessionManager")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -214,7 +214,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
             Assert.True(session.TryGetProperty("canClose", out var canClose));
             Assert.True(canClose.GetBoolean());
             Assert.True(session.TryGetProperty("isVisioVisible", out var isVisioVisible));
-            Assert.True(session.TryGetProperty("isPowerPointVisible", out var isVisible));
+            Assert.True(session.TryGetProperty("isVisioVisible", out var isVisible));
             Assert.Equal(isVisible.GetBoolean(), isVisioVisible.GetBoolean());
             Assert.False(isVisible.GetBoolean());
         }
@@ -231,7 +231,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
     }
 
     [Fact]
-    public async Task List_SessionWithShowPowerPointTrue_ReturnsIsPowerPointVisibleTrue()
+    public async Task List_SessionWithShowPowerPointTrue_ReturnsIsVisioVisibleTrue()
     {
         // Create a unique file with show=true for this test
         var testFile = Path.Join(_tempDir, $"ShowPowerPointTest_{Guid.NewGuid():N}.vsdx");
@@ -255,7 +255,7 @@ public class VisioFileToolOperationTrackingTests : IAsyncLifetime, IAsyncDisposa
 
             var sessions = listResult.GetProperty("sessions");
             var session = sessions[0];
-            Assert.True(session.GetProperty("isPowerPointVisible").GetBoolean());
+            Assert.True(session.GetProperty("isVisioVisible").GetBoolean());
         }
         finally
         {

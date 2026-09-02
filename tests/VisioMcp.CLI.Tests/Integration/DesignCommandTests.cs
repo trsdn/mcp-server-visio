@@ -10,7 +10,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Design")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Trait("Speed", "Fast")]
 public sealed class DesignCommandTests
 {

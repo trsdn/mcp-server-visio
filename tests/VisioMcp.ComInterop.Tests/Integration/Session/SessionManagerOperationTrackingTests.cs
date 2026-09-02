@@ -13,7 +13,7 @@ namespace VisioMcp.ComInterop.Tests.Integration;
 [Trait("Speed", "Medium")]
 [Trait("Layer", "ComInterop")]
 [Trait("Feature", "SessionManager")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Collection("Sequential")]
 public class SessionManagerOperationTrackingTests : IDisposable
 {
@@ -47,20 +47,20 @@ public class SessionManagerOperationTrackingTests : IDisposable
 
     /// <summary>
     /// Path to the template xlsx file used for fast test file creation.
-    /// Copying a template is ~1000x faster than spawning PowerPoint to create a new presentation.
+    /// Copying a template is ~1000x faster than starting Visio to create a new document.
     /// </summary>
     private static readonly string TemplateFilePath = Path.Combine(
         Path.GetDirectoryName(typeof(SessionManagerOperationTrackingTests).Assembly.Location)!,
-        "Integration", "Session", "TestFiles", "batch-test-static.pptx");
+        "Integration", "Session", "TestFiles", "batch-test-static.vsdx");
 
     private string CreateTestFile(string testName)
     {
-        var fileName = $"{testName}_{Guid.NewGuid():N}.pptx";
+        var fileName = $"{testName}_{Guid.NewGuid():N}.vsdx";
 #pragma warning disable CA3003 // Path.Combine is safe here - test code with controlled inputs
         var filePath = Path.Combine(_tempDir, fileName);
 #pragma warning restore CA3003
 
-        // PERFORMANCE OPTIMIZATION: Copy from template instead of spawning PowerPoint.
+        // PERFORMANCE OPTIMIZATION: Copy from template instead of starting Visio.
         // This reduces test file creation from ~7-14 seconds to <10ms.
         File.Copy(TemplateFilePath, filePath);
 
@@ -150,39 +150,39 @@ public class SessionManagerOperationTrackingTests : IDisposable
 
     #endregion
 
-    #region IsPowerPointVisible
+    #region IsVisioVisible
 
     [Fact]
-    public void IsPowerPointVisible_SessionWithShowPowerPointFalse_ReturnsFalse()
+    public void IsVisioVisible_SessionWithShowVisibleFalse_ReturnsFalse()
     {
-        var testFile = CreateTestFile(nameof(IsPowerPointVisible_SessionWithShowPowerPointFalse_ReturnsFalse));
+        var testFile = CreateTestFile(nameof(IsVisioVisible_SessionWithShowVisibleFalse_ReturnsFalse));
         using var manager = new SessionManager();
         var sessionId = manager.CreateSession(testFile, show: false);
 
-        Assert.False(manager.IsPowerPointVisible(sessionId));
+        Assert.False(manager.IsVisioVisible(sessionId));
 
         manager.CloseSession(sessionId);
     }
 
     [Fact]
-    public void IsPowerPointVisible_SessionWithShowPowerPointTrue_ReturnsTrue()
+    public void IsVisioVisible_SessionWithShowVisibleTrue_ReturnsTrue()
     {
-        var testFile = CreateTestFile(nameof(IsPowerPointVisible_SessionWithShowPowerPointTrue_ReturnsTrue));
+        var testFile = CreateTestFile(nameof(IsVisioVisible_SessionWithShowVisibleTrue_ReturnsTrue));
         using var manager = new SessionManager();
         var sessionId = manager.CreateSession(testFile, show: true);
 
-        Assert.True(manager.IsPowerPointVisible(sessionId));
+        Assert.True(manager.IsVisioVisible(sessionId));
 
         manager.CloseSession(sessionId);
     }
 
     [Fact]
-    public void IsPowerPointVisible_NonExistentSession_ReturnsFalse()
+    public void IsVisioVisible_NonExistentSession_ReturnsFalse()
     {
         using var manager = new SessionManager();
 
-        Assert.False(manager.IsPowerPointVisible("nonexistent"));
-        Assert.False(manager.IsPowerPointVisible(null!));
+        Assert.False(manager.IsVisioVisible("nonexistent"));
+        Assert.False(manager.IsVisioVisible(null!));
     }
 
     #endregion
@@ -262,7 +262,7 @@ public class SessionManagerOperationTrackingTests : IDisposable
 
         var result = manager.ValidateClose(sessionId);
 
-        Assert.True(result.IsPowerPointVisible);
+        Assert.True(result.IsVisioVisible);
 
         manager.CloseSession(sessionId);
     }
@@ -348,7 +348,7 @@ public class SessionManagerOperationTrackingTests : IDisposable
 
         // After close, these should return defaults
         Assert.Equal(0, manager.GetActiveOperationCount(sessionId));
-        Assert.False(manager.IsPowerPointVisible(sessionId));
+        Assert.False(manager.IsVisioVisible(sessionId));
     }
 
     [Fact]

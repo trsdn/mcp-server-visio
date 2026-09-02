@@ -14,7 +14,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "ServiceDaemon")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 [Trait("Speed", "Medium")]
 public sealed class CliDaemonTests : IAsyncLifetime
 {

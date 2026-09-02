@@ -7,18 +7,18 @@ namespace VisioMcp.ComInterop.Tests.Integration.Session;
 
 /// <summary>
 /// Integration tests for VisioBatch - verifies batch operations and COM cleanup.
-/// Tests that PowerPoint instances are reused across operations and properly cleaned up.
+/// Tests that Visio instances are reused across operations and properly cleaned up.
 ///
 /// LAYER RESPONSIBILITY:
-/// - ✅ Test VisioBatch.Execute() reuses PowerPoint instance
+/// - ✅ Test VisioBatch.Execute() reuses Visio instance
 /// - ✅ Test VisioBatch.Dispose() COM cleanup
 /// - ✅ Test VisioBatch.Save() functionality
-/// - ✅ Verify POWERPNT.EXE process termination (no leaks)
+/// - ✅ Verify VISIO.EXE process termination (no leaks)
 ///
 /// NOTE: VisioBatch.Dispose() handles all GC cleanup automatically.
 /// Tests only need to wait for async disposal and process termination timing.
 ///
-/// IMPORTANT: These tests spawn and terminate PowerPoint processes (side effects).
+/// IMPORTANT: These tests spawn and terminate Visio processes (side effects).
 /// They run OnDemand only to avoid interference with normal test runs.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -43,21 +43,21 @@ public class VisioBatchTests : IAsyncLifetime
         if (_staticTestFile == null)
         {
             var testFolder = Path.Join(AppContext.BaseDirectory, "Integration", "Session", "TestFiles");
-            _staticTestFile = Path.Join(testFolder, "batch-test-static.pptx");
+            _staticTestFile = Path.Join(testFolder, "batch-test-static.vsdx");
 
             // Verify the static file exists
             if (!File.Exists(_staticTestFile))
             {
                 throw new FileNotFoundException($"Static test file not found at {_staticTestFile}. " +
-                    "Please create the batch-test-static.pptx file in the TestFiles folder.");
+                    "Please create the batch-test-static.vsdx file in the TestFiles folder.");
             }
         }
 
         // Create a fresh copy for this test instance (in temp folder)
-        _testFileCopy = Path.Join(Path.GetTempPath(), $"batch-test-{Guid.NewGuid():N}.pptx");
+        _testFileCopy = Path.Join(Path.GetTempPath(), $"batch-test-{Guid.NewGuid():N}.vsdx");
         File.Copy(_staticTestFile, _testFileCopy, overwrite: true);
 
-        // Wait for any PowerPoint processes from file creation to terminate
+        // Wait for any Visio processes from file creation to terminate
         return Task.Delay(500);
     }
 
@@ -80,7 +80,7 @@ public class VisioBatchTests : IAsyncLifetime
     }
 
     [Fact]
-    public void ExecuteAsync_MultipleOperations_ReusesPowerPointInstance()
+    public void ExecuteAsync_MultipleOperations_ReusesVisioInstance()
     {
         // Arrange
         int operationCount = 0;
@@ -112,10 +112,10 @@ public class VisioBatchTests : IAsyncLifetime
     public void Dispose_CleansUpComObjects_NoProcessLeak()
     {
         // Arrange
-        var startingProcesses = Process.GetProcessesByName("POWERPNT");
+        var startingProcesses = Process.GetProcessesByName("VISIO");
         int startingCount = startingProcesses.Length;
 
-        _output.WriteLine($"PowerPoint processes before: {startingCount}");
+        _output.WriteLine($"Visio processes before: {startingCount}");
 
         // Act
         var batch = VisioSession.BeginBatch(_testFileCopy!);
@@ -123,15 +123,15 @@ public class VisioBatchTests : IAsyncLifetime
         batch.Execute((ctx, ct) =>
         {
             // Access slide count to verify COM is working
-            int slideCount = ctx.Document.Slides.Count;
+            int slideCount = ctx.Document.Pages.Count;
             _output.WriteLine($"Slide count: {slideCount}");
             return 0;
         });
 
         batch.Dispose();
 
-        // Wait for PowerPoint process to fully terminate with polling
-        // PowerPoint.Quit() signals shutdown but process termination is OS-controlled
+        // Wait for Visio process to fully terminate with polling
+        // Visio.Quit() signals shutdown but process termination is OS-controlled
         // Dispose() blocks up to StaThreadJoinTimeout for COM cleanup, but process may linger briefly
         var waitTimeout = TimeSpan.FromSeconds(15);
         var stopwatch = Stopwatch.StartNew();
@@ -139,20 +139,20 @@ public class VisioBatchTests : IAsyncLifetime
         do
         {
             Thread.Sleep(500);
-            endingCount = Process.GetProcessesByName("POWERPNT").Length;
-            _output.WriteLine($"PowerPoint processes at {stopwatch.Elapsed.TotalSeconds:F1}s: {endingCount}");
+            endingCount = Process.GetProcessesByName("VISIO").Length;
+            _output.WriteLine($"Visio processes at {stopwatch.Elapsed.TotalSeconds:F1}s: {endingCount}");
         }
         while (endingCount > startingCount && stopwatch.Elapsed < waitTimeout);
 
         // Assert
-        _output.WriteLine($"PowerPoint processes after {stopwatch.Elapsed.TotalSeconds:F1}s: {endingCount}");
+        _output.WriteLine($"Visio processes after {stopwatch.Elapsed.TotalSeconds:F1}s: {endingCount}");
 
         Assert.True(endingCount <= startingCount,
-            $"PowerPoint process leak in batch! Started with {startingCount}, ended with {endingCount} after {waitTimeout.TotalSeconds}s");
+            $"Visio process leak in batch! Started with {startingCount}, ended with {endingCount} after {waitTimeout.TotalSeconds}s");
     }
 
     [Fact]
-    public void Save_PersistsChanges_ToPresentation()
+    public void Save_PersistsChanges_ToDocument()
     {
         // Arrange
         string testValue = $"Test-{Guid.NewGuid():N}";
@@ -162,10 +162,10 @@ public class VisioBatchTests : IAsyncLifetime
         {
             batch.Execute((ctx, ct) =>
             {
-                // Add a slide and set its title text
-                dynamic slide = ctx.Document.Slides[1];
-                dynamic shape = slide.Shapes[1];
-                shape.TextFrame.TextRange.Text = testValue;
+                // Drop a shape on the first page and give it text.
+                dynamic page = ctx.Document.Pages[1];
+                dynamic shape = page.DrawRectangle(1.0, 1.0, 3.0, 2.0);
+                shape.Text = testValue;
                 return 0;
             });
 
@@ -181,9 +181,9 @@ public class VisioBatchTests : IAsyncLifetime
         {
             readValue = batch.Execute((ctx, ct) =>
             {
-                dynamic slide = ctx.Document.Slides[1];
-                dynamic shape = slide.Shapes[1];
-                string result = shape.TextFrame.TextRange.Text?.ToString() ?? "";
+                dynamic page = ctx.Document.Pages[1];
+                dynamic shape = page.Shapes[(int)page.Shapes.Count];
+                string result = shape.Text?.ToString() ?? "";
                 return result;
             });
         }
@@ -194,7 +194,7 @@ public class VisioBatchTests : IAsyncLifetime
     }
 
     [Fact]
-    public void PresentationPath_ReturnsCorrectPath()
+    public void DocumentPath_ReturnsCorrectPath()
     {
         // Arrange & Act
         using var batch = VisioSession.BeginBatch(_testFileCopy!);
@@ -212,64 +212,51 @@ public class VisioBatchTests : IAsyncLifetime
         // Act - Execute complete workflow in single batch
         using (var batch = VisioSession.BeginBatch(_testFileCopy!))
         {
-            int initialSlideCount = 0;
+            int initialPageCount = 0;
 
-            // Step 1: Get initial slide count
+            // Step 1: Get initial page count
             batch.Execute((ctx, ct) =>
             {
-                initialSlideCount = ctx.Document.Slides.Count;
-                _output.WriteLine($"✓ Initial slide count: {initialSlideCount}");
+                initialPageCount = ctx.Document.Pages.Count;
+                _output.WriteLine($"✓ Initial page count: {initialPageCount}");
                 return 0;
             });
 
-            // Step 2: Add a new slide
+            // Step 2: Add a new page. Visio has no slide layouts, so Pages.Add() takes no arguments.
             batch.Execute((ctx, ct) =>
             {
-                dynamic pres = ctx.Document;
-                // Use layout from first slide master
-                dynamic layout = pres.SlideMaster.CustomLayouts[1];
-                pres.Slides.AddSlide(pres.Slides.Count + 1, layout);
-                _output.WriteLine("✓ Added new slide");
+                ctx.Document.Pages.Add();
+                _output.WriteLine("✓ Added new page");
                 return 0;
             });
 
-            // Step 3: Write text to the new slide
+            // Step 3: Write text on the new page
             batch.Execute((ctx, ct) =>
             {
-                dynamic slide = ctx.Document.Slides[ctx.Document.Slides.Count];
-                // Add a text box shape
-                dynamic shape = slide.Shapes.AddTextbox(1, 100, 100, 400, 200); // msoTextOrientationHorizontal=1
-                shape.TextFrame.TextRange.Text = testBody;
-                _output.WriteLine($"✓ Wrote text to slide: {testBody}");
+                dynamic page = ctx.Document.Pages[ctx.Document.Pages.Count];
+                dynamic shape = page.DrawRectangle(1.0, 1.0, 4.0, 2.0);
+                shape.Text = testBody;
+                _output.WriteLine($"✓ Wrote text to page: {testBody}");
                 return 0;
             });
 
             // Step 4: Read back to verify
             var readData = batch.Execute((ctx, ct) =>
             {
-                int currentCount = ctx.Document.Slides.Count;
-                dynamic lastSlide = ctx.Document.Slides[currentCount];
-                string text = "";
-                for (int i = 1; i <= lastSlide.Shapes.Count; i++)
-                {
-                    dynamic shape = lastSlide.Shapes[i];
-                    if (Convert.ToInt32(shape.HasTextFrame) != 0)
-                    {
-                        text = shape.TextFrame.TextRange.Text?.ToString() ?? "";
-                        if (text.Length > 0) break;
-                    }
-                }
-                _output.WriteLine($"✓ Read back: slideCount={currentCount}, text={text}");
+                int currentCount = ctx.Document.Pages.Count;
+                dynamic lastPage = ctx.Document.Pages[currentCount];
+                string text = ReadFirstShapeText(lastPage);
+                _output.WriteLine($"✓ Read back: pageCount={currentCount}, text={text}");
                 return (currentCount, text);
             });
 
             // Verify
-            Assert.True(readData.currentCount > initialSlideCount, "Should have more slides after add");
+            Assert.True(readData.currentCount > initialPageCount, "Should have more pages after add");
             Assert.Equal(testBody, readData.text);
 
             // Step 5: Save
             batch.Save();
-            _output.WriteLine("✓ Saved presentation");
+            _output.WriteLine("✓ Saved document");
         }
 
         // Wait for file to be released
@@ -280,29 +267,38 @@ public class VisioBatchTests : IAsyncLifetime
         {
             var verifyData = batch.Execute((ctx, ct) =>
             {
-                int slideCount = ctx.Document.Slides.Count;
-                dynamic lastSlide = ctx.Document.Slides[slideCount];
-                string text = "";
-                for (int i = 1; i <= lastSlide.Shapes.Count; i++)
-                {
-                    dynamic shape = lastSlide.Shapes[i];
-                    if (Convert.ToInt32(shape.HasTextFrame) != 0)
-                    {
-                        text = shape.TextFrame.TextRange.Text?.ToString() ?? "";
-                        if (text.Length > 0) break;
-                    }
-                }
-                return (slideCount, text);
+                int pageCount = ctx.Document.Pages.Count;
+                dynamic lastPage = ctx.Document.Pages[pageCount];
+                return (pageCount, ReadFirstShapeText(lastPage));
             });
 
-            Assert.True(verifyData.slideCount >= 2, "Should have at least 2 slides after save");
-            Assert.Equal(testBody, verifyData.text);
+            Assert.True(verifyData.pageCount >= 2, "Should have at least 2 pages after save");
+            Assert.Equal(testBody, verifyData.Item2);
             _output.WriteLine("✓ All workflow changes persisted correctly");
         }
     }
 
-    // NOTE: ParallelBatches test removed — PowerPoint COM is single-instance.
-    // Creating multiple PowerPoint.Application objects shares the same POWERPNT.EXE process.
+    /// <summary>
+    /// First non-empty shape text on a page. Visio exposes <c>Shape.Text</c> directly; there is no
+    /// <c>HasTextFrame</c> or <c>TextFrame.TextRange</c>.
+    /// </summary>
+    private static string ReadFirstShapeText(dynamic page)
+    {
+        for (int i = 1; i <= (int)page.Shapes.Count; i++)
+        {
+            dynamic shape = page.Shapes[i];
+            string text = shape.Text?.ToString() ?? "";
+            if (text.Length > 0)
+            {
+                return text;
+            }
+        }
+
+        return "";
+    }
+
+    // NOTE: ParallelBatches test removed — Visio holds the file exclusively.
+    // Creating multiple Visio.Application objects shares the same VISIO.EXE process.
     // Multi-session is not supported.
 
     [Fact]
@@ -311,7 +307,7 @@ public class VisioBatchTests : IAsyncLifetime
     public void Constructor_FileLockedByAnotherProcess_ThrowsInvalidOperationException()
     {
         // Arrange - Create a separate test file for locking test
-        var lockedTestFile = Path.Join(Path.GetTempPath(), $"batch-test-locked-{Guid.NewGuid():N}.pptx");
+        var lockedTestFile = Path.Join(Path.GetTempPath(), $"batch-test-locked-{Guid.NewGuid():N}.vsdx");
         File.Copy(_staticTestFile!, lockedTestFile, overwrite: true);
 
         try

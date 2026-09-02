@@ -539,7 +539,7 @@ public sealed class VisioMcpService : IDisposable
             return new ServiceResponse { Success = false, ErrorMessage = $"Session '{request.SessionId}' not found" };
         }
 
-        // Check if PowerPoint process is still alive before attempting save
+        // Check if Visio process is still alive before attempting save
         if (!batch.IsVisioProcessAlive())
         {
             _sessionManager.CloseSession(request.SessionId, save: false, force: true);
@@ -564,8 +564,7 @@ public sealed class VisioMcpService : IDisposable
                 documentPath = s.DocumentPath,
                 pageName = s.PageName,
                 pageIndex = s.PageIndex,
-                isVisioVisible = _sessionManager.IsPowerPointVisible(s.SessionId),
-                isPowerPointVisible = _sessionManager.IsPowerPointVisible(s.SessionId),
+                isVisioVisible = _sessionManager.IsVisioVisible(s.SessionId),
                 activeOperations = _sessionManager.GetActiveOperationCount(s.SessionId),
                 canClose = _sessionManager.GetActiveOperationCount(s.SessionId) == 0
             })
@@ -651,7 +650,7 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse { Success = false, ErrorMessage = $"Session '{sessionId}' not found" });
         }
 
-        // Check if PowerPoint process is still alive before attempting operation
+        // Check if Visio process is still alive before attempting operation
         if (!batch.IsVisioProcessAlive())
         {
             // PowerPoint died - clean up the dead session
@@ -670,7 +669,7 @@ public sealed class VisioMcpService : IDisposable
         }
         catch (TimeoutException ex)
         {
-            // Operation timed out — PowerPoint COM call is hung.
+            // Operation timed out — Visio COM call is hung.
             // Force-close the session to trigger the force-kill path in VisioBatch.Dispose().
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
@@ -696,7 +695,7 @@ public sealed class VisioMcpService : IDisposable
             ex.HResult == ResiliencePipelines.RPC_S_SERVER_UNAVAILABLE ||
             ex.HResult == ResiliencePipelines.RPC_E_CALL_FAILED)
         {
-            // PowerPoint process died during the operation — clean up the dead session
+            // Visio process died during the operation — clean up the dead session
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {
@@ -709,7 +708,7 @@ public sealed class VisioMcpService : IDisposable
             ex.Message.Contains("no longer running", StringComparison.OrdinalIgnoreCase) ||
             ex.Message.Contains("process", StringComparison.OrdinalIgnoreCase))
         {
-            // PowerPoint process detected as dead before COM call (VisioBatch pre-check)
+            // Visio process detected as dead before COM call (VisioBatch pre-check)
             _sessionManager.CloseSession(sessionId, save: false, force: true);
             return Task.FromResult(new ServiceResponse
             {

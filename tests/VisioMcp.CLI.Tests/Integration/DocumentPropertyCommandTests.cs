@@ -9,7 +9,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "DocumentProperty")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Trait("Speed", "Medium")]
 public sealed class DocumentPropertyCommandTests(ITestOutputHelper output)
 {

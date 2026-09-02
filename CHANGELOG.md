@@ -6,6 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The COM session test suite tested PowerPoint, and 40 of its 62 tests were failing** (#56).
+  Nobody was running it: pre-commit does not, and CI skips `visio-integration`. Every fixture built
+  a `.pptx`, which the production validator correctly rejects, so the whole suite errored before
+  reaching any assertion. It is now **62 passed, 0 failed**.
+
+  Two of those tests were worse than failing — they were **vacuous**:
+
+  ```csharp
+  var startingProcesses = Process.GetProcessesByName("POWERPNT");   // code starts VISIO
+  ...
+  Assert.True(endingCount <= startingCount, "PowerPoint process leak in batch!");
+  ```
+
+  This is the **process-leak and disposal safety net**, guarding the most damaging failure mode in
+  the codebase: orphaned Visio processes holding a document open. It compared zero PowerPoint
+  processes before to zero after, and could not fail however many Visio processes leaked. It now
+  counts `VISIO`.
+
+  Also corrected in the same suite: `ctx.Document.Slides` (absent on a Visio document),
+  `SlideMaster.CustomLayouts` and `Slides.AddSlide(index, layout)` (Visio's `Pages.Add()` takes no
+  arguments), `TextFrame.TextRange.Text` (Visio exposes `Shape.Text` directly), and three assertions
+  on error text that #76 had already changed.
+
+- **`session.list` returned an `isPowerPointVisible` field** (#56). It sat on the wire beside a
+  correct `isVisioVisible`, both fed by the same call. Removed; `isVisioVisible` remains.
+
+### Changed
+
+- **PowerPoint identifiers removed from the runtime and public commands** (#56). `_showPowerPoint`,
+  `tempPowerPoint`, `_presentation`, `_powerPoint`, `IsPowerPointVisible`, `presentationPath`,
+  `CreateNewPresentation`, `GetPresentation` and the rest now name Visio concepts. `TextCommands`
+  no longer calls a Visio page a slide in its locals.
+
+  Deliberately kept: comments and error messages that name PowerPoint **to explain why an action has
+  no Visio equivalent**. An agent told only "not supported" would retry; told that WordArt is a
+  PowerPoint feature, it stops.
+
+### Added
+
+- **The terminology guard now covers identifiers, not just string literals** (#56). That gap is why
+  every name above survived #23, #37 and #76 — and why one of them reached the wire. The check
+  strips comments and literals and inspects what the compiler sees.
+
+  Proving it works found a bug in it: the first version matched `PowerPoint` but not the camelCase
+  `powerPoint`, so an induced regression passed. It is case-insensitive now, and the induced
+  regression fails as it should. On its first correct run it found `_presentation` and `_powerPoint`
+  in `VisioBatch`, which the manual rename list had missed.
+
 ### Added
 
 - **Named styles** (#36d). New `style` tool with eight actions: `list`, `read`, `create`, `rename`,

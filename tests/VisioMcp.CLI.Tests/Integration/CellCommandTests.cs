@@ -14,7 +14,7 @@ namespace VisioMcp.CLI.Tests.Integration;
 [Trait("Layer", "CLI")]
 [Trait("Category", "Integration")]
 [Trait("Feature", "Cell")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Trait("Speed", "Medium")]
 public sealed class CellCommandTests(ITestOutputHelper output)
 {
