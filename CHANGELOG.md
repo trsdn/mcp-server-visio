@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The MCP schema documented parameters far worse than the CLI did** (#37). `ServiceRegistryGenerator`
+  runs inside the Core compilation and can read XML `<param>` docs; `McpToolGenerator` runs in the
+  MCP server compilation where Core is a **metadata reference**, and XML documentation is not
+  carried in metadata. So `shape(find-by-type)`'s `shape_type` read *"Visio VisShapeTypes integer:
+  1=Page, 2=Group…"* in the CLI skill and *"(required for: find-by-type)"* in the MCP schema — the
+  same parameter, the same source doc, and the **LLM-facing** surface got the worse one.
+  Core's generator now emits those descriptions as `ServiceRegistry.{Category}.ParameterDocs`
+  constants, which *are* carried in metadata — the same reason `[McpTool(Description = "...")]`
+  always worked — and the MCP generator reads them back.
+  **Placeholder parameter descriptions fell from 115 of 151 (76%) to 35 of 167 (21%).**
+
+- **Parameter descriptions were taken from the first declaring action, not the first documented
+  one** (#37). `shapeName` carries a `<param>` doc on 26 methods, but `read` declares it first
+  without one, so it rendered as a bare `(required for: …)` on **both** surfaces. Aggregation now
+  takes the first non-empty description.
+
+- **`cell` had no parameter documentation at all** (#37). Its five actions are the ShapeSheet
+  surface, where the non-obvious rules matter most: distance cells need explicit units (`"3 in"`,
+  `"12 pt"`) or a bare number is read as inches, text-valued cells such as `Comment` evaluate to
+  `0` and must be read with `read-formula`, and a formula recalculates where a literal does not.
+  All of that is now in the schema an agent reads.
+
+### Removed
+
+- **The Excel-era parameter description table** (#37). `StringHelper.GetParameterDescription` held
+  eighteen keys inherited from the Excel ancestor — `queryName`, `mCode`, `rangeAddress`,
+  `pivotTableName`, `slicerName`, and the three-product artefact `"sheetName" => "Slide name"`.
+  Exactly one (`formula`) matched a parameter that exists in this product, so seventeen were dead
+  and every real lookup already fell through to `ToPascalCase`. Deleting it changed no output.
+
 ### Security
 
 - **Scriban upgraded 6.6.0 → 7.2.6** (#13): 6.6.0 carried one critical and four moderate advisories

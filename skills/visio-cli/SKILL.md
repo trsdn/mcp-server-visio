@@ -150,11 +150,11 @@ Visio ShapeSheet cell operations for reading and writing shape-level cells.
 
 | Parameter | Description |
 |-----------|-------------|
-| `--page-index` | (required) |
-| `--shape-name` | (required) |
-| `--cell-name` | (required for: read, read-formula, write, set-formula) |
-| `--value` | (required for: write) |
-| `--formula` | (required for: set-formula) |
+| `--page-index` | 1-based page index (required) |
+| `--shape-name` | Shape name, exactly as reported by shape(list) (required) |
+| `--cell-name` | ShapeSheet cell name, for example Width, PinX, FillForegnd, Char.Size or Prop.Cost. Section cells use the Section.Row.Cell form (required for: read, read-formula, write, set-formula) |
+| `--value` | Literal value. Distance cells need explicit units such as '3 in' or '12 pt', and angles need ' deg'; a bare number is read in internal units (inches, radians) (required for: write) |
+| `--formula` | ShapeSheet expression, for example 'Width*0.5' or 'GUARD(2 in)'. A formula recalculates when its inputs change; a literal value does not (required for: set-formula) |
 
 
 

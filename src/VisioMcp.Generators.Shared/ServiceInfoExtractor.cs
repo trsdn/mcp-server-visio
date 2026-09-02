@@ -316,11 +316,24 @@ public static class ServiceInfoExtractor
                     existing = new ExposedParameter(exposedName, p.TypeName, p.XmlDocDescription);
                     paramMap[exposedName] = existing;
                 }
-                else if (p.TypeName.EndsWith("?") && !existing.TypeName.EndsWith("?"))
+                else
                 {
-                    // If any method declares this parameter as nullable, upgrade to nullable.
-                    // MCP parameters are shared across all actions and must be compatible with ALL uses.
-                    existing.TypeName = p.TypeName;
+                    if (p.TypeName.EndsWith("?") && !existing.TypeName.EndsWith("?"))
+                    {
+                        // If any method declares this parameter as nullable, upgrade to nullable.
+                        // MCP parameters are shared across all actions and must be compatible with ALL uses.
+                        existing.TypeName = p.TypeName;
+                    }
+
+                    // Take the first non-empty description rather than the first description.
+                    // A parameter is declared by many actions and only some document it: shapeName
+                    // carries <param> docs on 26 methods, but 'read' declares it first without one,
+                    // so first-wins left it blank on both the CLI and MCP surfaces (#37).
+                    if (string.IsNullOrEmpty(existing.Description)
+                        && !string.IsNullOrEmpty(p.XmlDocDescription))
+                    {
+                        existing.Description = p.XmlDocDescription;
+                    }
                 }
 
                 // Track if this param is required for this action
