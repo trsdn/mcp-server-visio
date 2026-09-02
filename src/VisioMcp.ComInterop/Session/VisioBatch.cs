@@ -278,7 +278,7 @@ internal sealed class VisioBatch : IVisioBatch
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var result = operation(_context!, cancellationToken);
+                    var result = ExecuteInUndoScope(operation, cancellationToken);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException oce)
@@ -331,6 +331,76 @@ internal sealed class VisioBatch : IVisioBatch
             throw;
         }
     }
+
+    /// <summary>
+    /// Runs an operation inside a Visio undo scope so it is atomic and undoable in one step.
+    /// </summary>
+    /// <remarks>
+    /// <para>Two properties, both verified against a live instance rather than assumed:</para>
+    /// <para><b>Rollback.</b> <c>EndUndoScope(id, commit: false)</c> reverts the changes made inside
+    /// the scope. Without it an operation that writes several cells and then fails leaves the
+    /// document half-edited, with no way for the caller to know which writes landed.</para>
+    /// <para><b>Grouping.</b> With <c>commit: true</c>, everything written inside the scope becomes
+    /// a single entry in Visio's undo stack, so a command that writes five cells is one Ctrl+Z for
+    /// a user watching in visible mode rather than five.</para>
+    /// <para>Cost is roughly 1 ms per scope, negligible beside the COM calls it wraps. If Visio
+    /// refuses to open a scope the operation still runs — losing atomicity is much better than
+    /// refusing to work.</para>
+    /// </remarks>
+    private T ExecuteInUndoScope<T>(Func<VisioContext, CancellationToken, T> operation, CancellationToken cancellationToken)
+    {
+        var context = _context!;
+        int scopeId = 0;
+        bool scopeOpen = false;
+
+        try
+        {
+            scopeId = Convert.ToInt32(context.Application.BeginUndoScope(UndoScopeName));
+            scopeOpen = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not open an undo scope; running the operation without one.");
+        }
+
+        try
+        {
+            var result = operation(context, cancellationToken);
+
+            if (scopeOpen)
+            {
+                EndUndoScope(context, scopeId, commit: true);
+            }
+
+            return result;
+        }
+        catch
+        {
+            if (scopeOpen)
+            {
+                // Revert whatever the failed operation had already written. This must not throw:
+                // masking the original exception would hide why the operation failed.
+                EndUndoScope(context, scopeId, commit: false);
+            }
+
+            throw;
+        }
+    }
+
+    private void EndUndoScope(VisioContext context, int scopeId, bool commit)
+    {
+        try
+        {
+            context.Application.EndUndoScope(scopeId, commit);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to {Action} undo scope {ScopeId}.", commit ? "commit" : "cancel", scopeId);
+        }
+    }
+
+    /// <summary>Name shown in Visio's Undo menu for an operation performed by this tool.</summary>
+    private const string UndoScopeName = "VisioMcp operation";
 
     public void Save(CancellationToken cancellationToken = default)
     {
