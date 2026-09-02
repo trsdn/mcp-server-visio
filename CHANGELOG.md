@@ -19,6 +19,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The MCP smoke-test gate now derives its expected tool list from the assembly** (#26).
+  `ExpectedToolNames` was a hand-maintained 12-entry allow-list that omitted `layer`, so
+  `SmokeTest_AllTools_E2EWorkflow` and `ListTools_CanIterateAllTools` — the tests
+  `integration-tests.yml` invokes by name as the designated CI gate — had been red since `layer`
+  was added, treating a fully working Visio-native tool as an intruder. The set is now reflected
+  from `[McpServerToolType]`/`[McpServerTool]`, the same source `WithToolsFromAssembly()` uses, so
+  adding a public tool cannot silently break the gate again. Discovery asserts a non-empty result
+  and the presence of known anchor tools, so it cannot vacuously pass on zero data the way
+  `audit-core-coverage.ps1` does (#15). The hardcoded `HiddenLegacyToolNames` leak check is
+  deliberately left independent.
+  `VisioMcp.McpServer.Tests --filter "Category=Integration"`: **3 failed / 39 passed → 1 failed /
+  41 passed**. The last failure is #28.
+
 - **`xunit.runner.json` now reaches every test project's output directory** (#24). xunit reads this
   file from `bin/`, and silently ignores the settings when it is absent — no warning, no error. Only
   `VisioMcp.ComInterop.Tests` set `CopyToOutputDirectory`, so the other projects ran test collections

@@ -3,6 +3,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Pipelines;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
@@ -42,27 +43,50 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
     private Task? _serverTask;
 
     /// <summary>
-    /// Expected tool names from our assembly - the source of truth.
-    /// Public Visio MCP tools:
-    /// - file: Session management (hand-coded VisioFileTool)
-    /// - page, shape, text, cell, stencil, export: validated Visio-native surfaces
-    /// - window, hyperlink, docproperty, shapealign, master: remaining public utilities
+    /// Expected tool names, derived from the assembly rather than hand-maintained.
+    ///
+    /// This is the same source of truth the server itself uses: <c>WithToolsFromAssembly()</c>
+    /// discovers every <c>[McpServerToolType]</c> class and registers its <c>[McpServerTool]</c>
+    /// methods. Deriving the set here means adding a public tool cannot silently break the gate,
+    /// which is exactly what happened when <c>layer</c> was added and this list was not updated
+    /// (see #26) — the designated CI smoke test went red and stayed red.
+    ///
+    /// The assertions that carry real signal are therefore not "does this list match itself" but:
+    /// the derived set is non-empty and contains the known anchors (guarding against reflection
+    /// silently finding nothing), every declared tool actually reaches the client over the MCP
+    /// protocol, and no <see cref="HiddenLegacyToolNames"/> entry leaks onto the public surface.
     /// </summary>
-    private static readonly HashSet<string> ExpectedToolNames =
-    [
-        "cell",
-        "docproperty",
-        "export",
-        "file",
-        "hyperlink",
-        "master",
-        "page",
-        "shape",
-        "shapealign",
-        "stencil",
-        "text",
-        "window"
-    ];
+    private static readonly HashSet<string> ExpectedToolNames = DiscoverDeclaredToolNames();
+
+    /// <summary>
+    /// Reflects over the MCP server assembly for tools the SDK would register.
+    /// </summary>
+    private static HashSet<string> DiscoverDeclaredToolNames()
+    {
+        var assembly = typeof(VisioFileTool).Assembly;
+
+        var names = assembly
+            .GetTypes()
+            .Where(t => t.GetCustomAttributes(typeof(Server.McpServerToolTypeAttribute), inherit: false).Length > 0)
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Select(m => m.GetCustomAttribute<Server.McpServerToolAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // A discovery routine that finds nothing must fail loudly rather than vacuously pass.
+        // audit-core-coverage.ps1 reported "100% coverage" on zero discovered methods for exactly
+        // this reason (#15); this gate will not repeat it.
+        Assert.NotEmpty(names);
+        foreach (var anchor in new[] { "file", "page", "shape", "text", "cell" })
+        {
+            Assert.Contains(anchor, names);
+        }
+
+        return names;
+    }
 
     private static readonly HashSet<string> HiddenLegacyToolNames =
     [
