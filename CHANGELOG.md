@@ -220,6 +220,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`ShapeCommands` is now entirely PowerPoint-free** (#20). The last ten of its 23 broken actions
+  are resolved, so all 51 shape actions execute against a `.vsdx`.
+  Eight more are reimplemented against modern-Visio effect cells — `set-glow` (`GlowSize`,
+  `GlowColor`), `set-soft-edge` (`SoftEdgesSize`), `set-reflection` (`ReflectionSize` and
+  siblings), `set-3d` (`RotationXAngle`/`YAngle`/`ZAngle`, `BevelTopType`, `BevelTopHeight`),
+  `set-gradient-fill` (`FillGradientEnabled`), `set-text-frame` (the four margin cells) and
+  `copy-formatting` (an explicit fill/line/shadow/margin cell copy, since Visio has no
+  PickUp/Apply format painter).
+  `set-text-frame` now **reports** that `word_wrap` and `auto_size` have no Visio equivalent
+  instead of silently ignoring them — a silent no-op is how an agent comes to believe it changed
+  something.
+  The two with genuinely no Visio analogue — `set-action-settings` (PowerPoint click actions
+  navigate between slides) and `add-text-effect` (WordArt) — now throw `NotSupportedException`
+  naming the Visio alternative, rather than an opaque `RuntimeBinderException`.
+  27 integration tests in total, covering every reimplemented action.
+
 - **Four more shape actions reimplemented against Visio** (#20), bringing the total to 13 of 23.
   `set-shadow` and `read-shadow` now use `ShdwPattern`/`ShdwForegnd`/`ShdwOffsetX`/`ShdwOffsetY`;
   `set-alt-text` writes the `Comment` cell, quoting and escaping the text as a ShapeSheet string
