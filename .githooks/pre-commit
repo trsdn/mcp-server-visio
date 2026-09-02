@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# VisioMcp pre-commit hook.
+#
+# Installed by pointing Git at this directory:
+#
+#     git config core.hooksPath .githooks
+#
+# See docs/PRE-COMMIT-SETUP.md.
+#
+# This file is committed to the repository, so every clone gets the same hook after the one-time
+# bootstrap. The previous approach documented a manual
+# `Copy-Item scripts\pre-commit.ps1 .git\hooks\pre-commit`, which in practice was never run (#17).
+#
+# Git invokes hooks through its bundled shell even on Windows, so this is a POSIX script that
+# delegates to PowerShell. The checks themselves live in scripts/pre-commit.ps1 so they can also
+# be run directly and from CI.
+
+set -e
+
+repo_root=$(git rev-parse --show-toplevel)
+checks="$repo_root/scripts/pre-commit.ps1"
+
+if [ ! -f "$checks" ]; then
+    echo "pre-commit: $checks not found." >&2
+    exit 1
+fi
+
+# Prefer PowerShell 7+ (pwsh); fall back to Windows PowerShell.
+if command -v pwsh >/dev/null 2>&1; then
+    shell_exe=pwsh
+elif command -v powershell >/dev/null 2>&1; then
+    shell_exe=powershell
+else
+    echo "pre-commit: neither 'pwsh' nor 'powershell' is on PATH." >&2
+    echo "            Install PowerShell 7+ or run the checks manually:" >&2
+    echo "            pwsh -File scripts/pre-commit.ps1" >&2
+    exit 1
+fi
+
+exec "$shell_exe" -NoProfile -ExecutionPolicy Bypass -File "$checks"

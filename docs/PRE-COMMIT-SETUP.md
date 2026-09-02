@@ -4,43 +4,67 @@ This repository includes automated pre-commit checks to prevent code quality iss
 
 ## What Gets Checked
 
-1. **Branch Protection** - Blocks direct commits to `main` branch (Rule 6)
-2. **COM Object Leaks** - Ensures all dynamic COM objects are properly released
-3. **Core Commands Coverage** - Verifies 100% of Core methods are exposed via MCP Server
-4. **Naming Consistency** - Ensures enum action names match Core method names exactly
-5. **Success Flag Violations** - Ensures Success=true never paired with ErrorMessage (Rule 1)
-6. **CLI Actions Audit** - Verifies CLI action catalog matches Core action enums
-7. **CLI Workflow Smoke Test** - Validates the end-to-end CLI workflow
-8. **MCP Server Smoke Test** - Validates all 11 MCP tools work correctly
+1. **Branch Protection** — Blocks direct commits to `main` (Rule 6)
+2. **Process cleanup** — Kills stale `VISIO`, `visiocli` and server processes so the build can replace locked binaries
+3. **COM Object Leaks** — Ensures all `dynamic` COM objects are released in a `finally`
+4. **Core Commands Coverage** — Every Core action reaches dispatch; every public domain reaches both MCP and CLI; no suppressed domain leaks
+5. **Success Flag Violations** — `Success=true` is never paired with `ErrorMessage` (Rule 1)
+6. **CLI Settings Usage** — Every Settings property on a hand-written CLI command is actually read
+7. **CLI Workflow Smoke Test** — End-to-end CLI round-trip against a real `.vsdx`
+8. **MCP Server Smoke Test** — All MCP tools reachable over the protocol
 
-## Setup Instructions
+## Setup
 
-### Option 1: Git Bash (Recommended for cross-platform)
+**One command, once per clone:**
 
-The bash hook at `.git/hooks/pre-commit` works automatically if you have Git Bash installed (default with Git for Windows).
-
-**Test it:**
 ```powershell
-bash .git/hooks/pre-commit
+.\scripts\Install-GitHooks.ps1
 ```
 
-### Option 2: PowerShell (Windows-specific, more reliable output)
+This sets `core.hooksPath` to the committed `.githooks` directory:
 
-Use the PowerShell script for better formatting and error messages on Windows:
-
-**Manual execution:**
 ```powershell
-.\scripts\pre-commit.ps1
+git config core.hooksPath .githooks
 ```
 
-**Configure Git to use PowerShell hook:**
+Because the hook itself is version-controlled, every clone that runs the bootstrap once also picks
+up later changes to the hook automatically. This replaces the previous instruction to
+`Copy-Item scripts\pre-commit.ps1 .git\hooks\pre-commit`, which produced a private copy that
+drifted — and which, in practice, nobody ran (#17).
+
+**Verify it is installed:**
+
 ```powershell
-# Create a wrapper in .git/hooks/pre-commit
-@"
-#!/bin/sh
-pwsh -ExecutionPolicy Bypass -File "scripts/pre-commit.ps1"
-"@ | Out-File -FilePath .git/hooks/pre-commit -Encoding ASCII
+git config --get core.hooksPath   # -> .githooks
 ```
+
+**Run the checks without committing:**
+
+```powershell
+pwsh -File scripts\pre-commit.ps1
+```
+
+**Uninstall:**
+
+```powershell
+.\scripts\Install-GitHooks.ps1 -Uninstall
+```
+
+### Requirements
+
+The hook entry point `.githooks/pre-commit` is a POSIX shell script, because Git invokes hooks
+through its bundled shell even on Windows. It locates `pwsh` (PowerShell 7+), falling back to
+`powershell`, and delegates to `scripts/pre-commit.ps1`. If neither is on `PATH` it fails with an
+explanatory message rather than silently skipping the checks.
+
+### CI runs the same gates
+
+The hook is not the only line of defence. The `quality-gates` job in `build-cli.yml` runs the
+Visio-independent gates — COM leaks, coverage audit, success flag, CLI settings usage — on every
+PR, so bypassing the hook with `--no-verify` does not bypass the checks.
+
+The CLI workflow and MCP smoke tests need a real Visio instance and run on the self-hosted
+integration runner.
 
 ## What Happens on Failure
 
