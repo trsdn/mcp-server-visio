@@ -74,7 +74,7 @@ jobs:
           $version = (Get-Item "src/VisioMcp.CLI/bin/Release/net9.0-windows/visiocli.exe").VersionInfo.FileVersion
           Write-Output "Version: $version"
 
-          # Test CLI help command (safe - no PowerPoint COM required)
+          # Test CLI help command (safe - no Visio COM required)
           $helpOutput = & "src/VisioMcp.CLI/bin/Release/net9.0-windows/visiocli.exe" --help 2>&1
           $exitCode = $LASTEXITCODE
 
@@ -96,17 +96,50 @@ jobs:
         Write-Output "🔧 CLI tool ready for direct automation"
       shell: pwsh
 
-    - name: Test CLI (requires PowerPoint)
-      run: |
-        Write-Output "ℹ️ Note: CLI tests skipped in CI - they require Microsoft PowerPoint"
-        Write-Output "   Run 'dotnet test tests/VisioMcp.CLI.Tests/' locally with PowerPoint installed"
-      shell: pwsh
-
     - name: Upload CLI build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: VisioMcp-CLI-${{ github.sha }}
         path: src/VisioMcp.CLI/bin/Release/net9.0-windows/
+
+  unit-tests:
+    # The non-integration suite needs no Visio and no self-hosted runner, so it can gate every PR.
+    # Before #14 no registered workflow ran dotnet test at all: the only real invocation lived in
+    # integration-tests.yml, which was unregistered AND gated off by default, so a green check was
+    # reported having executed zero tests.
+    name: Unit tests
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore VisioMcp.sln
+
+    - name: Build solution
+      run: dotnet build VisioMcp.sln --no-restore --configuration Debug
+
+    - name: Run non-integration tests
+      # No LogFileName: each test project generates its own uniquely-named .trx. Pinning one name
+      # makes every project overwrite the previous one, leaving results for only the last.
+      run: |
+        dotnet test VisioMcp.sln --no-build --configuration Debug `
+          --filter "Category!=Integration" `
+          --logger "trx" `
+          --results-directory TestResults
+      shell: pwsh
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-results-${{ github.sha }}
+        path: TestResults/
 
   quality-gates:
     # Runs the pre-commit gates that do NOT require Visio, so they cannot silently rot again.

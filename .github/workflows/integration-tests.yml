@@ -1,4 +1,4 @@
-name: PowerPoint Integration Tests
+name: Visio Integration Tests
 
 permissions:
   contents: read
@@ -40,20 +40,25 @@ on:
         type: boolean
 
 jobs:
-  integration-runner-disabled:
-    if: ${{ vars.ENABLE_POWERPOINT_INTEGRATION_CI != 'true' }}
-    runs-on: windows-latest
-    steps:
-      - name: Report disabled PowerPoint runner
-        shell: pwsh
-        run: |
-          Write-Output "PowerPoint integration workflow is configured but inactive."
-          Write-Output "Set repository variable ENABLE_POWERPOINT_INTEGRATION_CI=true and provide a self-hosted runner labeled 'powerpoint' to activate it."
-          Write-Output "See docs/AZURE_SELFHOSTED_RUNNER_SETUP.md for setup details."
+  # NOTE (#14): there is deliberately no "runner disabled" reporting job here.
+  #
+  # This workflow previously carried an `integration-runner-disabled` job that ran whenever the
+  # gate variable was unset and simply printed an explanation. Because it was a normal job that
+  # exited 0, GitHub reported a GREEN CHECK for a workflow that had executed zero tests - the
+  # worst possible signal, since it is indistinguishable from a real pass.
+  #
+  # With the stub removed, `visio-integration` is reported as SKIPPED when the gate is off, which
+  # is unambiguous and cannot be mistaken for a pass.
+  #
+  # To activate: set the repository variable ENABLE_VISIO_INTEGRATION_CI=true and provide a
+  # self-hosted runner labelled 'visio'. See docs/AZURE_SELFHOSTED_RUNNER_SETUP.md.
+  #
+  # Unit-test coverage does not depend on any of this: the `unit-tests` job in build-cli.yml runs
+  # the whole non-integration suite on a hosted runner for every PR.
 
-  powerpoint-integration:
-    if: ${{ vars.ENABLE_POWERPOINT_INTEGRATION_CI == 'true' }}
-    runs-on: [self-hosted, windows, powerpoint]
+  visio-integration:
+    if: ${{ vars.ENABLE_VISIO_INTEGRATION_CI == 'true' }}
+    runs-on: [self-hosted, windows, visio]
 
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +126,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: powerpoint-integration-${{ github.run_id }}
+          name: visio-integration-${{ github.run_id }}
           path: |
             **/*.trx
             llm-tests/TestResults/**

@@ -19,6 +19,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CI now runs the test suite** (#14). No registered workflow executed `dotnet test` at all: the
+  only real invocation lived in `integration-tests.yml`, which was both unregistered (#12) and
+  gated off by default, so the only job that could run was a stub that **reported a green check
+  having executed zero tests**. The 13 public tools had no automated regression protection.
+  A `unit-tests` job in `build-cli.yml` now runs `dotnet test --filter "Category!=Integration"` —
+  **646 tests** — on `windows-latest`, needing neither Visio nor a self-hosted runner, and uploads
+  per-project `.trx` results. Verified that a red test makes the command exit 1.
+  The false-green stub is deleted: with it gone, the integration job reports as **skipped** when the
+  gate variable is unset, which cannot be mistaken for a pass.
+  `integration-tests.yml` is renamed *Visio Integration Tests*, its gate variable
+  `ENABLE_POWERPOINT_INTEGRATION_CI` → `ENABLE_VISIO_INTEGRATION_CI`, its job
+  `powerpoint-integration` → `visio-integration`, and its runner label `powerpoint` → `visio`.
+  `build-cli.yml`'s *"Test CLI (requires PowerPoint)"* step — which only printed a note telling the
+  developer to run tests locally — is removed, since the real job now exists.
+
 - **Git hooks are now installable in one command** (#17). `.git/hooks` contained only the stock
   `*.sample` files, so despite being documented, **no check ran on commit anywhere** — which,
   combined with the failing gates (#16) and the dormant workflows (#12), meant nothing ran on
@@ -204,6 +219,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   repository; replaced with the values actually in use.
 
 ### Changed
+
+- **`master` and `hyperlink` removed from the public surface** (#19). Both were advertised MCP
+  tools and CLI commands implemented entirely against PowerPoint COM, and **failed on every
+  invocation** against a Visio document:
+  ```
+  $ visiocli master list -s <sid>
+  {"success":false,"error":"RuntimeBinderException: 'System.__ComObject' does not contain
+   a definition for 'SlideMasters'"}
+  ```
+  Unlike the 24 already-suppressed legacy domains, these were published to LLMs and CLI users with
+  confident descriptions — `master` described itself as *"Inspect and edit slide masters and
+  layouts"*, inviting an agent to select it and receive an opaque binder error.
+  `PublicSurface = false` on each `[McpTool]` attribute removes them from the MCP schema, the CLI
+  and both shipped skill packages at once, because all three generators already filter on that
+  flag. The generated MCP skill's advertised operation count self-corrected from **149 to 139**.
+  They return when reimplemented against `Document.Masters` (#34) and `Shape.Hyperlinks` (#35).
+  A new regression test, `AllPublicTools_DoNotThrowRuntimeBinderException_AgainstVsdx`, sweeps
+  every publicly listed tool against a real `.vsdx` session and fails if any returns a
+  `RuntimeBinderException`.
 
 - **ADR-001 and Rule 30 rewritten to state the policy the repository actually follows** (#31).
   Both previously forbade unit tests outright — ADR-001 said *"We do NOT write traditional unit

@@ -153,7 +153,7 @@ These same checks run in CI/CD pipelines:
 - `audit-core-coverage.ps1` runs **after every build** in:
   - `build-mcp-server.yml` - MCP Server builds
   - `build-cli.yml` - CLI builds  
-  - `integration-tests.yml` - PowerPoint integration runs when `ENABLE_POWERPOINT_INTEGRATION_CI=true`
+  - `integration-tests.yml` - Visio integration runs when `ENABLE_VISIO_INTEGRATION_CI=true`
 
 **Pipeline enforcement ensures:**
 - Pre-commit hook provides **instant local feedback**
