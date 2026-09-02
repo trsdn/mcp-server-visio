@@ -220,6 +220,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Nine shape formatting actions reimplemented against Visio's ShapeSheet** (#20). `set-fill`,
+  `set-line`, `set-rotation`, `flip`, `scale`, `set-opacity`, `lock-aspect-ratio`, `read-fill` and
+  `read-line` were written against PowerPoint COM (`Shape.Fill`, `Shape.Line`, `Shape.Rotation`,
+  `ScaleWidth`, `LockAspectRatio`) and threw `RuntimeBinderException` on every call against a
+  `.vsdx` — verified before the change. They now write ShapeSheet cells (`FillForegnd`,
+  `FillPattern`, `LineColor`, `LineWeight`, `Angle`, `FlipX`/`FlipY`, `Width`/`Height`,
+  `FillForegndTrans`, `LockAspect`).
+  Behavioural notes carried in comments: `Angle` is negated because Visio measures anticlockwise
+  while the PowerPoint `Rotation` it replaces was clockwise; `scale` grows about the shape's pin
+  rather than its top-left, because Visio has no `ScaleWidth`; `set-opacity` also sets
+  `LineColorTrans` so a single knob keeps the shape visually coherent; `lock-aspect-ratio` adds the
+  Protection section when a shape does not already carry one.
+  Covered by 11 new integration tests in `VisioMcp.Core.Tests/Integration` — the project's first,
+  though `integration-tests.yml` already expected them. Each setter is verified through a reader,
+  so the tests prove the value reached Visio rather than that the call did not throw.
+
 - **`master` and `hyperlink` removed from the public surface** (#19). Both were advertised MCP
   tools and CLI commands implemented entirely against PowerPoint COM, and **failed on every
   invocation** against a Visio document:

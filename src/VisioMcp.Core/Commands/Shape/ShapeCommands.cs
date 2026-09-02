@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using VisioMcp.ComInterop;
@@ -805,33 +806,34 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
                 if (colorHex.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
-                    // msoFillBackground = 5 (transparent/no fill)
-                    shape.Fill.Visible = 0; // msoFalse
+                    // FillPattern 0 = no fill. The foreground colour is left untouched so it is
+                    // restored if the pattern is turned back on.
+                    SetShapeFormula(shape, "FillPattern", "0");
                 }
                 else
                 {
-                    shape.Fill.Visible = -1; // msoTrue
-                    shape.Fill.Solid();
-                    shape.Fill.ForeColor.RGB = HexToOleColor(colorHex);
+                    SetShapeFormula(shape, "FillForegnd", ToVisioRgbFormula(colorHex));
+                    SetShapeFormula(shape, "FillPattern", "1");
                 }
+
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-fill",
-                    Message = $"Set fill of shape '{shapeName}' to '{colorHex}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Set fill of shape '{shapeName}' to '{colorHex}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -843,33 +845,40 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
                 if (colorHex.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
-                    shape.Line.Visible = 0; // msoFalse
+                    // LinePattern 0 = no line.
+                    SetShapeFormula(shape, "LinePattern", "0");
                 }
                 else
                 {
-                    shape.Line.Visible = -1; // msoTrue
-                    shape.Line.ForeColor.RGB = HexToOleColor(colorHex);
+                    SetShapeFormula(shape, "LineColor", ToVisioRgbFormula(colorHex));
+                    SetShapeFormula(shape, "LinePattern", "1");
+
                     if (lineWidth > 0)
-                        shape.Line.Weight = lineWidth;
+                    {
+                        // LineWeight is a distance cell; state the unit so the value is not
+                        // reinterpreted in the document's default units.
+                        SetShapeFormula(shape, "LineWeight", FormatInvariant(lineWidth) + " pt");
+                    }
                 }
+
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-line",
-                    Message = $"Set line of shape '{shapeName}' to '{colorHex}' (weight {lineWidth}pt) on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Set line of shape '{shapeName}' to '{colorHex}' (weight {lineWidth}pt) on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -880,23 +889,27 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                shape.Rotation = degrees;
+                // Visio rotates about PinX/PinY and measures anticlockwise; PowerPoint's Rotation
+                // property was clockwise. The sign is negated so a positive value keeps the
+                // clockwise sense callers already expect.
+                SetShapeFormula(shape, "Angle", FormatInvariant(-degrees) + " deg");
+
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-rotation",
-                    Message = $"Rotated shape '{shapeName}' to {degrees}° on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Rotated shape '{shapeName}' to {degrees}° on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1253,27 +1266,36 @@ public class ShapeCommands : IShapeCommands
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
+        if (flipType is not (0 or 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(flipType), flipType, "flipType must be 0 (horizontal) or 1 (vertical).");
+        }
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                // msoFlipHorizontal=0, msoFlipVertical=1
-                shape.Flip(flipType);
+                // Visio holds flip state in the FlipX / FlipY ShapeSheet cells rather than
+                // offering a Flip() method, so this toggles the current value.
+                string cellName = flipType == 0 ? "FlipX" : "FlipY";
+                bool current = (TryGetShapeResult(shape, cellName) ?? 0d) != 0d;
+                SetShapeFormula(shape, cellName, current ? "FALSE" : "TRUE");
+
                 string dir = flipType == 0 ? "horizontally" : "vertically";
                 return new OperationResult
                 {
                     Success = true,
                     Action = "flip",
-                    Message = $"Flipped shape '{shapeName}' {dir} on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Flipped shape '{shapeName}' {dir} on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1320,52 +1342,39 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? fill = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                fill = shape.Fill;
-                // MsoFillType: 1=Solid, 3=Patterned, 4=Gradient, 6=Picture/Texture, 0=Background/None
-                int fillType = Convert.ToInt32(fill.Type);
-                string fillTypeName = fillType switch
+                double pattern = TryGetShapeResult(shape, "FillPattern") ?? 0d;
+                string colorFormula = TryGetShapeFormula(shape, "FillForegnd") ?? string.Empty;
+                double transparency = TryGetShapeResult(shape, "FillForegndTrans") ?? 0d;
+
+                // FillPattern 0 = no fill, 1 = solid, anything higher is one of Visio's
+                // hatch/gradient patterns.
+                string patternName = pattern switch
                 {
-                    1 => "Solid",
-                    3 => "Patterned",
-                    4 => "Gradient",
-                    6 => "Picture",
-                    _ => "None"
+                    0d => "None",
+                    1d => "Solid",
+                    _ => $"Pattern {FormatInvariant(pattern)}"
                 };
 
-                string colorHex = "";
-                if (fillType == 1)
-                {
-                    int rgb = Convert.ToInt32(fill.ForeColor.RGB);
-                    int r = rgb & 0xFF;
-                    int g = (rgb >> 8) & 0xFF;
-                    int b = (rgb >> 16) & 0xFF;
-                    colorHex = $"#{r:X2}{g:X2}{b:X2}";
-                }
-
-                float transparency = Convert.ToSingle(fill.Transparency);
-
-                string message = fillType == 1
-                    ? $"Fill: {fillTypeName}, Color: {colorHex}, Transparency: {transparency:F2}"
-                    : $"Fill: {fillTypeName}, Transparency: {transparency:F2}";
+                string message = pattern == 0d
+                    ? "Fill: None"
+                    : $"Fill: {patternName}, Color: {colorFormula}, Transparency: {FormatInvariant(transparency)}";
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "read-fill",
                     Message = message,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (fill != null) ComUtilities.Release(ref fill!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1376,29 +1385,21 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? line = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                line = shape.Line;
-                // msoTrue = -1, msoFalse = 0
-                bool visible = Convert.ToInt32(line.Visible) != 0;
+                double pattern = TryGetShapeResult(shape, "LinePattern") ?? 0d;
+                bool visible = pattern != 0d;
 
-                string colorHex = "";
-                float weight = 0f;
-                if (visible)
-                {
-                    int rgb = Convert.ToInt32(line.ForeColor.RGB);
-                    int r = rgb & 0xFF;
-                    int g = (rgb >> 8) & 0xFF;
-                    int b = (rgb >> 16) & 0xFF;
-                    colorHex = $"#{r:X2}{g:X2}{b:X2}";
-                    weight = Convert.ToSingle(line.Weight);
-                }
+                string colorFormula = TryGetShapeFormula(shape, "LineColor") ?? string.Empty;
+
+                // LineWeight's ResultIU is in inches; Visio's internal drawing unit. Points are
+                // what the setter accepts, so report the same unit.
+                double weightPoints = (TryGetShapeResult(shape, "LineWeight") ?? 0d) * 72d;
 
                 string message = visible
-                    ? $"Visible: true, Color: {colorHex}, Weight: {weight:F2}pt"
+                    ? $"Visible: true, Color: {colorFormula}, Weight: {FormatInvariant(weightPoints)}pt"
                     : "Visible: false";
 
                 return new OperationResult
@@ -1406,14 +1407,13 @@ public class ShapeCommands : IShapeCommands
                     Success = true,
                     Action = "read-line",
                     Message = message,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (line != null) ComUtilities.Release(ref line!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -1423,6 +1423,114 @@ public class ShapeCommands : IShapeCommands
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
         return ((dynamic)ctx.Document).Pages.Item(pageIndex);
     }
+
+    /// <summary>
+    /// Writes a ShapeSheet formula by universal cell name, releasing the cell afterwards.
+    /// </summary>
+    private static void SetShapeFormula(dynamic shape, string cellName, string formula)
+    {
+        dynamic? cell = null;
+        try
+        {
+            cell = shape.CellsU[cellName];
+            cell.FormulaU = formula;
+        }
+        finally
+        {
+            if (cell != null)
+            {
+                ComUtilities.Release(ref cell!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads a ShapeSheet formula by universal cell name, or null when the cell does not exist.
+    /// </summary>
+    private static string? TryGetShapeFormula(dynamic shape, string cellName)
+    {
+        dynamic? cell = null;
+        try
+        {
+            if (!ShapeCellExists(shape, cellName))
+            {
+                return null;
+            }
+
+            cell = shape.CellsU[cellName];
+            return cell.FormulaU?.ToString();
+        }
+        finally
+        {
+            if (cell != null)
+            {
+                ComUtilities.Release(ref cell!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads a ShapeSheet cell's evaluated result, or null when the cell does not exist.
+    /// </summary>
+    private static double? TryGetShapeResult(dynamic shape, string cellName)
+    {
+        dynamic? cell = null;
+        try
+        {
+            if (!ShapeCellExists(shape, cellName))
+            {
+                return null;
+            }
+
+            cell = shape.CellsU[cellName];
+            return Convert.ToDouble(cell.ResultIU, CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            if (cell != null)
+            {
+                ComUtilities.Release(ref cell!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether a shape exposes the named ShapeSheet cell.
+    /// </summary>
+    /// <remarks>
+    /// <c>CellExistsU</c> returns a VBA-style <c>short</c> (0 or -1), not a <c>bool</c>. Casting
+    /// it directly to <c>bool</c> throws <c>RuntimeBinderException: Cannot convert type 'short'
+    /// to 'bool'</c>, so the comparison is done numerically.
+    /// </remarks>
+    private static bool ShapeCellExists(dynamic shape, string cellName)
+    {
+        // visExistsAnywhere = 0: report the cell whether it is local or inherited from the master.
+        return Convert.ToInt32(shape.CellExistsU[cellName, 0], CultureInfo.InvariantCulture) != 0;
+    }
+
+    /// <summary>
+    /// Converts "#RRGGBB", "RRGGBB" or a Visio colour-index string into a ShapeSheet colour formula.
+    /// </summary>
+    private static string ToVisioRgbFormula(string colorHex)
+    {
+        var trimmed = colorHex.Trim().TrimStart('#');
+
+        if (trimmed.Length != 6 || !int.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var packed))
+        {
+            throw new ArgumentException(
+                $"Colour '{colorHex}' is not a 6-digit hex value such as '#FF0000' or 'FF0000'.",
+                nameof(colorHex));
+        }
+
+        int r = (packed >> 16) & 0xFF;
+        int g = (packed >> 8) & 0xFF;
+        int b = packed & 0xFF;
+
+        return $"RGB({r},{g},{b})";
+    }
+
+    private static string FormatInvariant(double value) =>
+        value.ToString("0.############", CultureInfo.InvariantCulture);
 
     private static void EnsureWindowPage(dynamic window, dynamic page)
     {
@@ -2617,24 +2725,29 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                // COM uses Transparency (0=opaque, 1=transparent), which is the inverse of opacity
-                shape.Fill.Transparency = 1.0f - opacity;
+                // Visio's FillForegndTrans is transparency (0 = opaque, 1 = fully transparent),
+                // the inverse of opacity. Setting the line to match keeps the shape visually
+                // coherent, which is what callers of a single "opacity" knob expect.
+                string transparency = FormatInvariant(1.0f - opacity);
+                SetShapeFormula(shape, "FillForegndTrans", transparency);
+                SetShapeFormula(shape, "LineColorTrans", transparency);
+
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-opacity",
-                    Message = $"Set opacity of shape '{shapeName}' to {opacity:F2} on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Set opacity of shape '{shapeName}' to {FormatInvariant(opacity)} on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2787,26 +2900,33 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                // 0 = msoScaleFromTopLeft, relative to current size
-                shape.ScaleWidth(scaleX, 0);
-                shape.ScaleHeight(scaleY, 0);
+                // Visio has no ScaleWidth/ScaleHeight; Width and Height are ShapeSheet cells, so
+                // scaling is multiplication against the current result. The shape's pin is
+                // unchanged, so it grows about its centre rather than its top-left.
+                double width = TryGetShapeResult(shape, "Width")
+                    ?? throw new InvalidOperationException($"Shape '{shapeName}' has no Width cell.");
+                double height = TryGetShapeResult(shape, "Height")
+                    ?? throw new InvalidOperationException($"Shape '{shapeName}' has no Height cell.");
+
+                SetShapeFormula(shape, "Width", FormatInvariant(width * scaleX) + " in");
+                SetShapeFormula(shape, "Height", FormatInvariant(height * scaleY) + " in");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "scale",
-                    Message = $"Scaled shape '{shapeName}' by {scaleX:F2}x width, {scaleY:F2}x height on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Scaled shape '{shapeName}' by {FormatInvariant(scaleX)}x width, {FormatInvariant(scaleY)}x height on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -2817,27 +2937,34 @@ public class ShapeCommands : IShapeCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                // msoTrue = -1, msoFalse = 0
-                shape.LockAspectRatio = locked ? -1 : 0;
+                // LockAspect lives in the Protection section, which shapes do not always carry.
+                // visSectionObject = 1, visRowLock = 20.
+                if (TryGetShapeResult(shape, "LockAspect") is null)
+                {
+                    shape.AddSection(1);
+                    shape.AddRow(1, 20, 0);
+                }
+
+                SetShapeFormula(shape, "LockAspect", locked ? "1" : "0");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "lock-aspect-ratio",
                     Message = locked
-                        ? $"Locked aspect ratio of shape '{shapeName}' on slide {pageIndex}"
-                        : $"Unlocked aspect ratio of shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                        ? $"Locked aspect ratio of shape '{shapeName}' on page {pageIndex}"
+                        : $"Unlocked aspect ratio of shape '{shapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
