@@ -32,6 +32,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **All seven committed workflows now carry `workflow_dispatch`, and `build-mcp-server.yml` runs on
+  pull requests** (#12). Five workflows were committed but never registered with GitHub Actions, so
+  they had never run and never would; `gh run list --workflow build-cli.yml` returned
+  `HTTP 404: workflow not found on the default branch`.
+  `build-cli.yml`, `build-mcp-server.yml` and `dependency-review.yml` had no manual trigger, so
+  registration could not be forced or verified. All three now have one.
+  Separately, `build-mcp-server.yml` had **no `pull_request` trigger at all** — only `push` to
+  `main`/`develop` — so the MCP Server build was never validated on a PR, only after merge. It now
+  mirrors `build-cli.yml`'s pull-request trigger.
+  Four of the five have since registered (`build-cli`, `dependency-review`, `integration-tests`
+  plus the already-active `codeql`/`stale`) as branches touching their path filters were pushed;
+  `build-mcp-server` and `release` register once this merges to `main`.
+
 - **`scripts/pre-commit.ps1` now exits 0 on a clean checkout** (#16). Six of the documented gates
   failed, and the gate inventory itself was wrong in both directions.
   - `check-com-leaks.ps1` excluded `PptBatch.cs|PptSession.cs` — files that do not exist — so the
