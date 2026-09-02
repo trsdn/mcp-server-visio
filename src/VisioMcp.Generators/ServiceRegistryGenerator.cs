@@ -181,6 +181,38 @@ public class ServiceRegistryGenerator : IIncrementalGenerator
         sb.AppendLine($"        public const string Description = \"{escapedDescription}\";");
         sb.AppendLine();
 
+        // Generate ParameterDocs so the MCP generator can reach these descriptions.
+        //
+        // ServiceRegistryGenerator runs inside the Core compilation and can read XML <param> docs
+        // from source. McpToolGenerator runs in the MCP server compilation, where Core is a
+        // metadata reference — and XML documentation is not carried in metadata, so it saw nothing
+        // and emitted "(required for: ...)" for every parameter (#37). Constants *are* carried in
+        // metadata, which is also why [McpTool(Description = "...")] always worked.
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine("        /// Parameter descriptions from interface XML documentation, emitted as");
+        sb.AppendLine("        /// constants so generators in other compilations can read them from metadata.");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        public static class ParameterDocs");
+        sb.AppendLine("        {");
+        foreach (var ep in GetAllExposedParameters(info))
+        {
+            if (string.IsNullOrEmpty(ep.Description))
+            {
+                continue;
+            }
+
+            var escapedParamDoc = ep.Description!
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "")
+                .Replace("\n", " ")
+                .Trim();
+
+            sb.AppendLine($"            public const string @{ep.Name} = \"{escapedParamDoc}\";");
+        }
+        sb.AppendLine("        }");
+        sb.AppendLine();
+
         // Generate TryParseAction method for this category
         sb.AppendLine("        /// <summary>");
         sb.AppendLine("        /// Parses a kebab-case action string to the strongly-typed enum.");

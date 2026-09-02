@@ -30,7 +30,7 @@ public class McpToolGenerator : IIncrementalGenerator
 
                 foreach (var info in services)
                 {
-                    var code = GenerateToolClass(info);
+                    var code = GenerateToolClass(info, ReadParameterDocs(compilation, info.CategoryPascal));
                     spc.AddSource($"McpTool.{info.CategoryPascal}.g.cs", SourceText.From(code, Encoding.UTF8));
                 }
             });
@@ -74,7 +74,7 @@ public class McpToolGenerator : IIncrementalGenerator
     /// <summary>
     /// Generates a complete MCP tool class for a service category.
     /// </summary>
-    private static string GenerateToolClass(ServiceInfo info)
+    private static string GenerateToolClass(ServiceInfo info, Dictionary<string, string> parameterDocs)
     {
         var sb = new StringBuilder();
         var hasProgress = info.Methods.Any(m => m.HasProgressParameter);
@@ -108,7 +108,7 @@ public class McpToolGenerator : IIncrementalGenerator
         sb.AppendLine("{");
 
         // Generate the tool method
-        GenerateToolMethod(sb, info, hasProgress);
+        GenerateToolMethod(sb, info, hasProgress, parameterDocs);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -117,7 +117,7 @@ public class McpToolGenerator : IIncrementalGenerator
     /// <summary>
     /// Generates the MCP tool method with XML docs, attributes, parameters, and body.
     /// </summary>
-    private static void GenerateToolMethod(StringBuilder sb, ServiceInfo info, bool hasProgress)
+    private static void GenerateToolMethod(StringBuilder sb, ServiceInfo info, bool hasProgress, Dictionary<string, string> parameterDocs)
     {
         var enumTypeName = $"{info.CategoryPascal}Action";
 
@@ -125,7 +125,7 @@ public class McpToolGenerator : IIncrementalGenerator
         var exposedParams = ServiceInfoExtractor.GetAllExposedParameters(info);
 
         // Build the enhanced parameter list for MCP
-        var mcpParams = BuildMcpParameters(info, exposedParams);
+        var mcpParams = BuildMcpParameters(info, exposedParams, parameterDocs);
 
         // XML doc: interface-level summary
         if (!string.IsNullOrEmpty(info.XmlDocSummary))
@@ -311,12 +311,60 @@ public class McpToolGenerator : IIncrementalGenerator
     }
 
     /// <summary>
+    /// Reads parameter descriptions from the constants Core's generator emitted.
+    /// </summary>
+    /// <remarks>
+    /// This generator runs in the MCP server compilation, where Core is a metadata reference.
+    /// XML documentation is not carried in metadata, so <c>GetDocumentationCommentXml()</c> returns
+    /// nothing here and every parameter fell back to a bare "(required for: ...)" suffix — while
+    /// the CLI, generated inside the Core compilation, got the real text (#37).
+    ///
+    /// Constants *are* carried in metadata, which is why <c>[McpTool(Description = "...")]</c>
+    /// always worked. <c>ServiceRegistryGenerator</c> therefore emits the same descriptions as
+    /// <c>ServiceRegistry.{Category}.ParameterDocs</c> constants, and this reads them back.
+    /// </remarks>
+    private static Dictionary<string, string> ReadParameterDocs(Compilation compilation, string categoryPascal)
+    {
+        var docs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var docsType = compilation.GetTypeByMetadataName(
+            $"VisioMcp.Generated.ServiceRegistry+{categoryPascal}+ParameterDocs");
+
+        if (docsType is null)
+        {
+            return docs;
+        }
+
+        foreach (var member in docsType.GetMembers())
+        {
+            if (member is IFieldSymbol { HasConstantValue: true } field
+                && field.ConstantValue is string value
+                && value.Length > 0)
+            {
+                docs[field.Name] = value;
+            }
+        }
+
+        return docs;
+    }
+
+    /// <summary>
     /// Builds MCP parameter descriptors from the exposed parameters.
     /// Handles type conversions: FromString enum → typed enum, TimeSpan → int seconds, etc.
     /// </summary>
-    private static List<McpParameter> BuildMcpParameters(ServiceInfo info, List<ExposedParameter> exposedParams)
+    private static List<McpParameter> BuildMcpParameters(ServiceInfo info, List<ExposedParameter> exposedParams, Dictionary<string, string> parameterDocs)
     {
         var result = new List<McpParameter>();
+
+        // Restore descriptions that XML docs could not carry across the metadata boundary.
+        foreach (var ep in exposedParams)
+        {
+            if (string.IsNullOrEmpty(ep.Description)
+                && parameterDocs.TryGetValue(ep.Name, out var doc))
+            {
+                ep.Description = doc;
+            }
+        }
 
         // Build a lookup of param info by exposed name for type resolution
         var paramInfoByName = new Dictionary<string, ParameterInfo>(StringComparer.OrdinalIgnoreCase);

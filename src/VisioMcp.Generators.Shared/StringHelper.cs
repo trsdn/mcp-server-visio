@@ -66,33 +66,19 @@ public static class StringHelper
     }
 
     /// <summary>
-    /// Gets CLI option description based on parameter name.
+    /// Last-resort label for a parameter with no XML <c>&lt;param&gt;</c> documentation.
     /// </summary>
-    public static string GetParameterDescription(string paramName)
-    {
-        return paramName switch
-        {
-            "queryName" => "Query name",
-            "mCode" => "M code formula",
-            "mCodeFile" => "Path to file containing M code",
-            "targetCellAddress" => "Target cell address (e.g., A1)",
-            "oldName" => "Current name (for rename)",
-            "newName" => "New name (for rename)",
-            "timeout" => "Timeout duration",
-            "refresh" => "Whether to refresh after update",
-            "sheetName" => "Slide name",
-            "tableName" => "Table name",
-            "connectionName" => "Connection name",
-            "chartName" => "Chart name",
-            "slicerName" => "Slicer name",
-            "pivotTableName" => "PivotTable name",
-            "rangeAddress" => "Range address (e.g., A1:C10)",
-            "values" => "Values to set",
-            "formula" => "Formula to apply",
-            "format" => "Format string",
-            _ => ToPascalCase(paramName)
-        };
-    }
+    /// <remarks>
+    /// This previously held a lookup table inherited from the Excel ancestor — <c>queryName</c>,
+    /// <c>mCode</c>, <c>rangeAddress</c>, <c>pivotTableName</c>, <c>slicerName</c>, and the
+    /// three-product artefact <c>"sheetName" =&gt; "Slide name"</c>. Of its eighteen keys exactly
+    /// one (<c>formula</c>) matched a parameter that exists in this product, so seventeen were
+    /// dead and every real lookup already fell through to <c>ToPascalCase</c> (#37).
+    ///
+    /// Deleting it changes no output. The real fix is a <c>&lt;param&gt;</c> doc on the interface;
+    /// this exists only so an undocumented parameter gets a readable label rather than nothing.
+    /// </remarks>
+    public static string GetParameterDescription(string paramName) => ToPascalCase(paramName);
 }
 
 /// <summary>

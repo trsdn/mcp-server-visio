@@ -132,7 +132,13 @@ public sealed class ExposedParameter
 {
     public string Name { get; }
     public string TypeName { get; set; }
-    public string? Description { get; }
+
+    /// <summary>
+    /// Description aggregated across every action declaring this parameter. Settable because the
+    /// first declaring action often has no <c>&lt;param&gt;</c> doc while a later one does (#37).
+    /// </summary>
+    public string? Description { get; set; }
+
     public string? DefaultValue { get; }
 
     /// <summary>Action names where this parameter is required (non-nullable, no default, or [RequiredParameter]).</summary>
