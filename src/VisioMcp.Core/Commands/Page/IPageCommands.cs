@@ -11,7 +11,14 @@ namespace VisioMcp.Core.Commands.Page;
 [McpTool("page", Title = "Page Operations", Destructive = true, Category = "pages",
     Description = "List, inspect, create, rename, and delete Visio pages, manage page guides, and control page-level routing and line jump settings. "
     + "WORKFLOW: file(open) → page(create, name='Overview') → shape(add-shape) → text(set). "
-    + "All page indices are 1-based. position=0 means append at end.")]
+    + "All page indices are 1-based. position=0 means append at end. "
+    + "BACKGROUND PAGES: a Visio background page is a normal page marked as a background and then shown behind "
+    + "other pages — shared furniture such as a title block or logo, drawn once. Two steps, in this order: "
+    + "page(set-background, is_background=true) on the page holding the furniture, then "
+    + "page(set-back-page, back_page_name='…') on each page that should show it. "
+    + "A page that is not itself a background CANNOT be used as one. clear-back-page detaches it and keeps the page. "
+    + "PAGE SIZE AND SCALE are not here: they are PageSheet cells, reached with cell(read/set-formula, "
+    + "sheet_target='page', cell_name='PageWidth' | 'PageHeight' | 'DrawingScale' | 'PageScale').")]
 public interface IPageCommands
 {
     /// <summary>
@@ -154,4 +161,38 @@ public interface IPageCommands
     /// <param name="placeStyle">Automatic layout style used when shapes are placed, written to the page PlaceStyle cell</param>
     [ServiceAction("set-place-style")]
     OperationResult SetPlaceStyle(IVisioBatch batch, int pageIndex, int placeStyle);
+
+    /// <summary>
+    /// Read whether a page is a background, and which background page it shows behind itself.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    [ServiceAction("read-background")]
+    PageBackgroundResult ReadBackground(IVisioBatch batch, int pageIndex);
+
+    /// <summary>
+    /// Make a page a background page, or turn it back into an ordinary one.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="isBackground">True to make it a background page, false to turn it back into a normal page</param>
+    [ServiceAction("set-background")]
+    PageBackgroundResult SetBackground(IVisioBatch batch, int pageIndex, bool isBackground);
+
+    /// <summary>
+    /// Show a background page behind this page. The target must already be a background page.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index of the page that will show the background</param>
+    /// <param name="backPageName">Name of the background page to show behind it, exactly as reported by list</param>
+    [ServiceAction("set-back-page")]
+    PageBackgroundResult SetBackPage(IVisioBatch batch, int pageIndex, string backPageName);
+
+    /// <summary>
+    /// Stop showing a background page behind this page. The background page itself is kept.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    [ServiceAction("clear-back-page")]
+    PageBackgroundResult ClearBackPage(IVisioBatch batch, int pageIndex);
 }

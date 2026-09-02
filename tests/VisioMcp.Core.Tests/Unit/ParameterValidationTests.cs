@@ -1,4 +1,3 @@
-using VisioMcp.Core.Commands.Background;
 using VisioMcp.Core.Commands.Comment;
 using VisioMcp.Core.Commands.DocumentProperty;
 using VisioMcp.Core.Commands.Export;
@@ -1454,38 +1453,9 @@ public class ParameterValidationTests
     }
 
     // ── Background Commands ──────────────────────────────────
-
-    [Fact]
-    public void BackgroundSetColor_NullColorHex_ThrowsArgumentNullException()
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetColor(null!, 1, null!));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void BackgroundSetColor_EmptyColorHex_ThrowsArgumentException(string colorHex)
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetColor(null!, 1, colorHex));
-    }
-
-    [Fact]
-    public void BackgroundSetImage_NullImagePath_ThrowsArgumentNullException()
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetImage(null!, 1, null!));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void BackgroundSetImage_EmptyImagePath_ThrowsArgumentException(string imagePath)
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetImage(null!, 1, imagePath));
-    }
+    // Removed in #36c: the background domain was superseded. Background *pages* moved to
+    // page(set-background / set-back-page); background *fill* is a PageSheet cell reached with
+    // cell(set-formula, sheet_target='page', cell_name='FillForegnd').
 
     // ── SmartArt Commands ────────────────────────────────────
 
@@ -1642,38 +1612,7 @@ public class ParameterValidationTests
     // ── Slide Table Commands (Additional) ────────────────────
 
     // ── Background Commands (Additional) ────────────────────
-
-    [Fact]
-    public void BackgroundSetGradient_NullColor1_ThrowsArgumentNullException()
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetGradient(null!, 1, null!, "#0000FF", 1));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void BackgroundSetGradient_EmptyColor1_ThrowsArgumentException(string color1)
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetGradient(null!, 1, color1, "#0000FF", 1));
-    }
-
-    [Fact]
-    public void BackgroundSetGradient_NullColor2_ThrowsArgumentNullException()
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetGradient(null!, 1, "#FF0000", null!, 1));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void BackgroundSetGradient_EmptyColor2_ThrowsArgumentException(string color2)
-    {
-        var commands = new BackgroundCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetGradient(null!, 1, "#FF0000", color2, 1));
-    }
+    // Removed in #36c along with the domain itself.
 
     // ── Proofing Commands ───────────────────────────────────
 

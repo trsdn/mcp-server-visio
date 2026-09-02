@@ -15,7 +15,7 @@ The following domains are implemented and covered by focused validation:
 | Domain | CLI | MCP | VS Code surface | Status | Notes |
 |---|---|---|---|---|---|
 | File / Session | Yes | Yes | Via MCP extension | Validated | Open, create, list, close, save, visible mode |
-| Page | Yes | Yes | Via MCP extension | Validated | List, read, create, rename, delete |
+| Page | Yes | Yes | Via MCP extension | Validated | List, read, create, rename, delete; background pages (mark, attach, detach) |
 | Layer | Yes | Yes | Via MCP extension | Validated | List, read, create, delete, shape membership, visibility/print/lock/color flags |
 | Shape | Yes | Yes | Via MCP extension | Validated MVP | List, read, add basic shapes, add text boxes, move/resize, delete |
 | Text | Yes | Yes | Via MCP extension | Validated MVP | Get, set, find, replace, word count |
@@ -68,8 +68,6 @@ word collides with the *unrelated* ShapeSheet sections tracked in
 | `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
 | `accessibility` | Remap | @trsdn | `audit` is remapped and shipped (`shape(set-alt-text)`, `text(alt-text-audit)`); `get-reading-order`/`set-reading-order` have no analogue — `TabOrder`, `ReadingOrder` and `AccessibilityOrder` are absent as properties and as cells | [#77](https://github.com/trsdn/mcp-server-visio/issues/77) |
-| `background` | Remap | @trsdn | `Page.Background` and `Page.BackPage` present; belongs on the public `page` tool | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
-| `pagesetup` | Remap | @trsdn | All settings are `PageSheet` cells: `PageWidth`, `PageHeight`, `PrintPageOrientation`, `PageScale`, `DrawingScale`, `PageLeftMargin`, `PaperKind`, `CenterX` | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
 | `design` | Remap | @trsdn | Two unrelated halves: 5 theme actions (**`Document.Theme` does not exist**; `Document.Styles` does, themes are `DocumentSheet` cells) and 14 catalog actions serving a PowerPoint deck-archetype library from `Core/Data/archetypes/` | [#78](https://github.com/trsdn/mcp-server-visio/issues/78) |
 | `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
 

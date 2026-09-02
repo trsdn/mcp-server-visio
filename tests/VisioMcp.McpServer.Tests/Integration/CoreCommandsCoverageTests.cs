@@ -2,7 +2,6 @@
 #pragma warning disable IDE0005
 using System.Reflection;
 using VisioMcp.Core.Commands.Accessibility;
-using VisioMcp.Core.Commands.Background;
 using VisioMcp.Core.Commands.Comment;
 using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
@@ -12,7 +11,6 @@ using VisioMcp.Core.Commands.HeaderFooter;
 using VisioMcp.Core.Commands.Hyperlink;
 using VisioMcp.Core.Commands.Image;
 using VisioMcp.Core.Commands.Master;
-using VisioMcp.Core.Commands.PageSetup;
 using VisioMcp.Core.Commands.PrintOptions;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
@@ -144,14 +142,6 @@ public class CoreCommandsCoverageTests
             $"ICommentCommands has {coreMethodCount} [ServiceAction] methods but CommentAction has only {enumValueCount} enum values.");
     }
 
-    [Fact]
-    public void IBackgroundCommands_AllMethodsHaveEnumValues()
-    {
-        var coreMethodCount = GetServiceActionMethodCount(typeof(IBackgroundCommands));
-        var enumValueCount = Enum.GetValues<BackgroundAction>().Length;
-        Assert.True(enumValueCount >= coreMethodCount,
-            $"IBackgroundCommands has {coreMethodCount} [ServiceAction] methods but BackgroundAction has only {enumValueCount} enum values.");
-    }
 
     [Fact]
     public void IHeaderFooterCommands_AllMethodsHaveEnumValues()
@@ -171,14 +161,6 @@ public class CoreCommandsCoverageTests
             $"IShapeAlignCommands has {coreMethodCount} [ServiceAction] methods but ShapealignAction has only {enumValueCount} enum values.");
     }
 
-    [Fact]
-    public void IPageSetupCommands_AllMethodsHaveEnumValues()
-    {
-        var coreMethodCount = GetServiceActionMethodCount(typeof(IPageSetupCommands));
-        var enumValueCount = Enum.GetValues<PagesetupAction>().Length;
-        Assert.True(enumValueCount >= coreMethodCount,
-            $"IPageSetupCommands has {coreMethodCount} [ServiceAction] methods but PagesetupAction has only {enumValueCount} enum values.");
-    }
 
     [Fact]
     public void ITagCommands_AllMethodsHaveEnumValues()
@@ -328,16 +310,6 @@ public class CoreCommandsCoverageTests
         }
     }
 
-    [Fact]
-    public void BackgroundAction_AllEnumValuesHaveMappings()
-    {
-        foreach (var action in Enum.GetValues<BackgroundAction>())
-        {
-            var exception = Record.Exception(() => ServiceRegistry.Background.ToActionString(action));
-            Assert.Null(exception);
-            Assert.NotEmpty(ServiceRegistry.Background.ToActionString(action));
-        }
-    }
 
     [Fact]
     public void HeaderfooterAction_AllEnumValuesHaveMappings()
@@ -361,16 +333,6 @@ public class CoreCommandsCoverageTests
         }
     }
 
-    [Fact]
-    public void PagesetupAction_AllEnumValuesHaveMappings()
-    {
-        foreach (var action in Enum.GetValues<PagesetupAction>())
-        {
-            var exception = Record.Exception(() => ServiceRegistry.Pagesetup.ToActionString(action));
-            Assert.Null(exception);
-            Assert.NotEmpty(ServiceRegistry.Pagesetup.ToActionString(action));
-        }
-    }
 
     [Fact]
     public void TagAction_AllEnumValuesHaveMappings()

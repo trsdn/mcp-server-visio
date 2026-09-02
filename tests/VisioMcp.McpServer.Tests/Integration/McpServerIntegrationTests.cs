@@ -92,14 +92,12 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
     private static readonly HashSet<string> HiddenLegacyToolNames =
     [
         "accessibility",
-        "background",
         "comment",
         "design",
         "headerfooter",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public.
         "image",
-        "pagesetup",
         "printoptions",
         "tag",
         "vba"
