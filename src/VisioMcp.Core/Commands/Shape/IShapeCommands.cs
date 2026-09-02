@@ -15,9 +15,12 @@ namespace VisioMcp.Core.Commands.Shape;
     + "color_hex: '#RRGGBB' (e.g. '#0B3D91'). Use 'none' for transparent fill/line. "
     + "z_order_cmd: 1=BringToFront, 2=SendToBack, 3=BringForward, 4=SendBackward. "
     + "merge_type: 1=Union, 2=Combine, 3=Fragment, 4=Intersect, 5=Subtract. "
-    + "connector_type: 1=Straight, 2=Elbow, 3=Curve. flip_type: 0=Horizontal, 1=Vertical. "
+    + "connector_type: 1=Straight, 2=Elbow (right-angle), 3=Curved. flip_type: 0=Horizontal, 1=Vertical. "
     + "CONNECTORS vs CONNECTION POINTS: a connector is the line between two shapes (add-connector, read-connector); "
     + "a connection point is an anchor on a shape that a connector glues to (add-connection-point). "
+    + "PREFER connect-shapes over add-connector: it uses Visio's Dynamic connector, which routes around shapes in "
+    + "the way and re-routes when either end moves, and it chains a whole path in one call — "
+    + "shape_names='A,B,C' creates A→B and B→C. add-connector draws a straight glued line between exactly two shapes. "
     + "Connection point x/y are ShapeSheet formulas such as 'Width*0.5' so the point follows the shape when it is resized. "
     + "gradient_style: 1=Horizontal, 2=Vertical, 3=DiagonalUp, 4=DiagonalDown. "
     + "find-by-type takes a Visio shape type: 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide. "
@@ -331,15 +334,25 @@ public interface IShapeCommands
     OperationResult SetShadow(IVisioBatch batch, int pageIndex, string shapeName, bool visible, float offsetX, float offsetY);
 
     /// <summary>
-    /// Add a connector line between two shapes.
+    /// Add a straight connector line between two shapes.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="connectorType">1=Straight, 2=Elbow, 3=Curve</param>
+    /// <param name="connectorType">Routing style: 1=Straight, 2=Elbow (right-angle), 3=Curved</param>
     /// <param name="startShapeName">Starting shape name</param>
     /// <param name="endShapeName">Ending shape name</param>
     [ServiceAction("add-connector")]
     OperationResult AddConnector(IVisioBatch batch, int pageIndex, int connectorType, string startShapeName, string endShapeName);
+
+    /// <summary>
+    /// Connect two or more shapes with Visio dynamic connectors, chained in the order given.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeNames">Comma-separated shape names to chain, in order. Two or more required; N names produce N-1 connectors</param>
+    /// <param name="connectorType">Routing style applied to every connector created: 1=Straight, 2=Elbow (right-angle), 3=Curved. Omit to keep Visio's default routing</param>
+    [ServiceAction("connect-shapes")]
+    ConnectorListResult ConnectShapes(IVisioBatch batch, int pageIndex, string shapeNames, int? connectorType = null);
 
     /// <summary>
     /// Merge shapes using boolean operations.
