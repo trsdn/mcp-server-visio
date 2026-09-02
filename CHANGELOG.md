@@ -19,6 +19,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`Close_NoOperationsRunning_ClosesSuccessfully` was failing on a stale `.pptx` path, not a
+  response-contract mismatch** (#28). The test created `CloseTest_<guid>.pptx`; `file create`
+  correctly rejects a non-Visio extension and returns an error object with no `session_id`, so the
+  *next* line threw `KeyNotFoundException`. The reported symptom pointed at the `file close`
+  contract, but the failure was on the `file create` response and the contract was never wrong.
+  Extension corrected to `.vsdx` — the last stale PowerPoint path in this file.
+  Property reads now go through a helper that reports the tool, the missing property, the properties
+  that *are* present and the raw response, so genuine contract drift fails legibly instead of as a
+  bare `The given key was not present in the dictionary`.
+  `VisioMcp.McpServer.Tests --filter "Category=Integration"`: **41 passed / 1 failed → 42 passed /
+  0 failed**. That suite started this release cycle at 17 passed / 25 failed.
+
 - **Shape Data parameters now have real descriptions in the generated CLI skill** (#29).
   `--property-name` and `--property-value` shipped with empty description cells in
   `skills/visio-cli/SKILL.md`, failing `SkillMdQualityTests.CliSkill_HasNoEmptyParameterDescriptions`.
