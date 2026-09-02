@@ -10,14 +10,14 @@ public class BackgroundCommands : IBackgroundCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 bool followMaster = Convert.ToInt32(slide.FollowMasterBackground) != 0;
                 var result = new BackgroundResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     SlideIndex = slideIndex,
                     FollowMasterBackground = followMaster,
                 };
@@ -57,7 +57,7 @@ public class BackgroundCommands : IBackgroundCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 slide.FollowMasterBackground = 0; // msoFalse
@@ -69,7 +69,7 @@ public class BackgroundCommands : IBackgroundCommands
                     Success = true,
                     Action = "set-color",
                     Message = $"Set background color of slide {slideIndex} to '{colorHex}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -83,7 +83,7 @@ public class BackgroundCommands : IBackgroundCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 slide.FollowMasterBackground = -1; // msoTrue
@@ -93,7 +93,7 @@ public class BackgroundCommands : IBackgroundCommands
                     Success = true,
                     Action = "reset",
                     Message = $"Reset background of slide {slideIndex} to master",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -113,7 +113,7 @@ public class BackgroundCommands : IBackgroundCommands
             if (!System.IO.File.Exists(fullPath))
                 throw new FileNotFoundException($"Image file not found: '{fullPath}'");
 
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 slide.FollowMasterBackground = 0; // msoFalse
@@ -124,7 +124,7 @@ public class BackgroundCommands : IBackgroundCommands
                     Success = true,
                     Action = "set-image",
                     Message = $"Set background image of slide {slideIndex} to '{Path.GetFileName(fullPath)}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -144,7 +144,7 @@ public class BackgroundCommands : IBackgroundCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 slide.FollowMasterBackground = 0; // msoFalse
@@ -157,7 +157,7 @@ public class BackgroundCommands : IBackgroundCommands
                     Success = true,
                     Action = "set-gradient",
                     Message = $"Set gradient background on slide {slideIndex} from '{color1}' to '{color2}' (style {gradientStyle})",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

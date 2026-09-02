@@ -10,7 +10,7 @@ public class VbaCommands : IVbaCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic vbProject = pres.VBProject;
             dynamic components = vbProject.VBComponents;
             try
@@ -19,7 +19,7 @@ public class VbaCommands : IVbaCommands
                 var result = new VbaModuleListResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
 
                 for (int i = 1; i <= count; i++)
@@ -61,7 +61,7 @@ public class VbaCommands : IVbaCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic vbProject = pres.VBProject;
             dynamic components = vbProject.VBComponents;
             dynamic comp = components.Item(moduleName);
@@ -77,7 +77,7 @@ public class VbaCommands : IVbaCommands
                 return new VbaModuleCodeResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     ModuleName = moduleName,
                     Code = code,
                     LineCount = lineCount
@@ -100,7 +100,7 @@ public class VbaCommands : IVbaCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic vbProject = pres.VBProject;
             dynamic components = vbProject.VBComponents;
             dynamic? comp = null;
@@ -119,7 +119,7 @@ public class VbaCommands : IVbaCommands
                     Success = true,
                     Action = "import",
                     Message = $"Imported VBA module '{moduleName}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -138,7 +138,7 @@ public class VbaCommands : IVbaCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = (dynamic)ctx.Presentation;
+            dynamic pres = (dynamic)ctx.Document;
             dynamic vbProject = pres.VBProject;
             dynamic components = vbProject.VBComponents;
             dynamic comp = components.Item(moduleName);
@@ -150,7 +150,7 @@ public class VbaCommands : IVbaCommands
                     Success = true,
                     Action = "delete",
                     Message = $"Deleted VBA module '{moduleName}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -169,7 +169,7 @@ public class VbaCommands : IVbaCommands
         return batch.Execute((ctx, ct) =>
         {
             // PowerPoint.Application.Run(macroName)
-            dynamic app = ((dynamic)ctx.Presentation).Application;
+            dynamic app = ((dynamic)ctx.Document).Application;
             try
             {
                 app.Run(macroName);
@@ -178,7 +178,7 @@ public class VbaCommands : IVbaCommands
                     Success = true,
                     Action = "run",
                     Message = $"Executed macro '{macroName}'",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

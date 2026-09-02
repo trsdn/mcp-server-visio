@@ -10,8 +10,8 @@ public class CommentCommands : ICommentCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            var result = new CommentListResult { Success = true, FilePath = ctx.PresentationPath };
-            dynamic pres = ctx.Presentation;
+            var result = new CommentListResult { Success = true, FilePath = ctx.DocumentPath };
+            dynamic pres = ctx.Document;
 
             if (slideIndex > 0)
             {
@@ -61,7 +61,7 @@ public class CommentCommands : ICommentCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             try
             {
                 // Comments.Add2(Left, Top, Author, AuthorInitials, Text)
@@ -75,7 +75,7 @@ public class CommentCommands : ICommentCommands
                     Success = true,
                     Action = "add",
                     Message = $"Added comment by '{author}' on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -89,7 +89,7 @@ public class CommentCommands : ICommentCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(slideIndex);
+            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
             dynamic? comments = null;
             dynamic? comment = null;
             try
@@ -103,7 +103,7 @@ public class CommentCommands : ICommentCommands
                     Success = true,
                     Action = "delete",
                     Message = $"Deleted comment {commentIndex} on slide {slideIndex}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -119,7 +119,7 @@ public class CommentCommands : ICommentCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             int cleared = 0;
 
             void ClearSlide(dynamic s)
@@ -173,7 +173,7 @@ public class CommentCommands : ICommentCommands
                 Message = slideIndex > 0
                     ? $"Cleared {cleared} comment(s) from slide {slideIndex}"
                     : $"Cleared {cleared} comment(s) from all slides",
-                FilePath = ctx.PresentationPath
+                FilePath = ctx.DocumentPath
             };
         });
     }

@@ -1,51 +1,44 @@
 namespace VisioMcp.ComInterop.Session;
 
 /// <summary>
-/// Provides access to the active Office COM objects for session operations.
-/// During the migration, legacy property names remain for compatibility with callers.
+/// Provides access to the active Visio COM objects for session operations.
 /// </summary>
+/// <remarks>
+/// This type deliberately exposes each COM object under exactly one name. It previously carried
+/// PowerPoint aliases — <c>Presentation</c>, <c>PresentationPath</c> and <c>App</c> — alongside the
+/// Visio names, for compatibility during the migration. Because the properties are
+/// <c>dynamic</c>, that made PowerPoint-era code look correct at the call site:
+/// <c>ctx.Document.Slides</c> compiled cleanly and failed only when executed, so the compiler
+/// could not help with the migration in progress. The aliases were removed in #21; do not
+/// reintroduce them. <c>VisioContextTests</c> fails the build if any returns.
+/// </remarks>
 public sealed class VisioContext
 {
     /// <summary>
     /// Creates a new <see cref="VisioContext"/>.
     /// </summary>
-    /// <param name="presentationPath">Full path to the active document.</param>
-    /// <param name="app">Application COM object.</param>
-    /// <param name="presentation">Document COM object.</param>
-    public VisioContext(string presentationPath, dynamic app, dynamic presentation)
+    /// <param name="documentPath">Full path to the active Visio document.</param>
+    /// <param name="application">Visio <c>Application</c> COM object.</param>
+    /// <param name="document">Visio <c>Document</c> COM object.</param>
+    public VisioContext(string documentPath, dynamic application, dynamic document)
     {
-        PresentationPath = presentationPath ?? throw new ArgumentNullException(nameof(presentationPath));
-        App = app ?? throw new ArgumentNullException(nameof(app));
-        Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+        DocumentPath = documentPath ?? throw new ArgumentNullException(nameof(documentPath));
+        Application = application ?? throw new ArgumentNullException(nameof(application));
+        Document = document ?? throw new ArgumentNullException(nameof(document));
     }
-
-    /// <summary>
-    /// Gets the full path to the active document using the legacy name.
-    /// </summary>
-    public string PresentationPath { get; }
 
     /// <summary>
     /// Gets the full path to the active Visio document.
     /// </summary>
-    public string DocumentPath => PresentationPath;
+    public string DocumentPath { get; }
 
     /// <summary>
-    /// Gets the active application COM object.
+    /// Gets the active Visio <c>Application</c> COM object.
     /// </summary>
-    public dynamic App { get; }
+    public dynamic Application { get; }
 
     /// <summary>
-    /// Gets the active application COM object.
+    /// Gets the active Visio <c>Document</c> COM object.
     /// </summary>
-    public dynamic Application => App;
-
-    /// <summary>
-    /// Gets the active document COM object using the legacy presentation name.
-    /// </summary>
-    public dynamic Presentation { get; }
-
-    /// <summary>
-    /// Gets the active Visio document COM object.
-    /// </summary>
-    public dynamic Document => Presentation;
+    public dynamic Document { get; }
 }

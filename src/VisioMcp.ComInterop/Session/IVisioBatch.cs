@@ -1,15 +1,16 @@
 namespace VisioMcp.ComInterop.Session;
 
 /// <summary>
-/// Represents a batch of Office COM operations that share a single application instance.
+/// Represents a batch of Visio COM operations that share a single application instance.
 /// </summary>
+/// <remarks>
+/// Each member is exposed under exactly one name. This interface previously carried
+/// <c>PresentationPath</c>, <c>Presentations</c> and <c>GetPresentation</c> beside their
+/// Document-named twins; since it is the first parameter of every Core command, leaving those in
+/// place would have defeated the alias removal in #21. They had no callers.
+/// </remarks>
 public interface IVisioBatch : IDisposable
 {
-    /// <summary>
-    /// Gets the path to the primary document using the legacy presentation name.
-    /// </summary>
-    string PresentationPath { get; }
-
     /// <summary>
     /// Gets the path to the primary Visio document.
     /// </summary>
@@ -21,19 +22,9 @@ public interface IVisioBatch : IDisposable
     Microsoft.Extensions.Logging.ILogger Logger { get; }
 
     /// <summary>
-    /// Gets all open documents keyed by normalized file path using the legacy property name.
-    /// </summary>
-    IReadOnlyDictionary<string, object> Presentations { get; }
-
-    /// <summary>
     /// Gets all open Visio documents keyed by normalized file path.
     /// </summary>
     IReadOnlyDictionary<string, object> Documents { get; }
-
-    /// <summary>
-    /// Gets the COM document object for a specific file path using the legacy method name.
-    /// </summary>
-    object GetPresentation(string filePath);
 
     /// <summary>
     /// Gets the COM Visio document object for a specific file path.

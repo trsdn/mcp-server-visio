@@ -13,7 +13,7 @@ internal sealed class VisioBatch : IVisioBatch
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-    private readonly string _presentationPath;
+    private readonly string _documentPath;
     private readonly string[] _allPresentationPaths;
     private readonly bool _showPowerPoint;
     private readonly bool _createNewFile;
@@ -28,11 +28,11 @@ internal sealed class VisioBatch : IVisioBatch
 
     private dynamic? _powerPoint;
     private dynamic? _presentation;
-    private Dictionary<string, object>? _presentations;
+    private Dictionary<string, object>? _documents;
     private VisioContext? _context;
 
-    public VisioBatch(string[] presentationPaths, ILogger<VisioBatch>? logger = null, bool show = false, TimeSpan? operationTimeout = null)
-        : this(presentationPaths, logger, show, createNewFile: false, operationTimeout: operationTimeout)
+    public VisioBatch(string[] documentPaths, ILogger<VisioBatch>? logger = null, bool show = false, TimeSpan? operationTimeout = null)
+        : this(documentPaths, logger, show, createNewFile: false, operationTimeout: operationTimeout)
     {
     }
 
@@ -42,13 +42,13 @@ internal sealed class VisioBatch : IVisioBatch
         return new VisioBatch([filePath], logger, show, createNewFile: true, operationTimeout: operationTimeout);
     }
 
-    private VisioBatch(string[] presentationPaths, ILogger<VisioBatch>? logger, bool show, bool createNewFile, TimeSpan? operationTimeout = null)
+    private VisioBatch(string[] documentPaths, ILogger<VisioBatch>? logger, bool show, bool createNewFile, TimeSpan? operationTimeout = null)
     {
-        if (presentationPaths == null || presentationPaths.Length == 0)
-            throw new ArgumentException("At least one presentation path is required", nameof(presentationPaths));
+        if (documentPaths == null || documentPaths.Length == 0)
+            throw new ArgumentException("At least one document path is required", nameof(documentPaths));
 
-        _allPresentationPaths = presentationPaths;
-        _presentationPath = presentationPaths[0];
+        _allPresentationPaths = documentPaths;
+        _documentPath = documentPaths[0];
         _showPowerPoint = show;
         _createNewFile = createNewFile;
         _operationTimeout = operationTimeout ?? ComInteropConstants.DefaultOperationTimeout;
@@ -114,7 +114,7 @@ internal sealed class VisioBatch : IVisioBatch
                     }
 
                     tempPresentations[normalizedPath] = pres;
-                    if (path == _presentationPath)
+                    if (path == _documentPath)
                     {
                         primaryPresentation = pres;
                     }
@@ -122,8 +122,8 @@ internal sealed class VisioBatch : IVisioBatch
 
                 _powerPoint = tempPowerPoint;
                 _presentation = primaryPresentation;
-                _presentations = tempPresentations;
-                _context = new VisioContext(_presentationPath, _powerPoint, _presentation!);
+                _documents = tempPresentations;
+                _context = new VisioContext(_documentPath, _powerPoint, _presentation!);
 
                 started.SetResult();
 
@@ -133,7 +133,7 @@ internal sealed class VisioBatch : IVisioBatch
                     {
                         if (!_workQueue.Reader.WaitToReadAsync(_shutdownCts.Token).AsTask().GetAwaiter().GetResult())
                         {
-                            _logger.LogDebug("Channel completed, exiting message pump for {FileName}", Path.GetFileName(_presentationPath));
+                            _logger.LogDebug("Channel completed, exiting message pump for {FileName}", Path.GetFileName(_documentPath));
                             break;
                         }
 
@@ -161,7 +161,7 @@ internal sealed class VisioBatch : IVisioBatch
                             }
                         }
 
-                        _logger.LogDebug("Shutdown requested, exiting message pump for {FileName}", Path.GetFileName(_presentationPath));
+                        _logger.LogDebug("Shutdown requested, exiting message pump for {FileName}", Path.GetFileName(_documentPath));
                         break;
                     }
                 }
@@ -172,21 +172,21 @@ internal sealed class VisioBatch : IVisioBatch
             }
             finally
             {
-                _logger.LogDebug("STA thread cleanup starting for {FileName}", Path.GetFileName(_presentationPath));
-                VisioShutdownService.CloseAndQuit(_presentation, _powerPoint, false, _presentationPath, _logger);
+                _logger.LogDebug("STA thread cleanup starting for {FileName}", Path.GetFileName(_documentPath));
+                VisioShutdownService.CloseAndQuit(_presentation, _powerPoint, false, _documentPath, _logger);
 
                 _presentation = null;
                 _powerPoint = null;
-                _presentations = null;
+                _documents = null;
                 _context = null;
 
                 OleMessageFilter.Revoke();
-                _logger.LogDebug("STA thread cleanup completed for {FileName}", Path.GetFileName(_presentationPath));
+                _logger.LogDebug("STA thread cleanup completed for {FileName}", Path.GetFileName(_documentPath));
             }
         })
         {
             IsBackground = true,
-            Name = $"VisioBatch-{Path.GetFileName(_presentationPath)}"
+            Name = $"VisioBatch-{Path.GetFileName(_documentPath)}"
         };
 
         _staThread.SetApartmentState(ApartmentState.STA);
@@ -194,9 +194,7 @@ internal sealed class VisioBatch : IVisioBatch
         started.Task.GetAwaiter().GetResult();
     }
 
-    public string PresentationPath => _presentationPath;
-
-    public string DocumentPath => _presentationPath;
+    public string DocumentPath => _documentPath;
 
     public ILogger Logger => _logger;
 
@@ -220,34 +218,30 @@ internal sealed class VisioBatch : IVisioBatch
         }
     }
 
-    public IReadOnlyDictionary<string, object> Presentations
+    public IReadOnlyDictionary<string, object> Documents
     {
         get
         {
             ObjectDisposedException.ThrowIf(_disposed != 0, nameof(VisioBatch));
-            return _presentations ?? throw new InvalidOperationException("Documents not initialized");
+            return _documents ?? throw new InvalidOperationException("Documents not initialized");
         }
     }
 
-    public IReadOnlyDictionary<string, object> Documents => Presentations;
-
-    public object GetPresentation(string filePath)
+    public object GetDocument(string filePath)
     {
         ObjectDisposedException.ThrowIf(_disposed != 0, nameof(VisioBatch));
 
-        if (_presentations == null)
+        if (_documents == null)
             throw new InvalidOperationException("Documents not initialized");
 
         string normalizedPath = Path.GetFullPath(filePath);
-        if (_presentations.TryGetValue(normalizedPath, out var presentation))
+        if (_documents.TryGetValue(normalizedPath, out var document))
         {
-            return presentation;
+            return document;
         }
 
         throw new KeyNotFoundException($"Document '{filePath}' is not open in this batch.");
     }
-
-    public object GetDocument(string filePath) => GetPresentation(filePath);
 
     public void Execute(Action<VisioContext, CancellationToken> operation, CancellationToken cancellationToken = default)
     {
@@ -265,14 +259,14 @@ internal sealed class VisioBatch : IVisioBatch
         if (_operationTimedOut)
         {
             throw new TimeoutException(
-                $"A previous operation timed out or was cancelled for '{Path.GetFileName(_presentationPath)}'. The Visio COM thread may be unresponsive. Please close this session and create a new one.");
+                $"A previous operation timed out or was cancelled for '{Path.GetFileName(_documentPath)}'. The Visio COM thread may be unresponsive. Please close this session and create a new one.");
         }
 
         if (!IsVisioProcessAlive())
         {
-            _logger.LogError("Visio process is no longer running for document {FileName}", Path.GetFileName(_presentationPath));
+            _logger.LogError("Visio process is no longer running for document {FileName}", Path.GetFileName(_documentPath));
             throw new InvalidOperationException(
-                $"Visio process is no longer running for document '{Path.GetFileName(_presentationPath)}'. The application may have been closed manually or crashed. Please close this session and create a new one.");
+                $"Visio process is no longer running for document '{Path.GetFileName(_documentPath)}'. The application may have been closed manually or crashed. Please close this session and create a new one.");
         }
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -310,7 +304,7 @@ internal sealed class VisioBatch : IVisioBatch
         catch (ChannelClosedException)
         {
             throw new ObjectDisposedException(nameof(VisioBatch),
-                $"Session for '{Path.GetFileName(_presentationPath)}' was disposed while submitting an operation.");
+                $"Session for '{Path.GetFileName(_documentPath)}' was disposed while submitting an operation.");
         }
 
         try
@@ -325,14 +319,14 @@ internal sealed class VisioBatch : IVisioBatch
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogError("Operation timed out after {Timeout} for {FileName}", _operationTimeout, Path.GetFileName(_presentationPath));
+            _logger.LogError("Operation timed out after {Timeout} for {FileName}", _operationTimeout, Path.GetFileName(_documentPath));
             _operationTimedOut = true;
             throw new TimeoutException(
-                $"Visio operation timed out after {_operationTimeout.TotalSeconds} seconds for '{Path.GetFileName(_presentationPath)}'. Visio may be unresponsive or the operation is taking longer than expected. Consider increasing timeoutSeconds when opening the session.");
+                $"Visio operation timed out after {_operationTimeout.TotalSeconds} seconds for '{Path.GetFileName(_documentPath)}'. Visio may be unresponsive or the operation is taking longer than expected. Consider increasing timeoutSeconds when opening the session.");
         }
         catch (OperationCanceledException)
         {
-            _logger.LogDebug("Operation cancelled or timed out for {FileName}", Path.GetFileName(_presentationPath));
+            _logger.LogDebug("Operation cancelled or timed out for {FileName}", Path.GetFileName(_documentPath));
             _operationTimedOut = true;
             throw;
         }
@@ -342,7 +336,7 @@ internal sealed class VisioBatch : IVisioBatch
     {
         Execute((ctx, ct) =>
         {
-            VisioShutdownService.SavePresentationWithTimeout(_presentation!, Path.GetFileName(_presentationPath), _logger, ct);
+            VisioShutdownService.SavePresentationWithTimeout(_presentation!, Path.GetFileName(_documentPath), _logger, ct);
             return 0;
         }, cancellationToken);
     }
@@ -353,20 +347,20 @@ internal sealed class VisioBatch : IVisioBatch
 
         if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
         {
-            _logger.LogDebug("[Thread {CallingThread}] Dispose skipped - already disposed for {FileName}", callingThread, Path.GetFileName(_presentationPath));
+            _logger.LogDebug("[Thread {CallingThread}] Dispose skipped - already disposed for {FileName}", callingThread, Path.GetFileName(_documentPath));
             return;
         }
 
-        _logger.LogDebug("[Thread {CallingThread}] Dispose starting for {FileName}", callingThread, Path.GetFileName(_presentationPath));
+        _logger.LogDebug("[Thread {CallingThread}] Dispose starting for {FileName}", callingThread, Path.GetFileName(_documentPath));
         _shutdownCts.Cancel();
         _workQueue.Writer.Complete();
-        _logger.LogDebug("[Thread {CallingThread}] Waiting for STA thread (Id={STAThread}) to exit for {FileName}", callingThread, _staThread?.ManagedThreadId ?? -1, Path.GetFileName(_presentationPath));
+        _logger.LogDebug("[Thread {CallingThread}] Waiting for STA thread (Id={STAThread}) to exit for {FileName}", callingThread, _staThread?.ManagedThreadId ?? -1, Path.GetFileName(_documentPath));
 
         if (_operationTimedOut && _VisioProcessId.HasValue && _staThread.IsAlive)
         {
             _logger.LogWarning(
                 "[Thread {CallingThread}] Operation timed out - force-killing Visio process {ProcessId} before waiting for STA thread for {FileName}",
-                callingThread, _VisioProcessId.Value, Path.GetFileName(_presentationPath));
+                callingThread, _VisioProcessId.Value, Path.GetFileName(_documentPath));
             TryKillProcess(_VisioProcessId.Value, callingThread, "pre-emptive, before STA join");
         }
 
@@ -377,11 +371,11 @@ internal sealed class VisioBatch : IVisioBatch
             {
                 _logger.LogError(
                     "[Thread {CallingThread}] STA thread (Id={STAThread}) did NOT exit within {Timeout} for {FileName}. Attempting force-kill.",
-                    callingThread, _staThread.ManagedThreadId, joinTimeout, Path.GetFileName(_presentationPath));
+                    callingThread, _staThread.ManagedThreadId, joinTimeout, Path.GetFileName(_documentPath));
 
                 if (_VisioProcessId.HasValue)
                 {
-                    TryKillProcess(_VisioProcessId.Value, callingThread, Path.GetFileName(_presentationPath));
+                    TryKillProcess(_VisioProcessId.Value, callingThread, Path.GetFileName(_documentPath));
                     _staThread.Join(TimeSpan.FromSeconds(5));
                 }
                 else
@@ -400,7 +394,7 @@ internal sealed class VisioBatch : IVisioBatch
                 {
                     _logger.LogWarning(
                         "[Thread {CallingThread}] Visio process {ProcessId} did not exit within 5s for {FileName}. Force-killing lingering process.",
-                        callingThread, _VisioProcessId.Value, Path.GetFileName(_presentationPath));
+                        callingThread, _VisioProcessId.Value, Path.GetFileName(_documentPath));
                     process.Kill();
                     process.WaitForExit(3000);
                 }

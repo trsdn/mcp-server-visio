@@ -10,14 +10,14 @@ public class PageSetupCommands : IPageSetupCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic pageSetup = pres.PageSetup;
             try
             {
                 return new PageSetupResult
                 {
                     Success = true,
-                    FilePath = ctx.PresentationPath,
+                    FilePath = ctx.DocumentPath,
                     SlideWidth = Convert.ToSingle(pageSetup.SlideWidth),
                     SlideHeight = Convert.ToSingle(pageSetup.SlideHeight),
                     SlideOrientation = Convert.ToInt32(pageSetup.SlideOrientation),
@@ -35,7 +35,7 @@ public class PageSetupCommands : IPageSetupCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic pageSetup = pres.PageSetup;
             try
             {
@@ -47,7 +47,7 @@ public class PageSetupCommands : IPageSetupCommands
                     Success = true,
                     Action = "set-size",
                     Message = $"Set slide size to {slideWidth}x{slideHeight} points",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
@@ -61,7 +61,7 @@ public class PageSetupCommands : IPageSetupCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic pageSetup = pres.PageSetup;
             try
             {
@@ -72,7 +72,7 @@ public class PageSetupCommands : IPageSetupCommands
                     Success = true,
                     Action = "set-first-number",
                     Message = $"Set first slide number to {firstSlideNumber}",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally

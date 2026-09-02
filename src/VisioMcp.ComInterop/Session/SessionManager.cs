@@ -637,7 +637,7 @@ public sealed class SessionManager : IDisposable
                 // Dispose sequentially - VisioBatch.Dispose() handles its own Visio cleanup
                 // via VisioShutdownService with proper timeouts and retry logic while
                 // discarding unsaved changes to avoid modal save prompts on shutdown.
-                _logger.LogInformation("Disposing session for {Path} without implicit save", session.PresentationPath);
+                _logger.LogInformation("Disposing session for {Path} without implicit save", session.DocumentPath);
                 session.Dispose();
             }
             catch (Exception)

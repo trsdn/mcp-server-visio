@@ -68,7 +68,7 @@ public class VisioSessionTests : IDisposable
 
             // Assert
             Assert.NotNull(batch);
-            Assert.Equal(testFile, batch.PresentationPath);
+            Assert.Equal(testFile, batch.DocumentPath);
 
             _output.WriteLine($"✓ Batch created successfully for: {Path.GetFileName(testFile)}");
         }
@@ -128,7 +128,7 @@ public class VisioSessionTests : IDisposable
             // Act
             var result = VisioSession.CreateNew(testFile, isMacroEnabled: false, (ctx, ct) =>
             {
-                _output.WriteLine($"✓ Presentation created at: {ctx.PresentationPath}");
+                _output.WriteLine($"✓ Presentation created at: {ctx.DocumentPath}");
                 return 0;
             });
 
@@ -141,7 +141,7 @@ public class VisioSessionTests : IDisposable
             {
                 batch.Execute((ctx, ct) =>
                 {
-                    Assert.NotNull(ctx.Presentation);
+                    Assert.NotNull(ctx.Document);
                     _output.WriteLine("✓ Can open created presentation with batch API");
                     return 0;
                 });
@@ -164,7 +164,7 @@ public class VisioSessionTests : IDisposable
             // Act
             var result = VisioSession.CreateNew(testFile, isMacroEnabled: true, (ctx, ct) =>
             {
-                _output.WriteLine($"✓ Macro-enabled presentation created at: {ctx.PresentationPath}");
+                _output.WriteLine($"✓ Macro-enabled presentation created at: {ctx.DocumentPath}");
                 return 0;
             });
 

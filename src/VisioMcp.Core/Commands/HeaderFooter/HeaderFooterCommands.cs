@@ -10,7 +10,7 @@ public class HeaderFooterCommands : IHeaderFooterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             // Slide-level headers/footers are in Designs(1).SlideMaster.HeadersFooters
             // Simpler: use first slide's HeadersFooters as representative
             dynamic slides = pres.Slides;
@@ -21,7 +21,7 @@ public class HeaderFooterCommands : IHeaderFooterCommands
                     return new HeaderFooterResult
                     {
                         Success = true,
-                        FilePath = ctx.PresentationPath,
+                        FilePath = ctx.DocumentPath,
                     };
                 }
 
@@ -33,7 +33,7 @@ public class HeaderFooterCommands : IHeaderFooterCommands
                     var result = new HeaderFooterResult
                     {
                         Success = true,
-                        FilePath = ctx.PresentationPath,
+                        FilePath = ctx.DocumentPath,
                     };
 
                     try { result.ShowFooter = Convert.ToInt32(hf.Footer.Visible) != 0; } catch { }
@@ -60,7 +60,7 @@ public class HeaderFooterCommands : IHeaderFooterCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
+            dynamic pres = ctx.Document;
             dynamic slides = pres.Slides;
             try
             {
@@ -94,7 +94,7 @@ public class HeaderFooterCommands : IHeaderFooterCommands
                     Success = true,
                     Action = "set",
                     Message = $"Updated header/footer settings on {count} slide(s)",
-                    FilePath = ctx.PresentationPath
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
