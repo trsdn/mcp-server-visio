@@ -13,9 +13,6 @@
 
     <!-- Exclude from main solution build by default - built on demand -->
     <IsPackable>false</IsPackable>
-
-    <!-- Suppress vulnerability warnings for build-time MSBuild SDK packages -->
-    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
