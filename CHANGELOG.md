@@ -19,6 +19,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`scripts/pre-commit.ps1` now exits 0 on a clean checkout** (#16). Six of the documented gates
+  failed, and the gate inventory itself was wrong in both directions.
+  - `check-com-leaks.ps1` excluded `PptBatch.cs|PptSession.cs` — files that do not exist — so the
+    legitimate session file `VisioBatch.cs` was reported as a leak. Now excludes
+    `VisioBatch.cs|VisioSession.cs`; **1 leak → 0**.
+  - `check-cli-settings-usage.ps1` matched `class Settings ... (.+)$` under `Singleline`, which
+    swallowed the rest of the file. In `BatchCommand.cs` that pulled in the `BatchEntry` and
+    `BatchResult` DTOs and reported their properties as unused settings. Now brace-matches the real
+    class body. Its exclusion lists (`PivotTable`, `Slicer`, `DaxQuery`, `MCodeFile`, `SheetScope`)
+    were Excel-era and are deleted.
+  - `Test-CliWorkflow.ps1` created a `.pptx` and drove the suppressed `slide` domain. Rewritten
+    against `page` / `--page-index` on a `.vsdx`; **11/11 steps pass**, including save-and-reopen
+    round-trip.
+  - `Stop-VisioMcpProcesses.ps1` killed `POWERPNT` and never `VISIO`, so Visio processes leaked
+    after every COM test run — 28 orphans were observed during this work. Now kills `VISIO`.
+    `pre-commit.ps1` had the same defect in its own cleanup loop.
+  - CI now runs the Visio-independent gates via a `quality-gates` job, so they cannot silently rot
+    again. `build-cli.yml` and `build-mcp-server.yml` also now build the whole solution before the
+    coverage audit, which reads generated output from both `Core` and `McpServer`.
+
+- **`audit-core-coverage.ps1` no longer reports "100% coverage" on zero discovered methods** (#15).
+  Pre-commit gate #3 parsed a hand-written `ToolActions.cs` / `ActionExtensions.cs` model that no
+  longer exists, so it found **0 methods and 0 enum values**, printed *"No gaps detected — 100%
+  coverage maintained!"* and exited **0**. A gate that reports success on an empty dataset is worse
+  than no gate, because it manufactures confidence.
+  Rewritten against the real source of truth — `[ServiceCategory]` / `[McpTool(PublicSurface)]`
+  attributes compared against the generated `ServiceRegistry.*.Dispatch.g.cs` and
+  `McpTool.*.g.cs`. It now discovers **37 categories (13 public, 24 suppressed) and 281 interface
+  methods**, and detects three classes of gap: an action missing from dispatch, a public category
+  with no MCP tool, and a suppressed category that leaked onto the public surface.
+  **Discovery returning nothing is now a hard failure**, including when the tree has not been built.
+  Verified in all three states: green on real data, red on an induced gap, red on empty discovery.
+  Hand-written tools (`VisioFileTool`) are recognised so `file` is not a false positive.
+  Callers updated: `pre-commit.ps1` (the `-CheckNaming` switch no longer exists — action names are
+  now derived from method names by the generator, so they cannot drift) and the usage docs in
+  `.github/instructions/coverage-prevention-strategy.instructions.md`, whose sample output
+  described tables and PivotTables from the Excel ancestor.
+
 - **All 14 OnDemand session/batch tests now pass** (#25). They created `.pptx` files, which
   `SessionManager` correctly rejects, so the suite that Rule 3 makes mandatory before touching
   session or batch code had **zero** working coverage of STA threading, COM lifetime, timeout
@@ -110,6 +148,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updated root, CLI, MCP, extension, and installation docs to describe the current Visio-first state more truthfully
 
 ### Removed
+
+- **Four obsolete pre-commit scripts deleted** (#16). `check-mcp-core-implementations.ps1`,
+  `check-cli-coverage.ps1` and `check-cli-action-coverage.ps1` parsed a hand-written
+  `ToolActions.cs` / `ActionExtensions.cs` model that no longer exists; the enum and the CLI
+  commands are now generated from the same `[ServiceCategory]` interfaces as the methods, so they
+  cannot drift apart by construction. Their surviving intent — that every public domain reaches
+  both MCP and CLI, and no suppressed domain leaks — is now asserted by `audit-core-coverage.ps1`
+  against the generated `_CliCategories.g.cs`.
+  `check-dynamic-casts.ps1` enforced documenting `((dynamic))` casts as *"PIA coverage gaps"* and
+  pointed at `docs/PIA-COVERAGE.md`, which does not exist. Its premise was migrating to
+  `Microsoft.Office.Interop.PowerPoint` — the wrong product — and its exclusion list named the
+  same nonexistent `Ppt*.cs` files.
+
+- **The unused `Microsoft.Office.Interop.PowerPoint` PIA reference removed** (#16) from
+  `VisioMcp.Core.csproj` and `Directory.Packages.props`. It was referenced with
+  `EmbedInteropTypes=true` and a `NU1701` suppression, but **no code used it** — the only match in
+  the tree was a comment. The solution builds with 0 warnings and 0 errors without it.
 
 - **`VisioMcp.Diagnostics.Tests` deleted** (#30). It contained no test files — only a `.csproj` —
   yet sat in the solution, built on every `dotnet build`, and appeared in the path filters of

@@ -1,18 +1,18 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Tests the PowerPoint CLI end-to-end workflow - exactly what a user would do.
+    Tests the Visio CLI end-to-end workflow - exactly what a user would do.
 
 .DESCRIPTION
     This script demonstrates and tests a basic CLI workflow:
     1. Create session (auto-starts daemon, creates file)
-    2. Create slide with Blank layout
-    3. List slides
+    2. Create a page
+    3. List pages
     4. Add textbox content
-    5. List shapes on the slide
+    5. List shapes on the page
     6. Close session (with save)
-    7. Reopen saved file (session open - exercises Presentations.Open path)
-    8. List slides in reopened session
+    7. Reopen saved file (session open - exercises Documents.Open path)
+    8. List pages in reopened session
     9. List shapes in reopened session
     10. Close reopened session
     11. Verify file exists
@@ -49,7 +49,7 @@ $cli = (Resolve-Path $cliPath).Path
 Write-Host "Using CLI: $cli" -ForegroundColor Cyan
 
 # Generate unique test file
-$testFile = Join-Path $env:TEMP "cli-workflow-test-$(Get-Random).pptx"
+$testFile = Join-Path $env:TEMP "cli-workflow-test-$(Get-Random).vsdx"
 Write-Host "Test file: $testFile" -ForegroundColor Cyan
 
 $passed = 0
@@ -93,7 +93,7 @@ function Test-Step {
 # ============================================================================
 
 Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "PowerPoint CLI Workflow Test" -ForegroundColor Cyan
+Write-Host "Visio CLI Workflow Test" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
 # 1. Create session (auto-starts daemon, creates file)
@@ -112,35 +112,35 @@ if (-not $session.sessionId) {
 $sessionId = $session.sessionId
 Write-Host "  Session ID: $sessionId" -ForegroundColor Gray
 
-# 2. Create slide
-Test-Step "Create slide with Blank layout" {
-    & $cli -q slide create --session $sessionId --position 0 --layout-name Blank | ConvertFrom-Json
+# 2. Create page
+Test-Step "Create page" {
+    & $cli -q page create --session $sessionId --name "SmokeTestPage" | ConvertFrom-Json
 } -Verify {
     param($r)
     $r.success -eq $true
 }
 
-# 3. List slides
-$slides = Test-Step "List slides" {
-    & $cli -q slide list --session $sessionId | ConvertFrom-Json
+# 3. List pages
+$pages = Test-Step "List pages" {
+    & $cli -q page list --session $sessionId | ConvertFrom-Json
 } -Verify {
     param($r)
-    $r.success -eq $true -and $null -ne $r.slides
+    $r.success -eq $true -and $null -ne $r.pages
 }
 
-Write-Host "  Slides: $(($slides.slides | Measure-Object).Count)" -ForegroundColor Gray
+Write-Host "  Pages: $(($pages.pages | Measure-Object).Count)" -ForegroundColor Gray
 
 # 4. Add textbox content
-Test-Step "Add textbox to slide 1" {
-    & $cli -q shape add-textbox --session $sessionId --slide-index 1 --left 72 --top 72 --width 240 --height 48 --text "CLI smoke test" | ConvertFrom-Json
+Test-Step "Add textbox to page 1" {
+    & $cli -q shape add-textbox --session $sessionId --page-index 1 --left 72 --top 72 --width 240 --height 48 --text "CLI smoke test" | ConvertFrom-Json
 } -Verify {
     param($r)
     $r.success -eq $true
 }
 
-# 5. List shapes on slide 1
-$shapes = Test-Step "List shapes on slide 1" {
-    & $cli -q shape list --session $sessionId --slide-index 1 | ConvertFrom-Json
+# 5. List shapes on page 1
+$shapes = Test-Step "List shapes on page 1" {
+    & $cli -q shape list --session $sessionId --page-index 1 | ConvertFrom-Json
 } -Verify {
     param($r)
     $r.success -eq $true -and $null -ne $r.shapes
@@ -156,9 +156,9 @@ Test-Step "Close session (with save)" {
     $r.success -eq $true
 }
 
-# 7. Reopen saved file (session open - exercises Presentations.Open path distinct from Add+SaveAs)
-#    This step would catch deployment issues like missing office.dll (issue #487) because
-#    PptBatch.ctor runs AutomationSecurity setup before opening any presentation.
+# 7. Reopen saved file (session open - exercises Documents.Open path distinct from Add+SaveAs)
+#    This step catches deployment issues that only surface when opening an existing document,
+#    because VisioBatch's constructor runs AutomationSecurity setup before opening anything.
 $reopenSession = Test-Step "Reopen saved file (session open)" {
     & $cli -q session open $testFile | ConvertFrom-Json
 } -Verify {
@@ -166,21 +166,21 @@ $reopenSession = Test-Step "Reopen saved file (session open)" {
     $r.sessionId -and $r.success -ne $false
 }
 
-# 8. List slides in reopened session (proves the file loaded correctly)
+# 8. List pages in reopened session (proves the file loaded correctly)
 if ($reopenSession -and $reopenSession.sessionId) {
     $reopenSessionId = $reopenSession.sessionId
-    $reopenedSlides = Test-Step "List slides in reopened session" {
-        & $cli -q slide list --session $reopenSessionId | ConvertFrom-Json
+    $reopenedPages = Test-Step "List pages in reopened session" {
+        & $cli -q page list --session $reopenSessionId | ConvertFrom-Json
     } -Verify {
         param($r)
-        $r.success -eq $true -and $null -ne $r.slides
+        $r.success -eq $true -and $null -ne $r.pages
     }
 
-    Write-Host "  Reopened slides: $(($reopenedSlides.slides | Measure-Object).Count)" -ForegroundColor Gray
+    Write-Host "  Reopened pages: $(($reopenedPages.pages | Measure-Object).Count)" -ForegroundColor Gray
 
     # 9. List shapes in reopened session (proves saved content loaded correctly)
-    $reopenedShapes = Test-Step "List shapes in reopened slide 1" {
-        & $cli -q shape list --session $reopenSessionId --slide-index 1 | ConvertFrom-Json
+    $reopenedShapes = Test-Step "List shapes on reopened page 1" {
+        & $cli -q shape list --session $reopenSessionId --page-index 1 | ConvertFrom-Json
     } -Verify {
         param($r)
         $r.success -eq $true -and $null -ne $r.shapes
