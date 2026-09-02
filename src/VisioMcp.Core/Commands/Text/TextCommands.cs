@@ -127,7 +127,7 @@ public class TextCommands : ITextCommands
             dynamic pres = ctx.Document;
             var matches = new List<string>();
 
-            void SearchSlide(dynamic s, int idx)
+            void SearchPage(dynamic s, int idx)
             {
                 dynamic shapes = s.Shapes;
                 try
@@ -158,38 +158,38 @@ public class TextCommands : ITextCommands
 
             if (pageIndex > 0)
             {
-                dynamic slide = pres.Pages.Item(pageIndex);
+                dynamic page = pres.Pages.Item(pageIndex);
                 try
                 {
-                    SearchSlide(slide, pageIndex);
+                    SearchPage(page, pageIndex);
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slide!);
+                    ComUtilities.Release(ref page!);
                 }
             }
             else
             {
-                dynamic slides = pres.Pages;
+                dynamic pages = pres.Pages;
                 try
                 {
-                    int slideCount = Convert.ToInt32(slides.Count);
-                    for (int i = 1; i <= slideCount; i++)
+                    int pageCount = Convert.ToInt32(pages.Count);
+                    for (int i = 1; i <= pageCount; i++)
                     {
-                        dynamic slide = slides.Item(i);
+                        dynamic page = pages.Item(i);
                         try
                         {
-                            SearchSlide(slide, i);
+                            SearchPage(page, i);
                         }
                         finally
                         {
-                            ComUtilities.Release(ref slide!);
+                            ComUtilities.Release(ref page!);
                         }
                     }
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slides!);
+                    ComUtilities.Release(ref pages!);
                 }
             }
 
@@ -212,7 +212,7 @@ public class TextCommands : ITextCommands
             dynamic pres = ctx.Document;
             int replacements = 0;
 
-            void ReplaceInSlide(dynamic s)
+            void ReplaceInPage(dynamic s)
             {
                 dynamic shapes = s.Shapes;
                 try
@@ -244,38 +244,38 @@ public class TextCommands : ITextCommands
 
             if (pageIndex > 0)
             {
-                dynamic slide = pres.Pages.Item(pageIndex);
+                dynamic page = pres.Pages.Item(pageIndex);
                 try
                 {
-                    ReplaceInSlide(slide);
+                    ReplaceInPage(page);
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slide!);
+                    ComUtilities.Release(ref page!);
                 }
             }
             else
             {
-                dynamic slides = pres.Pages;
+                dynamic pages = pres.Pages;
                 try
                 {
-                    int slideCount = Convert.ToInt32(slides.Count);
-                    for (int i = 1; i <= slideCount; i++)
+                    int pageCount = Convert.ToInt32(pages.Count);
+                    for (int i = 1; i <= pageCount; i++)
                     {
-                        dynamic slide = slides.Item(i);
+                        dynamic page = pages.Item(i);
                         try
                         {
-                            ReplaceInSlide(slide);
+                            ReplaceInPage(page);
                         }
                         finally
                         {
-                            ComUtilities.Release(ref slide!);
+                            ComUtilities.Release(ref page!);
                         }
                     }
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slides!);
+                    ComUtilities.Release(ref pages!);
                 }
             }
 
@@ -430,7 +430,7 @@ public class TextCommands : ITextCommands
             dynamic pres = ctx.Document;
             int totalWords = 0;
 
-            void CountInSlide(dynamic s)
+            void CountInPage(dynamic s)
             {
                 dynamic shapes = s.Shapes;
                 try
@@ -461,38 +461,38 @@ public class TextCommands : ITextCommands
 
             if (pageIndex > 0)
             {
-                dynamic slide = pres.Pages.Item(pageIndex);
+                dynamic page = pres.Pages.Item(pageIndex);
                 try
                 {
-                    CountInSlide(slide);
+                    CountInPage(page);
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slide!);
+                    ComUtilities.Release(ref page!);
                 }
             }
             else
             {
-                dynamic slides = pres.Pages;
+                dynamic pages = pres.Pages;
                 try
                 {
-                    int slideCount = Convert.ToInt32(slides.Count);
-                    for (int i = 1; i <= slideCount; i++)
+                    int pageCount = Convert.ToInt32(pages.Count);
+                    for (int i = 1; i <= pageCount; i++)
                     {
-                        dynamic slide = slides.Item(i);
+                        dynamic page = pages.Item(i);
                         try
                         {
-                            CountInSlide(slide);
+                            CountInPage(page);
                         }
                         finally
                         {
-                            ComUtilities.Release(ref slide!);
+                            ComUtilities.Release(ref page!);
                         }
                     }
                 }
                 finally
                 {
-                    ComUtilities.Release(ref slides!);
+                    ComUtilities.Release(ref pages!);
                 }
             }
 

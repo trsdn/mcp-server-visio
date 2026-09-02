@@ -26,7 +26,7 @@ public sealed class SessionManager : IDisposable
     private readonly ConcurrentDictionary<string, string> _activeFilePaths = new();
     private readonly ConcurrentDictionary<string, SessionTarget> _sessionTargets = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, int> _activeOperationCounts = new();
-    private readonly ConcurrentDictionary<string, bool> _showPowerPointFlags = new();
+    private readonly ConcurrentDictionary<string, bool> _showVisioFlags = new();
     private readonly ConcurrentDictionary<string, SessionOrigin> _sessionOrigins = new();
     private readonly ConcurrentDictionary<string, DateTime> _sessionCreatedAt = new();
     private readonly Polly.ResiliencePipeline _sessionCreationPipeline = ResiliencePipelines.CreateSessionCreationPipeline();
@@ -113,7 +113,7 @@ public sealed class SessionManager : IDisposable
 
             // Initialize operation counter and show flag
             _activeOperationCounts[sessionId] = 0;
-            _showPowerPointFlags[sessionId] = show;
+            _showVisioFlags[sessionId] = show;
             _sessionOrigins[sessionId] = origin;
             _sessionCreatedAt[sessionId] = DateTime.UtcNow;
 
@@ -189,7 +189,7 @@ public sealed class SessionManager : IDisposable
         try
         {
             // Create new Presentation and keep session open with retry for transient COM failures
-            batch = _sessionCreationPipeline.Execute(() => VisioBatch.CreateNewPresentation(normalizedPath, isMacroEnabled, logger: null, show: show, operationTimeout: operationTimeout));
+            batch = _sessionCreationPipeline.Execute(() => VisioBatch.CreateNewDocument(normalizedPath, isMacroEnabled, logger: null, show: show, operationTimeout: operationTimeout));
 
             // Store in active sessions
             if (!_activeSessions.TryAdd(sessionId, batch))
@@ -213,7 +213,7 @@ public sealed class SessionManager : IDisposable
 
             // Initialize operation counter and show flag
             _activeOperationCounts[sessionId] = 0;
-            _showPowerPointFlags[sessionId] = show;
+            _showVisioFlags[sessionId] = show;
             _sessionOrigins[sessionId] = origin;
             _sessionCreatedAt[sessionId] = DateTime.UtcNow;
 
@@ -240,7 +240,7 @@ public sealed class SessionManager : IDisposable
     /// If the session exists but PowerPoint has died, it is automatically cleaned up and null is returned.
     /// </summary>
     /// <param name="sessionId">Session ID returned from CreateSession</param>
-    /// <returns>IVisioBatch instance, or null if session not found or PowerPoint process is dead</returns>
+    /// <returns>IVisioBatch instance, or null if session not found or Visio process is dead</returns>
     public IVisioBatch? GetSession(string sessionId)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -255,7 +255,7 @@ public sealed class SessionManager : IDisposable
             return null;
         }
 
-        // Check if PowerPoint process is still alive
+        // Check if Visio process is still alive
         if (!batch.IsVisioProcessAlive())
         {
             _logger?.LogWarning("Session {SessionId} has a dead Visio process, auto-cleaning up", sessionId);
@@ -267,7 +267,7 @@ public sealed class SessionManager : IDisposable
     }
 
     /// <summary>
-    /// Cleans up a session whose PowerPoint process has died.
+    /// Cleans up a session whose Visio process has died.
     /// This removes all tracking data and disposes the batch (best effort).
     /// </summary>
     private void CleanupDeadSession(string sessionId, IVisioBatch batch)
@@ -291,7 +291,7 @@ public sealed class SessionManager : IDisposable
 
         // Clean up operation tracking data
         _activeOperationCounts.TryRemove(sessionId, out _);
-        _showPowerPointFlags.TryRemove(sessionId, out _);
+        _showVisioFlags.TryRemove(sessionId, out _);
 
         // Clean up session origin tracking data
         _sessionOrigins.TryRemove(sessionId, out _);
@@ -346,10 +346,10 @@ public sealed class SessionManager : IDisposable
     /// </summary>
     /// <param name="sessionId">Session ID</param>
     /// <returns>True if PowerPoint is visible for this session</returns>
-    public bool IsPowerPointVisible(string sessionId)
+    public bool IsVisioVisible(string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId)) return false;
-        return _showPowerPointFlags.TryGetValue(sessionId, out var visible) && visible;
+        return _showVisioFlags.TryGetValue(sessionId, out var visible) && visible;
     }
 
     /// <summary>
@@ -359,11 +359,11 @@ public sealed class SessionManager : IDisposable
     /// <param name="sessionId">Session ID</param>
     /// <param name="visible">New visibility state</param>
     /// <returns>True if session was found and flag updated, false if session not found</returns>
-    public bool SetPowerPointVisible(string sessionId, bool visible)
+    public bool SetVisioVisible(string sessionId, bool visible)
     {
         if (string.IsNullOrWhiteSpace(sessionId)) return false;
         if (!_activeSessions.ContainsKey(sessionId)) return false;
-        _showPowerPointFlags[sessionId] = visible;
+        _showVisioFlags[sessionId] = visible;
         return true;
     }
 
@@ -388,7 +388,7 @@ public sealed class SessionManager : IDisposable
         }
 
         var activeOps = GetActiveOperationCount(sessionId);
-        var isVisible = IsPowerPointVisible(sessionId);
+        var isVisible = IsVisioVisible(sessionId);
 
         if (activeOps > 0)
         {
@@ -478,7 +478,7 @@ public sealed class SessionManager : IDisposable
 
         // Clean up operation tracking data
         _activeOperationCounts.TryRemove(sessionId, out _);
-        _showPowerPointFlags.TryRemove(sessionId, out _);
+        _showVisioFlags.TryRemove(sessionId, out _);
 
         // Clean up session origin tracking data
         _sessionOrigins.TryRemove(sessionId, out _);
@@ -502,11 +502,11 @@ public sealed class SessionManager : IDisposable
     public int ActiveSessionCount => _activeSessions.Count;
 
     /// <summary>
-    /// Checks if the PowerPoint process for a session is still alive.
+    /// Checks if the Visio process for a session is still alive.
     /// If the session exists but PowerPoint has died, it is automatically cleaned up.
     /// </summary>
     /// <param name="sessionId">Session ID</param>
-    /// <returns>True if session exists and PowerPoint process is alive, false otherwise</returns>
+    /// <returns>True if session exists and Visio process is alive, false otherwise</returns>
     public bool IsSessionAlive(string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId)) return false;
@@ -531,7 +531,7 @@ public sealed class SessionManager : IDisposable
 
     /// <summary>
     /// Returns a snapshot of active sessions with associated Presentation paths.
-    /// Dead sessions (where PowerPoint process has died) are automatically cleaned up and excluded.
+    /// Dead sessions (where Visio process has died) are automatically cleaned up and excluded.
     /// </summary>
     public IReadOnlyList<SessionDescriptor> GetActiveSessions()
     {
@@ -624,7 +624,7 @@ public sealed class SessionManager : IDisposable
         _disposed = true;
 
         // Close all active sessions SEQUENTIALLY to avoid COM threading issues
-        // PowerPoint COM objects must be disposed on their STA threads, parallel disposal causes deadlocks
+        // Visio COM objects must be disposed on their STA threads, parallel disposal causes deadlocks
         var sessions = _activeSessions.Values.ToList();
         _activeSessions.Clear();
         _activeFilePaths.Clear();
@@ -714,12 +714,12 @@ public enum SessionOrigin
 /// Result of validating whether a session can be closed.
 /// </summary>
 /// <param name="SessionExists">Whether the session was found.</param>
-/// <param name="IsPowerPointVisible">Whether PowerPoint is visible (show=true).</param>
+/// <param name="IsVisioVisible">Whether PowerPoint is visible (show=true).</param>
 /// <param name="ActiveOperationCount">Number of operations currently running.</param>
 /// <param name="BlockingReason">Reason why close is blocked, or null if close is allowed.</param>
 public sealed record CloseValidationResult(
     bool SessionExists,
-    bool IsPowerPointVisible,
+    bool IsVisioVisible,
     int ActiveOperationCount,
     string? BlockingReason)
 {

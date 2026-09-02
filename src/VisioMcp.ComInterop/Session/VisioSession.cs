@@ -94,7 +94,7 @@ public static class VisioSession
                 Directory.CreateDirectory(directory);
             }
 
-            CreatePresentationOnStaThread(fullPath, isMacroEnabled, cancellationToken);
+            CreateDocumentOnStaThread(fullPath, isMacroEnabled, cancellationToken);
 
             using var batch = BeginBatch(fullPath);
             return batch.Execute(operation, cancellationToken);
@@ -105,7 +105,7 @@ public static class VisioSession
         }
     }
 
-    private static void CreatePresentationOnStaThread(string fullPath, bool isMacroEnabled, CancellationToken cancellationToken)
+    private static void CreateDocumentOnStaThread(string fullPath, bool isMacroEnabled, CancellationToken cancellationToken)
     {
         _ = isMacroEnabled;
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

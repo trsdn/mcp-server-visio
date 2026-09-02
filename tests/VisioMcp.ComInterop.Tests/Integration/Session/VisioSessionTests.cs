@@ -12,7 +12,7 @@ namespace VisioMcp.ComInterop.Tests.Integration;
 /// LAYER RESPONSIBILITY:
 /// - ✅ Test VisioSession.BeginBatch() validation and batch creation
 /// - ✅ Test VisioSession.CreateNew() file creation
-/// - ✅ Verify POWERPNT.EXE process termination (no leaks)
+/// - ✅ Verify VISIO.EXE process termination (no leaks)
 ///
 /// NOTE: VisioSession methods use VisioShutdownService for resilient cleanup.
 /// Automatic RCW finalizers handle COM reference cleanup (no forced GC needed).
@@ -31,16 +31,16 @@ public class VisioSessionTests : IDisposable
     {
         _output = output;
 
-        // Kill any existing PowerPoint processes to ensure clean state
-        var existingProcesses = Process.GetProcessesByName("POWERPNT");
+        // Kill any existing Visio processes to ensure clean state
+        var existingProcesses = Process.GetProcessesByName("VISIO");
         if (existingProcesses.Length > 0)
         {
-            _output.WriteLine($"Cleaning up {existingProcesses.Length} existing PowerPoint processes...");
+            _output.WriteLine($"Cleaning up {existingProcesses.Length} existing Visio processes...");
             foreach (var p in existingProcesses)
             {
                 p.Kill(); p.WaitForExit(2000);
             }
-            _output.WriteLine("PowerPoint processes cleaned up");
+            _output.WriteLine("Visio processes cleaned up");
         }
 
     }
@@ -58,7 +58,7 @@ public class VisioSessionTests : IDisposable
     public void BeginBatch_WithValidFile_CreatesBatch()
     {
         // Arrange
-        string testFile = Path.Join(Path.GetTempPath(), $"session-test-{Guid.NewGuid():N}.pptx");
+        string testFile = Path.Join(Path.GetTempPath(), $"session-test-{Guid.NewGuid():N}.vsdx");
         CreateTempTestFile(testFile);
 
         try
@@ -82,7 +82,7 @@ public class VisioSessionTests : IDisposable
     public void BeginBatch_WithNonExistentFile_ThrowsFileNotFoundException()
     {
         // Arrange
-        string nonExistentFile = Path.Join(Path.GetTempPath(), $"does-not-exist-{Guid.NewGuid():N}.pptx");
+        string nonExistentFile = Path.Join(Path.GetTempPath(), $"does-not-exist-{Guid.NewGuid():N}.vsdx");
 
         // Act & Assert
         Assert.Throws<FileNotFoundException>(() =>
@@ -118,10 +118,10 @@ public class VisioSessionTests : IDisposable
     }
 
     [Fact]
-    public void CreateNew_CreatesNewPresentation()
+    public void CreateNew_CreatesNewDocument()
     {
         // Arrange
-        string testFile = Path.Join(Path.GetTempPath(), $"new-presentation-{Guid.NewGuid():N}.pptx");
+        string testFile = Path.Join(Path.GetTempPath(), $"new-document-{Guid.NewGuid():N}.vsdx");
 
         try
         {
@@ -154,10 +154,10 @@ public class VisioSessionTests : IDisposable
     }
 
     [Fact]
-    public void CreateNew_WithMacroEnabled_CreatesXlsmFile()
+    public void CreateNew_WithMacroEnabled_CreatesMacroEnabledFile()
     {
         // Arrange
-        string testFile = Path.Join(Path.GetTempPath(), $"new-macro-presentation-{Guid.NewGuid():N}.pptm");
+        string testFile = Path.Join(Path.GetTempPath(), $"new-macro-document-{Guid.NewGuid():N}.vsdm");
 
         try
         {
@@ -170,8 +170,8 @@ public class VisioSessionTests : IDisposable
 
             // Assert
             Assert.True(File.Exists(testFile), "XLSM file should be created");
-            Assert.Equal(".pptm", Path.GetExtension(testFile).ToLowerInvariant());
-            _output.WriteLine("✓ Correctly created .pptm file");
+            Assert.Equal(".vsdm", Path.GetExtension(testFile).ToLowerInvariant());
+            _output.WriteLine("✓ Correctly created .vsdm file");
         }
         finally
         {
@@ -184,7 +184,7 @@ public class VisioSessionTests : IDisposable
     {
         // Arrange
         string testDir = Path.Join(Path.GetTempPath(), $"testdir-{Guid.NewGuid():N}");
-        string testFile = Path.Join(testDir, "newfile.pptx");
+        string testFile = Path.Join(testDir, "newfile.vsdx");
 
         try
         {
@@ -209,15 +209,15 @@ public class VisioSessionTests : IDisposable
 
     /// <summary>
     /// Path to the template xlsx file used for fast test file creation.
-    /// Copying a template is ~1000x faster than spawning PowerPoint to create a new presentation.
+    /// Copying a template is ~1000x faster than starting Visio to create a new document.
     /// </summary>
     private static readonly string TemplateFilePath = Path.Combine(
         Path.GetDirectoryName(typeof(VisioSessionTests).Assembly.Location)!,
-        "Integration", "Session", "TestFiles", "batch-test-static.pptx");
+        "Integration", "Session", "TestFiles", "batch-test-static.vsdx");
 
     private static void CreateTempTestFile(string filePath)
     {
-        // PERFORMANCE OPTIMIZATION: Copy from template instead of spawning PowerPoint.
+        // PERFORMANCE OPTIMIZATION: Copy from template instead of starting Visio.
         // For tests that only need a valid PowerPoint file to exist (not testing creation),
         // this reduces setup time from ~7-14 seconds to <10ms.
         File.Copy(TemplateFilePath, filePath);

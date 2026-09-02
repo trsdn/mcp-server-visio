@@ -14,8 +14,8 @@ internal sealed class VisioBatch : IVisioBatch
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     private readonly string _documentPath;
-    private readonly string[] _allPresentationPaths;
-    private readonly bool _showPowerPoint;
+    private readonly string[] _allDocumentPaths;
+    private readonly bool _showVisio;
     private readonly bool _createNewFile;
     private readonly TimeSpan _operationTimeout;
     private readonly ILogger<VisioBatch> _logger;
@@ -26,8 +26,8 @@ internal sealed class VisioBatch : IVisioBatch
     private int? _VisioProcessId;
     private bool _operationTimedOut;
 
-    private dynamic? _powerPoint;
-    private dynamic? _presentation;
+    private dynamic? _visioApp;
+    private dynamic? _document;
     private Dictionary<string, object>? _documents;
     private VisioContext? _context;
 
@@ -36,7 +36,7 @@ internal sealed class VisioBatch : IVisioBatch
     {
     }
 
-    internal static VisioBatch CreateNewPresentation(string filePath, bool isMacroEnabled, ILogger<VisioBatch>? logger = null, bool show = false, TimeSpan? operationTimeout = null)
+    internal static VisioBatch CreateNewDocument(string filePath, bool isMacroEnabled, ILogger<VisioBatch>? logger = null, bool show = false, TimeSpan? operationTimeout = null)
     {
         _ = isMacroEnabled;
         return new VisioBatch([filePath], logger, show, createNewFile: true, operationTimeout: operationTimeout);
@@ -47,9 +47,9 @@ internal sealed class VisioBatch : IVisioBatch
         if (documentPaths == null || documentPaths.Length == 0)
             throw new ArgumentException("At least one document path is required", nameof(documentPaths));
 
-        _allPresentationPaths = documentPaths;
+        _allDocumentPaths = documentPaths;
         _documentPath = documentPaths[0];
-        _showPowerPoint = show;
+        _showVisio = show;
         _createNewFile = createNewFile;
         _operationTimeout = operationTimeout ?? ComInteropConstants.DefaultOperationTimeout;
         _logger = logger ?? NullLogger<VisioBatch>.Instance;
@@ -68,23 +68,23 @@ internal sealed class VisioBatch : IVisioBatch
             {
                 OleMessageFilter.Register();
 
-                Type? appType = Type.GetTypeFromProgID(_showPowerPoint ? "Visio.Application" : "Visio.InvisibleApp")
+                Type? appType = Type.GetTypeFromProgID(_showVisio ? "Visio.Application" : "Visio.InvisibleApp")
                     ?? Type.GetTypeFromProgID("Visio.Application");
                 if (appType == null)
                 {
                     throw new InvalidOperationException("Microsoft Visio is not installed on this system.");
                 }
 
-                dynamic tempPowerPoint = Activator.CreateInstance(appType)!;
-                tempPowerPoint.Visible = _showPowerPoint;
-                tempPowerPoint.AlertResponse = 7;
+                dynamic visioApp = Activator.CreateInstance(appType)!;
+                visioApp.Visible = _showVisio;
+                visioApp.AlertResponse = 7;
 
-                CaptureProcessId(tempPowerPoint);
+                CaptureProcessId(visioApp);
 
-                var tempPresentations = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                dynamic? primaryPresentation = null;
+                var openDocuments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                dynamic? primaryDocument = null;
 
-                foreach (var path in _allPresentationPaths)
+                foreach (var path in _allDocumentPaths)
                 {
                     string normalizedPath = Path.GetFullPath(path);
                     object pres;
@@ -97,7 +97,7 @@ internal sealed class VisioBatch : IVisioBatch
                             throw new DirectoryNotFoundException($"Directory does not exist: '{directory}'. Create the directory first before creating Visio files.");
                         }
 
-                        pres = tempPowerPoint.Documents.Add("");
+                        pres = visioApp.Documents.Add("");
                         ((dynamic)pres).SaveAs(normalizedPath);
                     }
                     else
@@ -105,7 +105,7 @@ internal sealed class VisioBatch : IVisioBatch
                         FileAccessValidator.ValidateFileNotLocked(path);
                         try
                         {
-                            pres = tempPowerPoint.Documents.Open(normalizedPath);
+                            pres = visioApp.Documents.Open(normalizedPath);
                         }
                         catch (COMException ex)
                         {
@@ -113,17 +113,17 @@ internal sealed class VisioBatch : IVisioBatch
                         }
                     }
 
-                    tempPresentations[normalizedPath] = pres;
+                    openDocuments[normalizedPath] = pres;
                     if (path == _documentPath)
                     {
-                        primaryPresentation = pres;
+                        primaryDocument = pres;
                     }
                 }
 
-                _powerPoint = tempPowerPoint;
-                _presentation = primaryPresentation;
-                _documents = tempPresentations;
-                _context = new VisioContext(_documentPath, _powerPoint, _presentation!);
+                _visioApp = visioApp;
+                _document = primaryDocument;
+                _documents = openDocuments;
+                _context = new VisioContext(_documentPath, _visioApp, _document!);
 
                 started.SetResult();
 
@@ -173,10 +173,10 @@ internal sealed class VisioBatch : IVisioBatch
             finally
             {
                 _logger.LogDebug("STA thread cleanup starting for {FileName}", Path.GetFileName(_documentPath));
-                VisioShutdownService.CloseAndQuit(_presentation, _powerPoint, false, _documentPath, _logger);
+                VisioShutdownService.CloseAndQuit(_document, _visioApp, false, _documentPath, _logger);
 
-                _presentation = null;
-                _powerPoint = null;
+                _document = null;
+                _visioApp = null;
                 _documents = null;
                 _context = null;
 
@@ -406,7 +406,7 @@ internal sealed class VisioBatch : IVisioBatch
     {
         Execute((ctx, ct) =>
         {
-            VisioShutdownService.SaveDocumentWithTimeout(_presentation!, Path.GetFileName(_documentPath), _logger, ct);
+            VisioShutdownService.SaveDocumentWithTimeout(_document!, Path.GetFileName(_documentPath), _logger, ct);
             return 0;
         }, cancellationToken);
     }

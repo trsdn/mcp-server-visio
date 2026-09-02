@@ -22,13 +22,13 @@ namespace VisioMcp.ComInterop.Tests.Integration;
 /// - ✅ Test post-disposal protection
 ///
 /// NOTE: SessionManager uses VisioSession internally, so these tests verify
-/// the orchestration layer, not the underlying PowerPoint COM interactions.
+/// the orchestration layer, not the underlying Visio COM interactions.
 /// </summary>
 [Trait("Category", "Integration")]
 [Trait("Speed", "Medium")]
 [Trait("Layer", "ComInterop")]
 [Trait("Feature", "SessionManager")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 [Collection("Sequential")] // Disable parallelization to avoid COM interference
 public class SessionManagerTests : IDisposable
 {
@@ -42,13 +42,13 @@ public class SessionManagerTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"SessionManagerTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
-        // Clean up any existing PowerPoint processes to ensure clean state
+        // Clean up any existing Visio processes to ensure clean state
         try
         {
-            var existingProcesses = Process.GetProcessesByName("POWERPNT");
+            var existingProcesses = Process.GetProcessesByName("VISIO");
             if (existingProcesses.Length > 0)
             {
-                _output.WriteLine($"Cleaning up {existingProcesses.Length} existing PowerPoint processes...");
+                _output.WriteLine($"Cleaning up {existingProcesses.Length} existing Visio processes...");
                 foreach (var p in existingProcesses)
                 {
                     p.Kill(entireProcessTree: true);
@@ -59,7 +59,7 @@ public class SessionManagerTests : IDisposable
         }
         catch (Exception ex)
         {
-            _output.WriteLine($"Warning: Failed to clean PowerPoint processes: {ex.Message}");
+            _output.WriteLine($"Warning: Failed to clean Visio processes: {ex.Message}");
         }
     }
 
@@ -85,20 +85,20 @@ public class SessionManagerTests : IDisposable
 
     /// <summary>
     /// Path to the template xlsx file used for fast test file creation.
-    /// Copying a template is ~1000x faster than spawning PowerPoint to create a new presentation.
+    /// Copying a template is ~1000x faster than starting Visio to create a new document.
     /// </summary>
     private static readonly string TemplateFilePath = Path.Combine(
         Path.GetDirectoryName(typeof(SessionManagerTests).Assembly.Location)!,
-        "Integration", "Session", "TestFiles", "batch-test-static.pptx");
+        "Integration", "Session", "TestFiles", "batch-test-static.vsdx");
 
     private string CreateTestFile(string testName)
     {
-        var fileName = $"{testName}_{Guid.NewGuid():N}.pptx";
+        var fileName = $"{testName}_{Guid.NewGuid():N}.vsdx";
         var filePath = Path.Combine(_tempDir, fileName);
 
-        // PERFORMANCE OPTIMIZATION: Copy from template instead of spawning PowerPoint.
+        // PERFORMANCE OPTIMIZATION: Copy from template instead of starting Visio.
         // This reduces test file creation from ~7-14 seconds to <10ms.
-        // Original approach using VisioSession.CreateNew() spawned a full PowerPoint process
+        // Original approach using VisioSession.CreateNew() started a full Visio process
         // for each test file, causing 30+ second test execution times.
         File.Copy(TemplateFilePath, filePath);
 
@@ -127,12 +127,12 @@ public class SessionManagerTests : IDisposable
     public void CreateSession_NonExistentFile_ThrowsFileNotFoundException()
     {
         using var manager = new SessionManager();
-        var nonExistentFile = Path.Combine(_tempDir, "nonexistent.pptx");
+        var nonExistentFile = Path.Combine(_tempDir, "nonexistent.vsdx");
 
         var ex = Assert.Throws<FileNotFoundException>(
             () => manager.CreateSession(nonExistentFile));
 
-        Assert.Contains("PowerPoint file not found", ex.Message);
+        Assert.Contains("Visio file not found", ex.Message, StringComparison.Ordinal);
         Assert.Equal(0, manager.ActiveSessionCount);
     }
 
@@ -202,15 +202,13 @@ public class SessionManagerTests : IDisposable
         using var manager = new SessionManager();
         var sessionId = manager.CreateSession(testFile);
 
-        // Add a slide as marker of changes
+        // Add a page as marker of changes
         var batch = manager.GetSession(sessionId);
         Assert.NotNull(batch);
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Document.Slides;
-            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
-            dynamic layout = layouts[1];
-            slides.AddSlide(slides.Count + 1, layout);
+            dynamic pages = ctx.Document.Pages;
+            pages.Add();
             return 0;
         });
 
@@ -219,13 +217,13 @@ public class SessionManagerTests : IDisposable
         Assert.True(closed);
         Assert.Equal(0, manager.ActiveSessionCount);
 
-        // Verify changes persisted (extra slide still there)
+        // Verify changes persisted (extra page still there)
         using var verifyBatch = VisioSession.BeginBatch(testFile);
-        var slideCount = verifyBatch.Execute((ctx, ct) =>
+        var pageCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Document.Slides.Count;
+            return (int)ctx.Document.Pages.Count;
         });
-        Assert.True(slideCount > 1, $"Expected more than 1 slide after save, got {slideCount}");
+        Assert.True(pageCount > 1, $"Expected more than 1 page after save, got {pageCount}");
     }
 
     [Fact]
@@ -235,18 +233,16 @@ public class SessionManagerTests : IDisposable
         using var manager = new SessionManager();
         var sessionId = manager.CreateSession(testFile);
 
-        // Get initial slide count
+        // Get initial page count
         var batch = manager.GetSession(sessionId);
         Assert.NotNull(batch);
-        var initialCount = batch.Execute((ctx, ct) => (int)ctx.Document.Slides.Count);
+        var initialCount = batch.Execute((ctx, ct) => (int)ctx.Document.Pages.Count);
 
-        // Add a slide but don't save
+        // Add a page but don't save
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Document.Slides;
-            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
-            dynamic layout = layouts[1];
-            slides.AddSlide(slides.Count + 1, layout);
+            dynamic pages = ctx.Document.Pages;
+            pages.Add();
             return 0;
         });
 
@@ -257,11 +253,11 @@ public class SessionManagerTests : IDisposable
 
         // Verify changes were NOT persisted
         using var verifyBatch = VisioSession.BeginBatch(testFile);
-        var slideCount = verifyBatch.Execute((ctx, ct) =>
+        var pageCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Document.Slides.Count;
+            return (int)ctx.Document.Pages.Count;
         });
-        Assert.Equal(initialCount, slideCount); // Should be same as before
+        Assert.Equal(initialCount, pageCount); // Should be same as before
     }
 
     #endregion
@@ -337,10 +333,10 @@ public class SessionManagerTests : IDisposable
         var sessionId1 = manager.CreateSession(testFile1);
         Assert.Equal(1, manager.ActiveSessionCount);
 
-        // Second session should fail — PowerPoint COM is single-instance
+        // Second session should fail: only one session may be active at a time
         var ex = Assert.Throws<InvalidOperationException>(
             () => manager.CreateSession(testFile2));
-        Assert.Contains("single-instance", ex.Message);
+        Assert.Contains("Only one session can be active at a time", ex.Message, StringComparison.Ordinal);
         Assert.Equal(1, manager.ActiveSessionCount);
 
         manager.CloseSession(sessionId1);
@@ -406,7 +402,7 @@ public class SessionManagerTests : IDisposable
         var ex = Assert.Throws<InvalidOperationException>(
             () => manager.CreateSession(testFile));
 
-        Assert.Contains("single-instance", ex.Message);
+        Assert.Contains("Only one session can be active at a time", ex.Message, StringComparison.Ordinal);
         Assert.Equal(1, manager.ActiveSessionCount);
 
         manager.CloseSession(sessionId1);
@@ -477,7 +473,7 @@ public class SessionManagerTests : IDisposable
         var batch = new FakeVisioBatch(@"C:\temp\visible-unsaved-discard-test.vsdx");
         RegisterFakeSession(manager, sessionId, batch, batch.DocumentPath, show: true);
 
-        Assert.True(manager.IsPowerPointVisible(sessionId));
+        Assert.True(manager.IsVisioVisible(sessionId));
 
         manager.Dispose();
 
@@ -554,9 +550,9 @@ public class SessionManagerTests : IDisposable
         try
         {
             Directory.CreateDirectory(longDir);
-            var longFilePath = Path.Combine(longDir, "test.pptx");
+            var longFilePath = Path.Combine(longDir, "test.vsdx");
 
-            // Copy template file to the long path (faster than spawning PowerPoint)
+            // Copy template file to the long path (faster than starting Visio)
             File.Copy(TemplateFilePath, longFilePath);
             _testFiles.Add(longFilePath);
 
@@ -575,20 +571,20 @@ public class SessionManagerTests : IDisposable
         }
         catch (AggregateException ex) when (ex.InnerException is PathTooLongException)
         {
-            // PowerPoint COM may reject very long paths - expected behavior (converted from COMException)
-            _output.WriteLine($"PowerPoint rejected long path - test skipped: {ex.InnerException.Message}");
+            // Visio COM may reject very long paths - expected behavior (converted from COMException)
+            _output.WriteLine($"Visio rejected long path - test skipped: {ex.InnerException.Message}");
         }
         catch (AggregateException ex) when (ex.InnerException is AggregateException inner && inner.InnerException is PathTooLongException)
         {
             // Nested AggregateException from async task wrapping (STA thread -> Task.Wait -> Task.Wait)
-            _output.WriteLine($"PowerPoint rejected long path (nested) - test skipped: {((AggregateException)ex.InnerException).InnerException!.Message}");
+            _output.WriteLine($"Visio rejected long path (nested) - test skipped: {((AggregateException)ex.InnerException).InnerException!.Message}");
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already open") || ex.Message.Contains("Cannot open") || ex.Message.Contains("255 characters") || ex.Message.Contains("Filename cannot exceed"))
         {
-            // PowerPoint COM returns generic errors for paths it can't handle.
-            // This is a misleading error message - the real issue is the path is too long for PowerPoint COM.
+            // Visio COM returns generic errors for paths it can't handle.
+            // This is a misleading error message - the real issue is the path is too long for Visio COM.
             // We accept this as equivalent to PathTooLongException for test purposes.
-            _output.WriteLine($"PowerPoint COM rejected long path with generic error - test skipped: {ex.Message}");
+            _output.WriteLine($"Visio COM rejected long path with generic error - test skipped: {ex.Message}");
         }
     }
 
@@ -605,10 +601,8 @@ public class SessionManagerTests : IDisposable
 
         batch.Execute((ctx, ct) =>
         {
-            dynamic slides = ctx.Document.Slides;
-            dynamic layouts = ((dynamic)ctx.Document).SlideMaster.CustomLayouts;
-            dynamic layout = layouts[1];
-            slides.AddSlide(slides.Count + 1, layout);
+            dynamic pages = ctx.Document.Pages;
+            pages.Add();
             return 0;
         });
 
@@ -616,14 +610,14 @@ public class SessionManagerTests : IDisposable
         var closed = manager.CloseSession(sessionId, save: true);
         Assert.True(closed);
 
-        // Verify changes persisted (extra slide should be there)
+        // Verify changes persisted (extra page should be there)
         using var verifyBatch = VisioSession.BeginBatch(testFile);
-        var slideCount = verifyBatch.Execute((ctx, ct) =>
+        var pageCount = verifyBatch.Execute((ctx, ct) =>
         {
-            return (int)ctx.Document.Slides.Count;
+            return (int)ctx.Document.Pages.Count;
         });
 
-        Assert.True(slideCount > 1, $"Expected more than 1 slide after save, got {slideCount}");
+        Assert.True(pageCount > 1, $"Expected more than 1 page after save, got {pageCount}");
     }
 
     #endregion
@@ -634,7 +628,7 @@ public class SessionManagerTests : IDisposable
         GetField<ConcurrentDictionary<string, string>>(manager, "_activeFilePaths")[filePath] = sessionId;
         GetField<ConcurrentDictionary<string, SessionTarget>>(manager, "_sessionTargets")[sessionId] = new SessionTarget(filePath, null, null);
         GetField<ConcurrentDictionary<string, int>>(manager, "_activeOperationCounts")[sessionId] = 0;
-        GetField<ConcurrentDictionary<string, bool>>(manager, "_showPowerPointFlags")[sessionId] = show;
+        GetField<ConcurrentDictionary<string, bool>>(manager, "_showVisioFlags")[sessionId] = show;
         GetField<ConcurrentDictionary<string, SessionOrigin>>(manager, "_sessionOrigins")[sessionId] = SessionOrigin.Unknown;
         GetField<ConcurrentDictionary<string, DateTime>>(manager, "_sessionCreatedAt")[sessionId] = DateTime.UtcNow;
     }

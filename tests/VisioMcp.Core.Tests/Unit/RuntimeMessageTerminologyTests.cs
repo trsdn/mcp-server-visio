@@ -45,8 +45,7 @@ public class RuntimeMessageTerminologyTests
     [
         "has no Visio equivalent",
         "are a PowerPoint feature",
-        "Visio pages have no layout inheritance",
-        "IsPowerPointVisible"
+        "Visio pages have no layout inheritance"
     ];
 
     public static TheoryData<string> ScannedFiles()
@@ -122,6 +121,65 @@ public class RuntimeMessageTerminologyTests
     {
         // A gate that checks nothing passes vacuously — the failure mode #15 shipped with.
         Assert.True(ScannedFiles().Count >= 20, $"Expected to scan the runtime layers, found {ScannedFiles().Count} files.");
+    }
+
+    /// <summary>
+    /// Identifiers that name the wrong product. The literal check above cannot see these.
+    /// </summary>
+    /// <remarks>
+    /// The string-literal scan let <c>_showPowerPoint</c>, <c>tempPowerPoint</c> and
+    /// <c>IsPowerPointVisible</c> stand for the whole migration, and the last of those reached the
+    /// wire: <c>session.list</c> returned an <c>isPowerPointVisible</c> field. An identifier is not
+    /// cosmetic once it is serialised, and until then it is what the next contributor copies.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(ScannedFiles))]
+    public void RuntimeIdentifiers_DoNotNameTheWrongProduct(string relativePath)
+    {
+        var lines = File.ReadAllLines(Path.Combine(FindRepositoryRoot(), relativePath));
+        var offenders = new List<string>();
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+
+            if (IntentionalMentions.Any(m => line.Contains(m, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            // Comments explain why Visio differs from PowerPoint and legitimately name it.
+            var code = StripCommentsAndLiterals(line);
+
+            if (Regex.IsMatch(code, @"\b\w*(?:powerpoint|presentation)\w*\b", RegexOptions.IgnoreCase))
+            {
+                offenders.Add($"  line {i + 1}: {line.Trim()}");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{relativePath} declares an identifier naming the wrong product:"
+            + Environment.NewLine + string.Join(Environment.NewLine, offenders)
+            + Environment.NewLine
+            + "Rename it. Visio has Documents and Pages, not Presentations and Slides.");
+    }
+
+    /// <summary>
+    /// Everything that is neither a comment nor a string literal — what the compiler actually sees.
+    /// </summary>
+    private static string StripCommentsAndLiterals(string line)
+    {
+        var withoutLiterals = Regex.Replace(line, "\"([^\"\\\\]|\\\\.)*\"", "\"\"");
+
+        var commentIndex = withoutLiterals.IndexOf("//", StringComparison.Ordinal);
+        if (commentIndex >= 0)
+        {
+            withoutLiterals = withoutLiterals[..commentIndex];
+        }
+
+        // XML doc comments and block comments are prose too.
+        return Regex.Replace(withoutLiterals, @"^\s*(///|\*|/\*).*$", string.Empty);
     }
 
     private static string FindRepositoryRoot()

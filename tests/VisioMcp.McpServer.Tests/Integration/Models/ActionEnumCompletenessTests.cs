@@ -19,7 +19,7 @@ namespace VisioMcp.McpServer.Tests.Integration.Models;
 [Trait("Speed", "Fast")]
 [Trait("Layer", "McpServer")]
 [Trait("Feature", "ActionEnums")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 public class ActionEnumCompletenessTests(ITestOutputHelper output)
 {
 

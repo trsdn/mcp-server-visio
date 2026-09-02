@@ -19,7 +19,7 @@ public static class VisioShutdownService
     /// Saves the active document on the calling STA thread.
     /// </summary>
     public static void SaveDocumentWithTimeout(
-        dynamic presentation,
+        dynamic document,
         string? fileName = null,
         ILogger? logger = null,
         CancellationToken cancellationToken = default)
@@ -32,7 +32,7 @@ public static class VisioShutdownService
 
         try
         {
-            presentation.Save();
+            document.Save();
             logger.LogDebug("Document {FileName} saved successfully", fileName);
         }
         catch (COMException ex)
@@ -55,8 +55,8 @@ public static class VisioShutdownService
     /// Closes a document and quits the application with resilient retry logic.
     /// </summary>
     public static void CloseAndQuit(
-        dynamic? presentation,
-        dynamic? powerPoint,
+        dynamic? document,
+        dynamic? visioApp,
         bool save,
         string? filePath = null,
         ILogger? logger = null)
@@ -67,15 +67,15 @@ public static class VisioShutdownService
 
         try
         {
-            if (powerPoint != null)
+            if (visioApp != null)
             {
-                try { powerPoint.AlertResponse = AlertResponseNo; } catch { }
+                try { visioApp.AlertResponse = AlertResponseNo; } catch { }
 
                 if (!save)
                 {
                     try
                     {
-                        powerPoint.Visible = false;
+                        visioApp.Visible = false;
                     }
                     catch
                     {
@@ -83,18 +83,18 @@ public static class VisioShutdownService
                 }
             }
 
-            if (save && presentation != null)
+            if (save && document != null)
             {
-                SaveDocumentWithTimeout(presentation, fileName, logger);
+                SaveDocumentWithTimeout(document, fileName, logger);
             }
 
             bool closedDocumentsFromApplication = false;
 
-            if (powerPoint != null)
+            if (visioApp != null)
             {
                 try
                 {
-                    closedDocumentsFromApplication = CloseOpenDocuments(powerPoint, !save, logger);
+                    closedDocumentsFromApplication = CloseOpenDocuments(visioApp, !save, logger);
                 }
                 catch (Exception ex)
                 {
@@ -102,12 +102,12 @@ public static class VisioShutdownService
                 }
             }
 
-            if (!closedDocumentsFromApplication && presentation != null)
+            if (!closedDocumentsFromApplication && document != null)
             {
                 try
                 {
                     logger.LogDebug("Closing primary document {FileName} directly (save={Save})", fileName, save);
-                    CloseDocument(presentation, !save, logger, fileName);
+                    CloseDocument(document, !save, logger, fileName);
                 }
                 catch (Exception ex)
                 {
@@ -115,13 +115,13 @@ public static class VisioShutdownService
                 }
             }
 
-            if (presentation != null)
+            if (document != null)
             {
-                TryReleaseComObject(presentation);
-                presentation = null;
+                TryReleaseComObject(document);
+                document = null;
             }
 
-            if (powerPoint != null)
+            if (visioApp != null)
             {
                 int attemptNumber = 0;
                 Exception? lastException = null;
@@ -137,7 +137,7 @@ public static class VisioShutdownService
                         try
                         {
                             logger.LogDebug("Quit attempt {Attempt} for {FileName}", attemptNumber, fileName);
-                            powerPoint.Quit();
+                            visioApp.Quit();
                             logger.LogDebug("Quit attempt {Attempt} succeeded for {FileName}", attemptNumber, fileName);
                         }
                         catch (COMException ex)
@@ -183,8 +183,8 @@ public static class VisioShutdownService
                 }
                 finally
                 {
-                    TryReleaseComObject(powerPoint);
-                    powerPoint = null;
+                    TryReleaseComObject(visioApp);
+                    visioApp = null;
                 }
 
                 if (lastException != null)
@@ -210,14 +210,14 @@ public static class VisioShutdownService
         }
     }
 
-    private static bool CloseOpenDocuments(dynamic powerPoint, bool discardChanges, ILogger logger)
+    private static bool CloseOpenDocuments(dynamic visioApp, bool discardChanges, ILogger logger)
     {
         dynamic? documents = null;
         bool closedAnyDocuments = false;
 
         try
         {
-            documents = powerPoint.Documents;
+            documents = visioApp.Documents;
             int documentCount = Convert.ToInt32(documents.Count);
 
             if (documentCount == 0)
@@ -225,7 +225,7 @@ public static class VisioShutdownService
                 return false;
             }
 
-            try { powerPoint.AlertResponse = AlertResponseNo; } catch { }
+            try { visioApp.AlertResponse = AlertResponseNo; } catch { }
 
             for (int index = documentCount; index >= 1; index--)
             {
