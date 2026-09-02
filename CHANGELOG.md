@@ -19,6 +19,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`xunit.runner.json` now reaches every test project's output directory** (#24). xunit reads this
+  file from `bin/`, and silently ignores the settings when it is absent — no warning, no error. Only
+  `VisioMcp.ComInterop.Tests` set `CopyToOutputDirectory`, so the other projects ran test collections
+  in parallel against a single Visio COM instance on one STA thread. Measured on
+  `VisioMcp.McpServer.Tests --filter "Category=Integration"`: **25 failed / 17 passed → 3 failed /
+  39 passed**. The 22 eliminated failures were entirely phantom. The three that remain are genuine
+  and tracked as #26 and #28.
+  The four duplicate per-project copies are replaced by one canonical `tests/xunit.runner.json`
+  linked from `tests/Directory.Build.props`, so every current and future test project picks it up
+  and none can opt out by omission.
+
 - **`main` now builds from a clean clone with no extra flags** (#13). `dotnet build VisioMcp.sln -c Release`
   previously failed with 5 `NU1904`/`NU1902` errors and only succeeded with `-p:NuGetAudit=false`.
   This also unblocks CodeQL (#18) and `release.yml`, both of which run an unflagged `dotnet build`.
