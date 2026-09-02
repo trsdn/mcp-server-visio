@@ -19,6 +19,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Every suppressed legacy domain now carries a disposition, an owner and Visio evidence** (#22).
+  26 command domains (~7,700 LOC, 132 actions) were compiled but hidden behind
+  `[McpTool(PublicSurface = false)]` with no recorded decision — documented only as eight vague
+  thematic rows in `FEATURES.md`. Each domain was **probed against a live Visio 16.0 instance** and
+  classified **Port** (7), **Remap** (5) or **Delete** (14), with the specific COM member that does
+  or does not exist recorded per row. Follow-ups filed for the Port and Remap sets:
+  #62 `comment`, #63 `headerfooter`, #64 `image`, #65 `printoptions`, #66 `vba`,
+  #67 `background`+`pagesetup`.
+  Probing overturned two guesses the issue itself made: `Document.Sections` **does not exist**, so
+  `section` is a delete rather than the port it was assumed to be (its name collides with the
+  unrelated ShapeSheet sections of #33), and `Page.Comments.Add` **does** exist and works, making
+  `comment` a complete port. `Document.Theme` also does not exist — Visio themes are `DocumentSheet`
+  cells — which corrects the premise of the styles/themes work in #36.
+  `LegacyDomainClassificationTests` makes the table an enforced invariant rather than prose: it
+  asserts the table lists **exactly** the domains suppressed in code, that every disposition is one
+  of the three valid verdicts, and that every row names an owner, evidence and a tracking reference.
+  Verified against three induced drift modes — a missing row, a stale row, and an invalid
+  disposition with a `TBD` owner — each of which fails the build.
+
 - **CI now runs the test suite** (#14). No registered workflow executed `dotnet test` at all: the
   only real invocation lived in `integration-tests.yml`, which was both unregistered (#12) and
   gated off by default, so the only job that could run was a stub that **reported a green check

@@ -36,18 +36,67 @@ The recommended sequence today is:
 
 ## Domains in migration backlog
 
-These areas are part of the planned broad parity push, but should not yet be marketed as implemented unless validated individually:
+Twenty-six command domains inherited from the PowerPoint ancestor are compiled but suppressed from
+the public surface via `[McpTool(..., PublicSurface = false)]` — roughly 7,700 lines and 132 actions.
 
-| Domain | Planned disposition | Notes |
+Every row below carries a disposition backed by **an actual probe of a live Visio 16.0 instance**,
+not by inference from the name. That distinction matters: `Document.Theme` and `Document.Sections`
+both sound like safe ports and neither exists, while `GlowSize` and `Page.Comments` both sound like
+PowerPoint-only concepts and both do.
+
+- **Port** — a real Visio equivalent exists; reimplement in place and republish
+- **Remap** — the concept exists under a different name and belongs in an already-public tool
+- **Delete** — probed and absent; no Visio analogue
+
+<!-- BEGIN:LEGACY-DOMAIN-CLASSIFICATION -->
+
+| Domain | Disposition | Owner | Visio evidence | Tracking |
+|---|---|---|---|---|
+| `comment` | Port | @trsdn | `Page/Shape/Document.Comments` with `Add`, `Item`, `DeleteAll`; verified by adding, editing and deleting a comment | [#62](https://github.com/trsdn/mcp-server-visio/issues/62) |
+| `headerfooter` | Port | @trsdn | `Document.HeaderLeft/Center/Right`, `FooterLeft/Center/Right`, `HeaderFooterFont`, `HeaderMargin` all present | [#63](https://github.com/trsdn/mcp-server-visio/issues/63) |
+| `image` | Port | @trsdn | `Page.Import` returned a shape with `Type=4` (`visTypeForeignObject`); `Shape.Export` wrote it back to disk | [#64](https://github.com/trsdn/mcp-server-visio/issues/64) |
+| `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
+| `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
+| `hyperlink` | Port | @trsdn | `Shape.Hyperlinks` present; suppressed in #19 only because the implementation was PowerPoint's | [#35](https://github.com/trsdn/mcp-server-visio/issues/35) |
+| `master` | Port | @trsdn | `Document.Masters` present; suppressed in #19 for the same reason | [#34](https://github.com/trsdn/mcp-server-visio/issues/34) |
+| `accessibility` | Remap | @trsdn | No `Shape.AlternateText`; Visio alt text is the `Comment` ShapeSheet cell, already shipped as `shape(set-alt-text)` / `shape(read-alt-text)` | [#20](https://github.com/trsdn/mcp-server-visio/issues/20) |
+| `background` | Remap | @trsdn | `Page.Background` and `Page.BackPage` present; belongs on the public `page` tool | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
+| `pagesetup` | Remap | @trsdn | All settings are `PageSheet` cells: `PageWidth`, `PageHeight`, `PrintPageOrientation`, `PageScale`, `DrawingScale`, `PageLeftMargin`, `PaperKind`, `CenterX` | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
+| `design` | Remap | @trsdn | **`Document.Theme` does not exist.** `Document.Styles` does (6 built-ins); themes are `DocumentSheet` cells `ThemeIndex`, `VariationColorIndex`, `VariationStyleIndex` | [#36](https://github.com/trsdn/mcp-server-visio/issues/36) |
+| `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
+| `animation` | Delete | @trsdn | `Shape.AnimationSettings` missing | #22 |
+| `chart` | Delete | @trsdn | `Document.Charts` missing; Visio charts are embedded OLE with no automatable object model | #22 |
+| `customshow` | Delete | @trsdn | No analogue; the concept presupposes an ordered slide show | #22 |
+| `media` | Delete | @trsdn | No audio or video object model; media can only arrive as an OLE foreign object | #22 |
+| `notes` | Delete | @trsdn | `Page.NotesPage` missing | #22 |
+| `placeholder` | Delete | @trsdn | Visio pages have no layout inheritance, so there is nothing to place or audit | #22 |
+| `proofing` | Delete | @trsdn | `Document.SpellCheck`, `Document.LanguageSettings` and `Application.CustomDictionaries` all missing; only `Document.Language` and the `Char.LangID` cell survive, and those belong to `cell` | #22 |
+| `section` | Delete | @trsdn | `Document.Sections` missing. **Not** the ShapeSheet section of #33 — same word, unrelated concept | #22 |
+| `slide` | Delete | @trsdn | Superseded by the public `page` tool | #22 |
+| `slideimport` | Delete | @trsdn | Slide-import semantics have no page analogue; `Page.Paste` already covers what is meaningful | #22 |
+| `slideshow` | Delete | @trsdn | `Document.SlideShowSettings` missing | #22 |
+| `slidetable` | Delete | @trsdn | Visio has no table object; tables are drawn as grouped shapes | #22 |
+| `smartart` | Delete | @trsdn | `Page.SmartArt` missing | #22 |
+| `transition` | Delete | @trsdn | `Page.Transition` missing | #22 |
+
+<!-- END:LEGACY-DOMAIN-CLASSIFICATION -->
+
+`LegacyDomainClassificationTests` asserts that this table lists **exactly** the domains carrying
+`[McpTool(PublicSurface = false)]`. Suppressing a domain without recording a disposition fails the
+build, and so does leaving a row behind after a domain is deleted or published. A disposition table
+that drifts is worse than none, because it is trusted.
+
+### Themes and connectors
+
+Two cross-cutting Visio-native areas are tracked outside the table because they are additive rather
+than inherited:
+
+| Area | Disposition | Notes |
 |---|---|---|
-| Connectors / connection points / routing | Port / redesign | High-priority Visio-native domain |
-| Layers / styles / themes | Partially validated / continue port | Layer management is now validated; styles/themes still need Visio-specific API work |
-| Groups / containers / lists / selection | Port / redesign | Important for real diagram workflows |
-| Broader ShapeSheet coverage | Port | Expand beyond curated MVP cells |
-| Data graphics / data recordsets | Redesign | Needs deliberate Visio-first model |
-| Print / metadata | Port / redesign | Keep only Visio-meaningful operations beyond the validated export MVP |
-| Hyperlinks / comments / document metadata | Port / redesign | Evaluate per-domain fit |
-| Legacy slide-era presentation concepts | Remove unless remapped | Do not preserve misleading PowerPoint semantics |
+| Connectors / connection points / routing | Port / redesign | High-priority Visio-native domain ([#32](https://github.com/trsdn/mcp-server-visio/issues/32)) |
+| Groups / containers / lists / selection | Port / redesign | Important for real diagram workflows ([#36](https://github.com/trsdn/mcp-server-visio/issues/36)) |
+| Broader ShapeSheet coverage | Port | Generic section and row access beyond the current cell surface ([#33](https://github.com/trsdn/mcp-server-visio/issues/33)) |
+| Data graphics / data recordsets | Redesign | Visio Professional only; needs a deliberate Visio-first model |
 
 ## Cleanup rules
 
