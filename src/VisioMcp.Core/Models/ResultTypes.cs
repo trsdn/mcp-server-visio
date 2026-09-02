@@ -320,6 +320,42 @@ public class CellListResult : ResultBase
     public List<CellInfo> Cells { get; set; } = [];
 }
 
+/// <summary>One connection point on a shape — an anchor a connector can glue to.</summary>
+public class ConnectionPointInfo
+{
+    /// <summary>0-based row index in the shape's Connections section.</summary>
+    public int RowIndex { get; set; }
+
+    /// <summary>Row name, empty for a positional point. Named points glue more robustly.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>X formula, for example <c>Width*0.5</c>.</summary>
+    public string X { get; set; } = string.Empty;
+
+    /// <summary>Y formula, for example <c>Height*1</c>.</summary>
+    public string Y { get; set; } = string.Empty;
+
+    /// <summary>Connection type formula from the Type column.</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>Full cell name a connector glues to, for example <c>Connections.Top</c>.</summary>
+    public string GlueTarget { get; set; } = string.Empty;
+}
+
+public class ConnectionPointListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public List<ConnectionPointInfo> ConnectionPoints { get; set; } = [];
+}
+
+public class ConnectionPointResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public ConnectionPointInfo? ConnectionPoint { get; set; }
+}
+
 /// <summary>One ShapeSheet section present on a sheet.</summary>
 public class ShapeSheetSectionInfo
 {

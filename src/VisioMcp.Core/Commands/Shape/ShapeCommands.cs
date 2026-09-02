@@ -1487,7 +1487,230 @@ public class ShapeCommands : IShapeCommands
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
         return ((dynamic)ctx.Document).Pages.Item(pageIndex);
     }
+    public ConnectionPointListResult ListConnectionPoints(IVisioBatch batch, int pageIndex, string shapeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                var points = new List<ConnectionPointInfo>();
+                int rowCount = ShapeSheetSections.RowCount(shape, ShapeSheetSections.ConnectionPoints);
+
+                for (int row = 0; row < rowCount; row++)
+                {
+                    points.Add(ReadConnectionPoint(shape, row));
+                }
+
+                return new ConnectionPointListResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ConnectionPoints = points
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public ConnectionPointResult AddConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, string? connectionPointX = null, string? connectionPointY = null, string? connectionPointName = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionPointX);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionPointY);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                if (!ShapeSheetSections.SectionExists(shape, ShapeSheetSections.ConnectionPoints))
+                {
+                    shape.AddSection(ShapeSheetSections.ConnectionPoints);
+                }
+
+                int rowIndex = string.IsNullOrWhiteSpace(connectionPointName)
+                    ? Convert.ToInt32(shape.AddRow(ShapeSheetSections.ConnectionPoints, ShapeSheetSections.RowLast, ShapeSheetSections.TagDefault))
+                    : Convert.ToInt32(shape.AddNamedRow(ShapeSheetSections.ConnectionPoints, connectionPointName, ShapeSheetSections.TagDefault));
+
+                WriteConnectionPointPosition(shape, rowIndex, connectionPointX!, connectionPointY!);
+
+                return new ConnectionPointResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ConnectionPoint = ReadConnectionPoint(shape, rowIndex)
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public ConnectionPointResult SetConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, int connectionPointIndex = 0, string? connectionPointX = null, string? connectionPointY = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionPointX);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionPointY);
+        ArgumentOutOfRangeException.ThrowIfNegative(connectionPointIndex);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                EnsureConnectionPointExists(shape, shapeName, connectionPointIndex);
+                WriteConnectionPointPosition(shape, connectionPointIndex, connectionPointX!, connectionPointY!);
+
+                return new ConnectionPointResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ConnectionPoint = ReadConnectionPoint(shape, connectionPointIndex)
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public OperationResult DeleteConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, int connectionPointIndex)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentOutOfRangeException.ThrowIfNegative(connectionPointIndex);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                EnsureConnectionPointExists(shape, shapeName, connectionPointIndex);
+                shape.DeleteRow(ShapeSheetSections.ConnectionPoints, connectionPointIndex);
+
+                return new OperationResult
+                {
+                    Success = true,
+                    Action = "delete-connection-point",
+                    Message = $"Deleted connection point {connectionPointIndex} from shape '{shapeName}'. Points below it have shifted up, and any connector glued to it has lost its attachment.",
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    private static void EnsureConnectionPointExists(dynamic shape, string shapeName, int connectionPointIndex)
+    {
+        int rowCount = ShapeSheetSections.RowCount(shape, ShapeSheetSections.ConnectionPoints);
+
+        if (connectionPointIndex >= rowCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(connectionPointIndex),
+                connectionPointIndex,
+                $"Shape '{shapeName}' has {rowCount} connection point(s).");
+        }
+    }
+
+    /// <summary>
+    /// Writes the X and Y columns of a connection point row.
+    /// </summary>
+    /// <remarks>
+    /// Columns are positional: 0 = X, 1 = Y, 2 = DirX, 3 = DirY, 4 = Type, 5 = AutoGen. Confirmed
+    /// by reading <c>Cell.Name</c> back from a live instance rather than taken from documentation.
+    /// </remarks>
+    private static void WriteConnectionPointPosition(dynamic shape, int rowIndex, string x, string y)
+    {
+        dynamic? xCell = null;
+        dynamic? yCell = null;
+        try
+        {
+            xCell = shape.CellsSRC(ShapeSheetSections.ConnectionPoints, rowIndex, 0);
+            xCell.FormulaU = x;
+
+            yCell = shape.CellsSRC(ShapeSheetSections.ConnectionPoints, rowIndex, 1);
+            yCell.FormulaU = y;
+        }
+        finally
+        {
+            if (yCell != null) { ComUtilities.Release(ref yCell!); }
+            if (xCell != null) { ComUtilities.Release(ref xCell!); }
+        }
+    }
+
+    private static ConnectionPointInfo ReadConnectionPoint(dynamic shape, int rowIndex)
+    {
+        dynamic? xCell = null;
+        dynamic? yCell = null;
+        dynamic? typeCell = null;
+        try
+        {
+            xCell = shape.CellsSRC(ShapeSheetSections.ConnectionPoints, rowIndex, 0);
+            yCell = shape.CellsSRC(ShapeSheetSections.ConnectionPoints, rowIndex, 1);
+            typeCell = shape.CellsSRC(ShapeSheetSections.ConnectionPoints, rowIndex, 4);
+
+            string rowName = SafeCellString(() => xCell!.RowName) ?? string.Empty;
+
+            // A named row's cells are Connections.<name>.X, so the glue target is the parent row.
+            string glueTarget = rowName.Length > 0
+                ? $"Connections.{rowName}"
+                : SafeCellString(() => xCell!.Name) ?? string.Empty;
+
+            return new ConnectionPointInfo
+            {
+                RowIndex = rowIndex,
+                Name = rowName,
+                X = SafeCellString(() => xCell!.FormulaU) ?? string.Empty,
+                Y = SafeCellString(() => yCell!.FormulaU) ?? string.Empty,
+                Type = SafeCellString(() => typeCell!.FormulaU) ?? string.Empty,
+                GlueTarget = glueTarget
+            };
+        }
+        finally
+        {
+            if (typeCell != null) { ComUtilities.Release(ref typeCell!); }
+            if (yCell != null) { ComUtilities.Release(ref yCell!); }
+            if (xCell != null) { ComUtilities.Release(ref xCell!); }
+        }
+    }
+
+    private static string? SafeCellString(Func<object?> read)
+    {
+        try
+        {
+            return read()?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private static void EnsureWindowPage(dynamic window, dynamic page)
     {
