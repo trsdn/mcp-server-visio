@@ -22,6 +22,7 @@ The following domains are implemented and covered by focused validation:
 | Cell / ShapeSheet | Yes | Yes | Via MCP extension | Validated MVP | Read value/formula, write value, set formula, curated listing |
 | Stencil / Master | Yes | Yes | Via MCP extension | Validated MVP | List masters from installed stencils, drop masters on pages; manage the document's own masters (list, read, create from a shape, rename, delete, find instances) |
 | Export | Yes | Yes | Via MCP extension | Validated MVP | PDF/XPS document export, page export by file extension, save-copy |
+| Hyperlink | Yes | Yes | Via MCP extension | Validated MVP | List, read, add, update, delete. A shape may carry several, unlike PowerPoint |
 | Visible live mode | Yes | Yes | Via MCP extension | Validated | Watch Visio while automation runs |
 
 ## Current recommended workflow
@@ -66,7 +67,6 @@ word collides with the *unrelated* ShapeSheet sections tracked in
 | `image` | Port | @trsdn | `Page.Import` returned a shape with `Type=4` (`visTypeForeignObject`); `Shape.Export` wrote it back to disk | [#64](https://github.com/trsdn/mcp-server-visio/issues/64) |
 | `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
-| `hyperlink` | Port | @trsdn | `Shape.Hyperlinks` present; suppressed in #19 only because the implementation was PowerPoint's | [#35](https://github.com/trsdn/mcp-server-visio/issues/35) |
 | `accessibility` | Remap | @trsdn | `audit` is remapped and shipped (`shape(set-alt-text)`, `text(alt-text-audit)`); `get-reading-order`/`set-reading-order` have no analogue — `TabOrder`, `ReadingOrder` and `AccessibilityOrder` are absent as properties and as cells | [#77](https://github.com/trsdn/mcp-server-visio/issues/77) |
 | `background` | Remap | @trsdn | `Page.Background` and `Page.BackPage` present; belongs on the public `page` tool | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
 | `pagesetup` | Remap | @trsdn | All settings are `PageSheet` cells: `PageWidth`, `PageHeight`, `PrintPageOrientation`, `PageScale`, `DrawingScale`, `PageLeftMargin`, `PaperKind`, `CenterX` | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |

@@ -154,14 +154,14 @@ public class ResultTypeSerializationTests
     {
         var info = new HyperlinkInfo
         {
-            Index = 1,
+            Name = "Row_1",
             Address = "https://example.com"
         };
         var json = JsonSerializer.Serialize(info, JsonOptions);
 
         Assert.Contains("\"address\":\"https://example.com\"", json);
-        // SlideIndex = 0 should be omitted (WhenWritingDefault)
-        Assert.DoesNotContain("\"slideIndex\":", json);
+        // PageIndex = 0 should be omitted (WhenWritingDefault)
+        Assert.DoesNotContain("\"pageIndex\":", json);
     }
 
     [Fact]

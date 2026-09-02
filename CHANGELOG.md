@@ -8,6 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **The `hyperlink` tool works, reimplemented on `Shape.Hyperlinks`** (#35). It was backed by
+  PowerPoint `ActionSettings`/`ppActionHyperlink` and every action threw `RuntimeBinderException`
+  on a `.vsdx`; it has been off the public surface since #19. Six actions: `list`,
+  `list-for-shape`, `read`, `add`, `update`, `delete`.
+  The modelling difference drove the whole interface: **a Visio shape carries a *collection* of
+  hyperlinks**, stored as rows in its Hyperlink ShapeSheet section, not the single click-action the
+  old implementation assumed. Every action therefore addresses one by row name, because the row
+  *index* shifts when an earlier hyperlink is deleted.
+  `address` is external, `sub_address` navigates inside the document (`Page-2`, or
+  `Page-2/Rectangle` for a shape), and either alone is enough. A hyperlink with neither is rejected:
+  Visio accepts that row silently and does nothing with it, so it would otherwise be reported as a
+  working link. `update` with no fields is rejected for the same reason.
+  Errors name the shape and list the hyperlinks it does have — Visio's own message is
+  `Invalid parameter`, which identifies neither.
+
+  **`Shape.Hyperlinks` is 0-based**, unlike `Pages`, `Shapes` and `Masters`. Reading it as 1-based
+  throws `COMException: Invalid parameter` on a shape holding exactly one hyperlink — the most
+  common case there is. A test pins the index of the first hyperlink at 0.
+
+### Added
+
 - **The `master` tool works, reimplemented on `Document.Masters`** (#34). It was backed by
   PowerPoint `SlideMasters`/`CustomLayouts` and every action threw `RuntimeBinderException` on a
   `.vsdx`; it has been off the public surface since #19. Six actions, all Visio-native: `list`,

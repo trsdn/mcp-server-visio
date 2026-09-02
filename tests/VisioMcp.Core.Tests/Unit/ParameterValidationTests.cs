@@ -114,16 +114,19 @@ public class ParameterValidationTests
     }
 
     [Fact]
-    public void HyperlinkAdd_NullAddress_ThrowsArgumentNullException()
+    public void HyperlinkAdd_NoTarget_ThrowsArgumentException()
     {
         var commands = new HyperlinkCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.Add(null!, 1, "Shape1", null!));
+
+        // Visio accepts a hyperlink row with neither target and does nothing with it, so this is
+        // rejected up front rather than reported as a created link.
+        Assert.Throws<ArgumentException>(() => commands.Add(null!, 1, "Shape1", null!));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void HyperlinkAdd_EmptyAddress_ThrowsArgumentException(string address)
+    public void HyperlinkAdd_EmptyAddressAndNoSubAddress_ThrowsArgumentException(string address)
     {
         var commands = new HyperlinkCommands();
         Assert.Throws<ArgumentException>(() => commands.Add(null!, 1, "Shape1", address));
@@ -133,7 +136,7 @@ public class ParameterValidationTests
     public void HyperlinkRead_NullShapeName_ThrowsArgumentNullException()
     {
         var commands = new HyperlinkCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.Read(null!, 1, null!));
+        Assert.Throws<ArgumentNullException>(() => commands.Read(null!, 1, null!, "Row_1"));
     }
 
     [Theory]
@@ -142,7 +145,31 @@ public class ParameterValidationTests
     public void HyperlinkRead_EmptyShapeName_ThrowsArgumentException(string shapeName)
     {
         var commands = new HyperlinkCommands();
-        Assert.Throws<ArgumentException>(() => commands.Read(null!, 1, shapeName));
+        Assert.Throws<ArgumentException>(() => commands.Read(null!, 1, shapeName, "Row_1"));
+    }
+
+    [Fact]
+    public void HyperlinkRead_NullHyperlinkName_ThrowsArgumentNullException()
+    {
+        var commands = new HyperlinkCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.Read(null!, 1, "Shape1", null!));
+    }
+
+    [Fact]
+    public void HyperlinkUpdate_NoFieldsGiven_ThrowsArgumentException()
+    {
+        var commands = new HyperlinkCommands();
+
+        // Every field is optional so omitted ones stay put; a call with none of them would be a
+        // silent no-op reported as success.
+        Assert.Throws<ArgumentException>(() => commands.Update(null!, 1, "Shape1", "Row_1"));
+    }
+
+    [Fact]
+    public void HyperlinkDelete_NullHyperlinkName_ThrowsArgumentNullException()
+    {
+        var commands = new HyperlinkCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.Delete(null!, 1, "Shape1", null!));
     }
 
     // ── VBA Commands ─────────────────────────────────────────

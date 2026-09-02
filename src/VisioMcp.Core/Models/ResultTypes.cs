@@ -723,18 +723,9 @@ public class WindowSnapSettingsResult : ResultBase
 
 public class HyperlinkResult : ResultBase
 {
-    public int SlideIndex { get; set; }
+    public int PageIndex { get; set; }
     public string ShapeName { get; set; } = string.Empty;
-    public bool HasHyperlink { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Address { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SubAddress { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ScreenTip { get; set; }
+    public HyperlinkInfo? Hyperlink { get; set; }
 }
 
 public class HyperlinkListResult : ResultBase
@@ -744,17 +735,38 @@ public class HyperlinkListResult : ResultBase
 
 public class HyperlinkInfo
 {
-    public int Index { get; set; }
+    /// <summary>
+    /// Row name within the shape's Hyperlink ShapeSheet section, such as <c>Row_1</c>. This is the
+    /// stable handle: <see cref="RowIndex"/> shifts when an earlier hyperlink is deleted.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>0-based row index, unlike almost every other Visio collection.</summary>
+    public int RowIndex { get; set; }
+
+    /// <summary>External target. Empty for a link that only navigates within the document.</summary>
     public string Address { get; set; } = string.Empty;
 
+    /// <summary>Target inside the document — a page name, or a shape as <c>Page/Shape</c>.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SubAddress { get; set; }
 
+    /// <summary>Text Visio shows for the link on hover.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ScreenTip { get; set; }
+    public string? Description { get; set; }
+
+    /// <summary>Query string or fragment appended to <see cref="Address"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExtraInfo { get; set; }
+
+    /// <summary>Target frame for the browser.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Frame { get; set; }
+
+    public bool NewWindow { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int SlideIndex { get; set; }
+    public int PageIndex { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ShapeName { get; set; }
