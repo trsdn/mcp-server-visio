@@ -220,6 +220,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`TextCommands` is now entirely PowerPoint-free** (#20). Its 13 broken actions were written
+  against `TextFrame.TextRange.Font` and `ParagraphFormat` and threw `RuntimeBinderException` on
+  every call. Ten are reimplemented against Visio's Character and Paragraph ShapeSheet sections —
+  `format` (`Char.Font`/`Size`/`Color`/`Style`, `Para.HorzAlign`, `VerticalAlign`),
+  `format-advanced`, `set-spacing`, `set-bullets`, `read-spacing`, `read-bullets`, `change-case`,
+  `insert-symbol`, `insert-date-time` and `insert-slide-number`. `alt-text-audit` now audits the
+  `Comment` cell, matching `shape(set-alt-text)`.
+  `Char.Style` is a bitfield, so bold/italic/underline are applied by read-modify-write — setting
+  one no longer silently clears the others, which a test pins.
+  `change-case` deliberately rewrites the stored text rather than setting `Char.Case`, which is a
+  display transform that would leave `text(get)` returning the original casing.
+  `insert-date-time` and `insert-slide-number` insert **literal text and say so**: Visio's live
+  fields cannot be created through a single cell write, so a value that silently fails to track
+  page reordering would be worse than an honest message.
+  Parameters with no Visio equivalent — `strikethrough`, `subscript`, `superscript`,
+  `characterSpacing` — are **reported as ignored** rather than silently dropped.
+  `insert-link` and `empty-placeholder-audit` throw `NotSupportedException` naming the alternative:
+  Visio attaches hyperlinks to a whole shape rather than a text range (#35), and Visio pages have
+  no layout inheritance and therefore no placeholders.
+  20 new integration tests.
+
 - **`ShapeCommands` is now entirely PowerPoint-free** (#20). The last ten of its 23 broken actions
   are resolved, so all 51 shape actions execute against a `.vsdx`.
   Eight more are reimplemented against modern-Visio effect cells — `set-glow` (`GlowSize`,

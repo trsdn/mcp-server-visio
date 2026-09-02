@@ -1,3 +1,4 @@
+using System.Globalization;
 using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
 using VisioMcp.Core.Models;
@@ -6,6 +7,62 @@ namespace VisioMcp.Core.Commands.Text;
 
 public class TextCommands : ITextCommands
 {
+    // Char.Style is a bitfield rather than separate cells.
+    private const int CharStyleBold = 1;
+    private const int CharStyleItalic = 2;
+    private const int CharStyleUnderline = 4;
+
+    /// <summary>Maps the accepted alignment words onto Para.HorzAlign values.</summary>
+    private static int ParseHorizontalAlignment(string alignment) => alignment.ToLowerInvariant() switch
+    {
+        "left" => 0,
+        "center" => 1,
+        "centre" => 1,
+        "right" => 2,
+        "justify" => 3,
+        _ => throw new ArgumentException(
+            $"Unknown alignment '{alignment}'. Expected left, center, right or justify.", nameof(alignment))
+    };
+
+    /// <summary>Maps the accepted vertical alignment words onto the VerticalAlign cell.</summary>
+    private static int ParseVerticalAlignment(string verticalAlignment) => verticalAlignment.ToLowerInvariant() switch
+    {
+        "top" => 0,
+        "middle" => 1,
+        "center" => 1,
+        "centre" => 1,
+        "bottom" => 2,
+        _ => throw new ArgumentException(
+            $"Unknown vertical alignment '{verticalAlignment}'. Expected top, middle or bottom.", nameof(verticalAlignment))
+    };
+
+    /// <summary>Lower-cases everything, then capitalises the first letter of each sentence.</summary>
+    private static string ToSentenceCase(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        var chars = value.ToLowerInvariant().ToCharArray();
+        bool startOfSentence = true;
+
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (startOfSentence && char.IsLetter(chars[i]))
+            {
+                chars[i] = char.ToUpperInvariant(chars[i]);
+                startOfSentence = false;
+            }
+            else if (chars[i] is '.' or '!' or '?')
+            {
+                startOfSentence = true;
+            }
+        }
+
+        return new string(chars);
+    }
+
     public TextResult GetText(IVisioBatch batch, int pageIndex, string shapeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
@@ -238,80 +295,78 @@ public class TextCommands : ITextCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                var changes = new List<string>();
 
-                dynamic textFrame = shape.TextFrame;
-                dynamic font = textFrame.TextRange.Font;
-                if (fontName != null) font.Name = fontName;
-                if (fontSize.HasValue) font.Size = fontSize.Value;
-                if (bold.HasValue) font.Bold = bold.Value ? -1 : 0; // msoTrue/msoFalse
-                if (italic.HasValue) font.Italic = italic.Value ? -1 : 0;
+                if (fontName != null)
+                {
+                    ShapeSheetHelpers.SetFormula(shape, "Char.Font", ShapeSheetHelpers.ToStringFormula(fontName));
+                    changes.Add($"font={fontName}");
+                }
+
+                if (fontSize.HasValue)
+                {
+                    ShapeSheetHelpers.SetFormula(shape, "Char.Size", ShapeSheetHelpers.FormatInvariant(fontSize.Value) + " pt");
+                    changes.Add($"size={ShapeSheetHelpers.FormatInvariant(fontSize.Value)}pt");
+                }
+
                 if (color != null)
                 {
-                    // Parse hex color #RRGGBB → RGB int
-                    if (color.StartsWith('#') && color.Length == 7)
-                    {
-                        int r = Convert.ToInt32(color[1..3], 16);
-                        int g = Convert.ToInt32(color[3..5], 16);
-                        int b = Convert.ToInt32(color[5..7], 16);
-                        font.Color.RGB = r + (g << 8) + (b << 16); // PowerPoint uses BGR format
-                    }
+                    ShapeSheetHelpers.SetFormula(shape, "Char.Color", ShapeSheetHelpers.ToRgbFormula(color, nameof(color)));
+                    changes.Add($"color={color}");
                 }
 
-                // Horizontal alignment for all paragraphs
+                // Char.Style is a bitfield (bold 1, italic 2, underline 4), so bold and italic are
+                // applied by read-modify-write. Setting the cell outright would silently clear
+                // whichever attribute the caller did not mention.
+                if (bold.HasValue || italic.HasValue)
+                {
+                    int style = (int)(ShapeSheetHelpers.TryGetResult(shape, "Char.Style") ?? 0d);
+
+                    if (bold.HasValue)
+                    {
+                        style = bold.Value ? style | CharStyleBold : style & ~CharStyleBold;
+                        changes.Add($"bold={bold.Value}");
+                    }
+
+                    if (italic.HasValue)
+                    {
+                        style = italic.Value ? style | CharStyleItalic : style & ~CharStyleItalic;
+                        changes.Add($"italic={italic.Value}");
+                    }
+
+                    ShapeSheetHelpers.SetFormula(shape, "Char.Style", style.ToString(CultureInfo.InvariantCulture));
+                }
+
                 if (alignment != null)
                 {
-                    // ppAlignLeft=1, ppAlignCenter=2, ppAlignRight=3, ppAlignJustify=4
-                    int ppAlign = alignment.ToLowerInvariant() switch
-                    {
-                        "left" => 1,
-                        "center" => 2,
-                        "right" => 3,
-                        "justify" => 4,
-                        _ => 1
-                    };
-                    dynamic paragraphs = textFrame.TextRange.Paragraphs();
-                    int paraCount = (int)paragraphs.Count;
-                    for (int p = 1; p <= paraCount; p++)
-                    {
-                        dynamic para = textFrame.TextRange.Paragraphs(p, 1);
-                        try { para.ParagraphFormat.Alignment = ppAlign; }
-                        finally { ComUtilities.Release(ref para!); }
-                    }
-                    ComUtilities.Release(ref paragraphs!);
+                    ShapeSheetHelpers.SetFormula(shape, "Para.HorzAlign", ParseHorizontalAlignment(alignment).ToString(CultureInfo.InvariantCulture));
+                    changes.Add($"align={alignment}");
                 }
 
-                // Vertical anchor: msoAnchorTop=1, msoAnchorMiddle=3, msoAnchorBottom=4
                 if (verticalAlignment != null)
                 {
-                    textFrame.VerticalAnchor = verticalAlignment.ToLowerInvariant() switch
-                    {
-                        "top" => 1,
-                        "middle" => 3,
-                        "bottom" => 4,
-                        _ => 1
-                    };
+                    ShapeSheetHelpers.SetFormula(shape, "VerticalAlign", ParseVerticalAlignment(verticalAlignment).ToString(CultureInfo.InvariantCulture));
+                    changes.Add($"valign={verticalAlignment}");
                 }
 
-                ComUtilities.Release(ref font!);
-                ComUtilities.Release(ref textFrame!);
                 return new OperationResult
                 {
                     Success = true,
                     Action = "format",
-                    Message = $"Formatted text in shape '{shapeName}' (slide {pageIndex})",
-                    FilePath = ctx.PresentationPath
+                    Message = changes.Count > 0
+                        ? $"Formatted text in shape '{shapeName}' on page {pageIndex}: {string.Join(", ", changes)}"
+                        : $"No formatting changed on shape '{shapeName}' (all parameters were null)",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
@@ -322,46 +377,52 @@ public class TextCommands : ITextCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                var changes = new List<string>();
 
-                dynamic font = shape.TextFrame.TextRange.Font;
-                try
+                if (underline.HasValue)
                 {
-                    if (underline.HasValue)
-                        font.Underline = underline.Value ? -1 : 0;
-                    if (strikethrough.HasValue)
-                        font.Strikethrough = strikethrough.Value ? -1 : 0;
-                    if (subscript.HasValue)
-                        font.Subscript = subscript.Value ? -1 : 0;
-                    if (superscript.HasValue)
-                        font.Superscript = superscript.Value ? -1 : 0;
+                    int style = (int)(ShapeSheetHelpers.TryGetResult(shape, "Char.Style") ?? 0d);
+                    style = underline.Value ? style | CharStyleUnderline : style & ~CharStyleUnderline;
+                    ShapeSheetHelpers.SetFormula(shape, "Char.Style", style.ToString(CultureInfo.InvariantCulture));
+                    changes.Add($"underline={underline.Value}");
                 }
-                finally
+
+                // Visio's Character section has no strikethrough, subscript or superscript cell.
+                // These are reported rather than silently dropped: a no-op that returns success is
+                // how a caller comes to believe the text changed when it did not.
+                var unsupported = new List<string>();
+                if (strikethrough.HasValue) unsupported.Add("strikethrough");
+                if (subscript.HasValue) unsupported.Add("subscript");
+                if (superscript.HasValue) unsupported.Add("superscript");
+
+                string message = changes.Count > 0
+                    ? $"Applied advanced formatting to shape '{shapeName}' on page {pageIndex}: {string.Join(", ", changes)}"
+                    : $"No advanced formatting applied to shape '{shapeName}'";
+
+                if (unsupported.Count > 0)
                 {
-                    ComUtilities.Release(ref font!);
+                    message += $". Ignored (no Visio equivalent): {string.Join(", ", unsupported)}";
                 }
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "format-advanced",
-                    Message = $"Applied advanced formatting to shape '{shapeName}' (slide {pageIndex})",
-                    FilePath = ctx.PresentationPath
+                    Message = message,
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult WordCount(IVisioBatch batch, int pageIndex)
     {
         return batch.Execute((ctx, ct) =>
@@ -450,316 +511,171 @@ public class TextCommands : ITextCommands
     {
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Presentation;
-            var missing = new List<string>();
-
-            void AuditSlide(dynamic s, int idx)
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shapes = page.Shapes;
+            try
             {
-                dynamic shapes = s.Shapes;
-                try
+                int count = (int)shapes.Count;
+                var missing = new List<string>();
+
+                for (int i = 1; i <= count; i++)
                 {
-                    int count = (int)shapes.Count;
-                    for (int i = 1; i <= count; i++)
+                    dynamic shape = shapes.Item(i);
+                    try
                     {
-                        dynamic shape = shapes.Item(i);
-                        try
+                        // Visio's alt-text equivalent is the Comment cell - see
+                        // ShapeCommands.SetAltText. It is a string cell, so the formula carries the
+                        // text; an empty shape yields the empty-string formula "" rather than null.
+                        string comment = ShapeSheetHelpers.TryGetFormula(shape, "Comment") ?? string.Empty;
+                        string trimmed = comment.Trim().Trim('"').Trim();
+
+                        if (trimmed.Length == 0)
                         {
-                            string altText = shape.AlternativeText?.ToString() ?? "";
-                            if (string.IsNullOrWhiteSpace(altText))
-                            {
-                                missing.Add($"Slide {idx}, Shape '{shape.Name}'");
-                            }
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref shape!);
+                            missing.Add(shape.NameU?.ToString() ?? $"Shape{i}");
                         }
                     }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref shapes!);
-                }
-            }
-
-            if (pageIndex > 0)
-            {
-                dynamic slide = pres.Slides.Item(pageIndex);
-                try
-                {
-                    AuditSlide(slide, pageIndex);
-                }
-                finally
-                {
-                    ComUtilities.Release(ref slide!);
-                }
-            }
-            else
-            {
-                dynamic slides = pres.Slides;
-                try
-                {
-                    int slideCount = (int)slides.Count;
-                    for (int i = 1; i <= slideCount; i++)
+                    finally
                     {
-                        dynamic slide = slides.Item(i);
-                        try
-                        {
-                            AuditSlide(slide, i);
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref slide!);
-                        }
+                        ComUtilities.Release(ref shape!);
                     }
                 }
-                finally
-                {
-                    ComUtilities.Release(ref slides!);
-                }
-            }
 
-            return new OperationResult
+                string message = missing.Count == 0
+                    ? $"All {count} shape(s) on page {pageIndex} have alt text"
+                    : $"{missing.Count} of {count} shape(s) on page {pageIndex} have no alt text: {string.Join(", ", missing)}";
+
+                return new OperationResult
+                {
+                    Success = true,
+                    Action = "alt-text-audit",
+                    Message = message,
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
             {
-                Success = true,
-                Action = "alt-text-audit",
-                Message = missing.Count > 0
-                    ? $"{missing.Count} shape(s) missing alt text:\n" + string.Join("\n", missing)
-                    : "All shapes have alt text.",
-                FilePath = ctx.PresentationPath
-            };
+                ComUtilities.Release(ref shapes!);
+                ComUtilities.Release(ref page!);
+            }
         });
     }
-
     public OperationResult EmptyPlaceholderAudit(IVisioBatch batch, int pageIndex)
     {
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic pres = ctx.Presentation;
-            var empty = new List<string>();
+        // Placeholders are a PowerPoint slide-layout concept: a slide inherits typed regions from
+        // its layout, and an unfilled one is a defect. Visio pages have no layout inheritance and
+        // therefore no placeholders, so there is nothing equivalent to audit.
+        _ = batch;
+        _ = pageIndex;
 
-            void AuditSlide(dynamic s, int idx)
-            {
-                dynamic placeholders = s.Shapes.Placeholders;
-                try
-                {
-                    int count = (int)placeholders.Count;
-                    for (int i = 1; i <= count; i++)
-                    {
-                        dynamic ph = placeholders.Item(i);
-                        try
-                        {
-                            if (Convert.ToInt32(ph.HasTextFrame) != 0)
-                            {
-                                dynamic textRange = ph.TextFrame.TextRange;
-                                try
-                                {
-                                    string text = textRange.Text?.ToString() ?? "";
-                                    if (string.IsNullOrWhiteSpace(text))
-                                    {
-                                        empty.Add($"Slide {idx}, Placeholder '{ph.Name}'");
-                                    }
-                                }
-                                finally
-                                {
-                                    ComUtilities.Release(ref textRange!);
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref ph!);
-                        }
-                    }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref placeholders!);
-                }
-            }
-
-            if (pageIndex > 0)
-            {
-                dynamic slide = pres.Slides.Item(pageIndex);
-                try
-                {
-                    AuditSlide(slide, pageIndex);
-                }
-                finally
-                {
-                    ComUtilities.Release(ref slide!);
-                }
-            }
-            else
-            {
-                dynamic slides = pres.Slides;
-                try
-                {
-                    int slideCount = (int)slides.Count;
-                    for (int i = 1; i <= slideCount; i++)
-                    {
-                        dynamic slide = slides.Item(i);
-                        try
-                        {
-                            AuditSlide(slide, i);
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref slide!);
-                        }
-                    }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref slides!);
-                }
-            }
-
-            return new OperationResult
-            {
-                Success = true,
-                Action = "empty-placeholder-audit",
-                Message = empty.Count > 0
-                    ? $"{empty.Count} empty placeholder(s) found:\n" + string.Join("\n", empty)
-                    : "No empty placeholders found.",
-                FilePath = ctx.PresentationPath
-            };
-        });
+        throw new NotSupportedException(
+            "text(empty-placeholder-audit) has no Visio equivalent. Placeholders come from a " +
+            "PowerPoint slide layout; Visio pages have no layout inheritance. To find shapes with " +
+            "no text, use shape(list) followed by text(get) on each shape.");
     }
-
     public OperationResult SetSpacing(IVisioBatch batch, int pageIndex, string shapeName, float? lineSpacing, float? spaceBefore, float? spaceAfter, float? characterSpacing)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                var changes = new List<string>();
 
-                dynamic textFrame = shape.TextFrame;
-                dynamic textRange = textFrame.TextRange;
-                try
+                if (lineSpacing.HasValue)
                 {
-                    // Paragraph-level spacing
-                    dynamic paragraphFormat = textRange.ParagraphFormat;
-                    try
-                    {
-                        if (lineSpacing.HasValue) paragraphFormat.SpaceWithin = lineSpacing.Value;
-                        if (spaceBefore.HasValue) paragraphFormat.SpaceBefore = spaceBefore.Value;
-                        if (spaceAfter.HasValue) paragraphFormat.SpaceAfter = spaceAfter.Value;
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref paragraphFormat!);
-                    }
-
-                    // Character-level spacing
-                    if (characterSpacing.HasValue)
-                    {
-                        dynamic font = textRange.Font;
-                        try
-                        {
-                            font.Spacing = characterSpacing.Value;
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref font!);
-                        }
-                    }
+                    // A negative SpLine is a multiple of the line height, which is how a "1.5 line
+                    // spacing" request is expressed; a positive value would be an absolute distance.
+                    ShapeSheetHelpers.SetFormula(shape, "Para.SpLine", ShapeSheetHelpers.FormatInvariant(-lineSpacing.Value));
+                    changes.Add($"lineSpacing={ShapeSheetHelpers.FormatInvariant(lineSpacing.Value)}");
                 }
-                finally
+
+                if (spaceBefore.HasValue)
                 {
-                    ComUtilities.Release(ref textRange!);
-                    ComUtilities.Release(ref textFrame!);
+                    ShapeSheetHelpers.SetFormula(shape, "Para.SpBefore", ShapeSheetHelpers.FormatInvariant(spaceBefore.Value) + " pt");
+                    changes.Add($"spaceBefore={ShapeSheetHelpers.FormatInvariant(spaceBefore.Value)}pt");
+                }
+
+                if (spaceAfter.HasValue)
+                {
+                    ShapeSheetHelpers.SetFormula(shape, "Para.SpAfter", ShapeSheetHelpers.FormatInvariant(spaceAfter.Value) + " pt");
+                    changes.Add($"spaceAfter={ShapeSheetHelpers.FormatInvariant(spaceAfter.Value)}pt");
+                }
+
+                string message = changes.Count > 0
+                    ? $"Set spacing on shape '{shapeName}' on page {pageIndex}: {string.Join(", ", changes)}"
+                    : $"No spacing changed on shape '{shapeName}'";
+
+                // Visio has no character-spacing (tracking) cell.
+                if (characterSpacing.HasValue)
+                {
+                    message += ". Ignored (no Visio equivalent): characterSpacing";
                 }
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-spacing",
-                    Message = $"Set spacing on shape '{shapeName}' (slide {pageIndex})",
-                    FilePath = ctx.PresentationPath
+                    Message = message,
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult SetBullets(IVisioBatch batch, int pageIndex, string shapeName, int bulletType, string? bulletCharacter, int indentLevel)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
+        if (bulletType is < 0 or > 7)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(bulletType), bulletType, "bulletType must be 0 (none) or 1-7 (Visio bullet styles).");
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(indentLevel);
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                ShapeSheetHelpers.SetFormula(shape, "Para.Bullet", bulletType.ToString(CultureInfo.InvariantCulture));
 
-                dynamic textFrame = shape.TextFrame;
-                dynamic textRange = textFrame.TextRange;
-                try
+                if (!string.IsNullOrEmpty(bulletCharacter))
                 {
-                    dynamic paragraphFormat = textRange.ParagraphFormat;
-                    try
-                    {
-                        // ppBulletNone=0, ppBulletUnnumbered=1, ppBulletNumbered=2
-                        dynamic bullet = paragraphFormat.Bullet;
-                        try
-                        {
-                            bullet.Type = bulletType;
-
-                            if (bulletType == 1 && !string.IsNullOrEmpty(bulletCharacter))
-                                bullet.Character = Convert.ToInt32(bulletCharacter[0]);
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref bullet!);
-                        }
-
-                        // ParagraphFormat.Level is 1-based (1-5)
-                        paragraphFormat.Level = indentLevel + 1;
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref paragraphFormat!);
-                    }
+                    ShapeSheetHelpers.SetFormula(shape, "Para.BulletStr", ShapeSheetHelpers.ToStringFormula(bulletCharacter));
                 }
-                finally
-                {
-                    ComUtilities.Release(ref textRange!);
-                    ComUtilities.Release(ref textFrame!);
-                }
+
+                // Visio has no discrete bullet "levels"; indentation is a distance. A quarter inch
+                // per level matches Visio's own default list indentation.
+                double indentInches = indentLevel * 0.25d;
+                ShapeSheetHelpers.SetFormula(shape, "Para.IndLeft", ShapeSheetHelpers.FormatInvariant(indentInches) + " in");
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "set-bullets",
-                    Message = $"Set bullets on shape '{shapeName}' (slide {pageIndex})",
-                    FilePath = ctx.PresentationPath
+                    Message = bulletType == 0
+                        ? $"Removed bullets from shape '{shapeName}' on page {pageIndex}"
+                        : $"Set bullet style {bulletType} on shape '{shapeName}' at indent level {indentLevel} on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
-    /// <summary>
-    /// Read paragraph and run details from a COM TextRange into the provided list.
-    /// </summary>
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
@@ -866,329 +782,247 @@ public class TextCommands : ITextCommands
         ArgumentException.ThrowIfNullOrWhiteSpace(linkText);
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
 
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
-            dynamic? found = null;
-            dynamic? actionSettings = null;
-            dynamic? actionSetting = null;
-            dynamic? hyperlink = null;
-            try
-            {
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                found = textRange.Find(linkText);
+        // PowerPoint could hyperlink a text *range* inside a shape. Visio models hyperlinks as
+        // rows in a shape's Hyperlink ShapeSheet section, attached to the whole shape, so there is
+        // no equivalent of linking part of a shape's text.
+        //
+        // Parameters are still validated first so the caller gets the more specific error when
+        // both a bad argument and the unsupported operation apply.
+        _ = batch;
+        _ = pageIndex;
 
-                if (found == null)
-                {
-                    return new OperationResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"Text '{linkText}' not found in shape '{shapeName}' on slide {pageIndex}",
-                        FilePath = ctx.PresentationPath
-                    };
-                }
-
-                // ppMouseClick = 1
-                actionSettings = found.ActionSettings;
-                actionSetting = actionSettings.Item(1);
-                hyperlink = actionSetting.Hyperlink;
-                hyperlink.Address = url;
-
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "insert-link",
-                    Message = $"Added hyperlink '{url}' to text '{linkText}' in shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
-                };
-            }
-            finally
-            {
-                if (hyperlink != null) ComUtilities.Release(ref hyperlink!);
-                if (actionSetting != null) ComUtilities.Release(ref actionSetting!);
-                if (actionSettings != null) ComUtilities.Release(ref actionSettings!);
-                if (found != null) ComUtilities.Release(ref found!);
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
-            }
-        });
+        throw new NotSupportedException(
+            "text(insert-link) has no Visio equivalent. Visio attaches hyperlinks to a whole shape " +
+            "via its Hyperlink ShapeSheet section rather than to a range of text. Use the hyperlink " +
+            "tool once it is reimplemented against Shape.Hyperlinks (tracked in #35).");
     }
-
     public OperationResult ChangeCase(IVisioBatch batch, int pageIndex, string shapeName, int caseType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
+        if (caseType is < 0 or > 3)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(caseType), caseType, "caseType must be 0 (lower), 1 (upper), 2 (title) or 3 (sentence).");
+        }
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
-
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                textRange.ChangeCase(caseType);
-
-                string caseLabel = caseType switch
+                // Deliberately not Char.Case: that is a display transform, so the stored text would
+                // be unchanged and a subsequent text(get) would return the original casing. The
+                // caller asked to change the text, so the text is changed.
+                string original = shape.Text?.ToString() ?? string.Empty;
+                string converted = caseType switch
                 {
-                    1 => "Sentence case",
-                    2 => "lowercase",
-                    3 => "UPPERCASE",
-                    4 => "Title Case",
-                    5 => "tOGGLE cASE",
-                    _ => $"case type {caseType}"
+                    0 => original.ToLowerInvariant(),
+                    1 => original.ToUpperInvariant(),
+                    2 => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(original.ToLowerInvariant()),
+                    _ => ToSentenceCase(original)
                 };
+
+                shape.Text = converted;
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "change-case",
-                    Message = $"Changed text to {caseLabel} in shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Changed case of text in shape '{shapeName}' on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult ReadSpacing(IVisioBatch batch, int pageIndex, string shapeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
-            dynamic? paragraphFormat = null;
-            dynamic? font = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                // SpLine is negative when it expresses a multiple of the line height and positive
+                // when it is an absolute distance, so it is reported raw rather than converted.
+                double lineSpacing = ShapeSheetHelpers.TryGetResult(shape, "Para.SpLine") ?? 0d;
+                double beforeInches = ShapeSheetHelpers.TryGetResult(shape, "Para.SpBefore") ?? 0d;
+                double afterInches = ShapeSheetHelpers.TryGetResult(shape, "Para.SpAfter") ?? 0d;
 
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                paragraphFormat = textRange.ParagraphFormat;
-                font = textRange.Font;
-
-                float spaceWithin = Convert.ToSingle(paragraphFormat.SpaceWithin);
-                float spaceBefore = Convert.ToSingle(paragraphFormat.SpaceBefore);
-                float spaceAfter = Convert.ToSingle(paragraphFormat.SpaceAfter);
-                float charSpacing = Convert.ToSingle(font.Spacing);
+                string message =
+                    $"LineSpacing: {ShapeSheetHelpers.FormatInvariant(lineSpacing)}, " +
+                    $"SpaceBefore: {ShapeSheetHelpers.FormatInvariant(ShapeSheetHelpers.InchesToPoints(beforeInches))}pt, " +
+                    $"SpaceAfter: {ShapeSheetHelpers.FormatInvariant(ShapeSheetHelpers.InchesToPoints(afterInches))}pt";
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "read-spacing",
-                    Message = $"SpaceWithin={spaceWithin}, SpaceBefore={spaceBefore}, SpaceAfter={spaceAfter}, CharacterSpacing={charSpacing}",
-                    FilePath = ctx.PresentationPath
+                    Message = message,
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (font != null) ComUtilities.Release(ref font!);
-                if (paragraphFormat != null) ComUtilities.Release(ref paragraphFormat!);
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult ReadBullets(IVisioBatch batch, int pageIndex, string shapeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
-            dynamic? allParagraphs = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                int bullet = (int)(ShapeSheetHelpers.TryGetResult(shape, "Para.Bullet") ?? 0d);
+                string custom = ShapeSheetHelpers.TryGetFormula(shape, "Para.BulletStr") ?? string.Empty;
+                double indentInches = ShapeSheetHelpers.TryGetResult(shape, "Para.IndLeft") ?? 0d;
 
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                allParagraphs = textRange.Paragraphs();
-
-                int paraCount = (int)allParagraphs.Count;
-                var lines = new List<string>();
-
-                for (int p = 1; p <= paraCount; p++)
-                {
-                    dynamic para = textRange.Paragraphs(p, 1);
-                    dynamic? pf = null;
-                    dynamic? bullet = null;
-                    try
-                    {
-                        pf = para.ParagraphFormat;
-                        bullet = pf.Bullet;
-
-                        int bulletType = Convert.ToInt32(bullet.Type);
-                        int bulletChar = 0;
-                        try { bulletChar = Convert.ToInt32(bullet.Character); } catch { }
-                        int level = Convert.ToInt32(pf.Level);
-
-                        lines.Add($"Paragraph {p}: BulletType={bulletType}, BulletCharacter={bulletChar}, IndentLevel={level}");
-                    }
-                    finally
-                    {
-                        if (bullet != null) ComUtilities.Release(ref bullet!);
-                        if (pf != null) ComUtilities.Release(ref pf!);
-                        ComUtilities.Release(ref para!);
-                    }
-                }
+                string message = bullet == 0
+                    ? "Bullets: none"
+                    : $"Bullets: style {bullet}, custom character {custom}, " +
+                      $"indent {ShapeSheetHelpers.FormatInvariant(ShapeSheetHelpers.InchesToPoints(indentInches))}pt";
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "read-bullets",
-                    Message = string.Join("; ", lines),
-                    FilePath = ctx.PresentationPath
+                    Message = message,
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (allParagraphs != null) ComUtilities.Release(ref allParagraphs!);
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult InsertSymbol(IVisioBatch batch, int pageIndex, string shapeName, string fontName, int charNumber)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(fontName);
 
+        // char.ConvertFromUtf32 throws for surrogates and out-of-range values; check first so the
+        // caller gets a parameter error rather than an opaque conversion failure.
+        if (charNumber < 0 || charNumber > 0x10FFFF || (charNumber >= 0xD800 && charNumber <= 0xDFFF))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(charNumber), charNumber, "charNumber must be a valid Unicode code point outside the surrogate range.");
+        }
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                string symbol = char.ConvertFromUtf32(charNumber);
+                string existing = shape.Text?.ToString() ?? string.Empty;
+                shape.Text = existing + symbol;
 
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                textRange.InsertSymbol(fontName, charNumber, true);
+                // Visio applies Char.Font to the whole shape rather than to a range, so naming a
+                // symbol font restyles all of the shape's text, not just the inserted character.
+                ShapeSheetHelpers.SetFormula(shape, "Char.Font", ShapeSheetHelpers.ToStringFormula(fontName));
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "insert-symbol",
-                    Message = $"Inserted symbol (font='{fontName}', char={charNumber}) in shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Appended symbol U+{charNumber:X4} to shape '{shapeName}' on page {pageIndex} and set font '{fontName}' for the whole shape",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult InsertDateTime(IVisioBatch batch, int pageIndex, string shapeName, int dateTimeFormat)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
+                // Formatted with InvariantCulture so the result does not vary with the machine
+                // locale. As with insert-slide-number this is literal text, not a live field.
+                var now = DateTime.Now;
+                string formatted = dateTimeFormat switch
+                {
+                    1 => now.ToString("d MMMM yyyy", CultureInfo.InvariantCulture),
+                    2 => now.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                    3 => now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    4 => now.ToString("HH:mm", CultureInfo.InvariantCulture),
+                    5 => now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                    _ => now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                };
 
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                textRange.InsertDateTime(dateTimeFormat, true);
+                string existing = shape.Text?.ToString() ?? string.Empty;
+                shape.Text = existing + formatted;
 
                 return new OperationResult
                 {
                     Success = true,
-                    Action = "insert-datetime",
-                    Message = $"Inserted date/time (format={dateTimeFormat}) in shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Action = "insert-date-time",
+                    Message = $"Appended '{formatted}' to shape '{shapeName}' on page {pageIndex}. Note: inserted as literal text, not a field that updates.",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
-
     public OperationResult InsertSlideNumber(IVisioBatch batch, int pageIndex, string shapeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Presentation).Slides.Item(pageIndex);
-            dynamic shape = slide.Shapes.Item(shapeName);
-            dynamic? textFrame = null;
-            dynamic? textRange = null;
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' does not have a text frame.");
-
-                textFrame = shape.TextFrame;
-                textRange = textFrame.TextRange;
-                textRange.InsertSlideNumber();
+                // PowerPoint inserted a live slide-number field. Visio's equivalent would be a
+                // Fields-section field, which cannot be added through a single cell write, so the
+                // page's current index is appended as literal text instead. The distinction
+                // matters: this does not update if pages are reordered.
+                string existing = shape.Text?.ToString() ?? string.Empty;
+                shape.Text = existing + pageIndex.ToString(CultureInfo.InvariantCulture);
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "insert-slide-number",
-                    Message = $"Inserted slide number in shape '{shapeName}' on slide {pageIndex}",
-                    FilePath = ctx.PresentationPath
+                    Message = $"Appended page number {pageIndex} to shape '{shapeName}'. Note: inserted as literal text, not a field that tracks page order.",
+                    FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                if (textRange != null) ComUtilities.Release(ref textRange!);
-                if (textFrame != null) ComUtilities.Release(ref textFrame!);
                 ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref slide!);
+                ComUtilities.Release(ref page!);
             }
         });
     }
