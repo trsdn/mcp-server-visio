@@ -7,15 +7,14 @@ namespace VisioMcp.Core.Commands.Cell;
 
 public class CellCommands : ICellCommands
 {
-    public CellResult Read(IVisioBatch batch, int pageIndex, string shapeName, string cellName)
+    public CellResult Read(IVisioBatch batch, int pageIndex, string? shapeName, string cellName, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(cellName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsU[cellName];
             try
             {
@@ -24,28 +23,26 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     Cell = ReadCellInfo(cell, cellName, includeValue: true, includeFormula: true)
                 };
             }
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public CellResult ReadFormula(IVisioBatch batch, int pageIndex, string shapeName, string cellName)
+    public CellResult ReadFormula(IVisioBatch batch, int pageIndex, string? shapeName, string cellName, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(cellName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsU[cellName];
             try
             {
@@ -54,29 +51,27 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     Cell = ReadCellInfo(cell, cellName, includeValue: false, includeFormula: true)
                 };
             }
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public OperationResult Write(IVisioBatch batch, int pageIndex, string shapeName, string cellName, string value)
+    public OperationResult Write(IVisioBatch batch, int pageIndex, string? shapeName, string cellName, string value, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(cellName);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsU[cellName];
             try
             {
@@ -93,22 +88,20 @@ public class CellCommands : ICellCommands
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public OperationResult SetFormula(IVisioBatch batch, int pageIndex, string shapeName, string cellName, string formula)
+    public OperationResult SetFormula(IVisioBatch batch, int pageIndex, string? shapeName, string cellName, string formula, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentException.ThrowIfNullOrWhiteSpace(cellName);
         ArgumentException.ThrowIfNullOrWhiteSpace(formula);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsU[cellName];
             try
             {
@@ -125,20 +118,18 @@ public class CellCommands : ICellCommands
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public CellListResult List(IVisioBatch batch, int pageIndex, string shapeName)
+    public CellListResult List(IVisioBatch batch, int pageIndex, string? shapeName, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             try
             {
                 var result = new CellListResult
@@ -146,7 +137,7 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName
+                    ShapeName = sheetRef.Label
                 };
 
                 foreach (string knownCellName in KnownCellNames)
@@ -171,12 +162,111 @@ public class CellCommands : ICellCommands
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
+    /// <summary>
+    /// A resolved ShapeSheet target, together with the COM objects that must be released.
+    /// </summary>
+    /// <remarks>
+    /// Visio exposes the same section, row and cell API on a shape, on <c>Page.PageSheet</c> and on
+    /// <c>Document.DocumentSheet</c> — confirmed against a live instance in #33. This lets one set
+    /// of cell actions address all three rather than duplicating them per target.
+    /// </remarks>
+    private sealed class SheetRef
+    {
+        internal dynamic Sheet { get; init; } = null!;
+        internal dynamic? Page { get; init; }
+
+        /// <summary>Name for result payloads and messages, for example a shape name or "PageSheet".</summary>
+        internal string Label { get; init; } = string.Empty;
+
+        internal void Release()
+        {
+            dynamic? sheet = Sheet;
+            if (sheet != null)
+            {
+                ComUtilities.Release(ref sheet!);
+            }
+
+            dynamic? page = Page;
+            if (page != null)
+            {
+                ComUtilities.Release(ref page!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves <c>sheetTarget</c> to the sheet the caller means.
+    /// </summary>
+    /// <exception cref="ArgumentException">The target is not one of shape, page or document.</exception>
+    private static SheetRef ResolveSheet(VisioContext ctx, string? sheetTarget, int pageIndex, string? shapeName)
+    {
+        var target = string.IsNullOrWhiteSpace(sheetTarget) ? "shape" : sheetTarget.Trim();
+
+        if (string.Equals(target, "document", StringComparison.OrdinalIgnoreCase))
+        {
+            return new SheetRef
+            {
+                Sheet = ((dynamic)ctx.Document).DocumentSheet,
+                Page = null,
+                Label = "DocumentSheet"
+            };
+        }
+
+        if (string.Equals(target, "page", StringComparison.OrdinalIgnoreCase))
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            return new SheetRef
+            {
+                Sheet = page.PageSheet,
+                Page = page,
+                Label = "PageSheet"
+            };
+        }
+
+        if (!string.Equals(target, "shape", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                $"Unknown sheet target '{sheetTarget}'. Use 'shape' (the default), 'page' for the page's own "
+                + "ShapeSheet, or 'document' for the document's.",
+                nameof(sheetTarget));
+        }
+
+        if (string.IsNullOrWhiteSpace(shapeName))
+        {
+            throw new ArgumentException(
+                "shapeName is required when sheet_target is 'shape'. Pass sheet_target='page' or 'document' "
+                + "to address a page's or the document's own ShapeSheet instead.",
+                nameof(shapeName));
+        }
+
+        dynamic shapePage = GetPage(ctx, pageIndex);
+        dynamic shape = shapePage.Shapes.Item(shapeName);
+
+        return new SheetRef
+        {
+            Sheet = shape,
+            Page = shapePage,
+            Label = SafeSheetString(() => shape.Name) ?? shapeName
+        };
+    }
+
+    /// <summary>Reads a COM string property, returning null rather than throwing.</summary>
+    private static string? SafeSheetString(Func<object?> read)
+    {
+        try
+        {
+            return read()?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
@@ -263,14 +353,13 @@ public class CellCommands : ICellCommands
         }
     }
 
-    public ShapeSheetSectionListResult ListSections(IVisioBatch batch, int pageIndex, string shapeName)
+    public ShapeSheetSectionListResult ListSections(IVisioBatch batch, int pageIndex, string? shapeName, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             try
             {
                 var sections = new List<ShapeSheetSectionInfo>();
@@ -295,28 +384,26 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     Sections = sections
                 };
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public ShapeSheetRowListResult ListRows(IVisioBatch batch, int pageIndex, string shapeName, string? section = null)
+    public ShapeSheetRowListResult ListRows(IVisioBatch batch, int pageIndex, string? shapeName, string? section = null, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         int sectionIndex = ShapeSheetSections.Resolve(section!);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             try
             {
                 var rows = new List<ShapeSheetRowInfo>();
@@ -332,7 +419,7 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     SectionName = ShapeSheetSections.GetName(sectionIndex),
                     SectionIndex = sectionIndex,
                     Rows = rows
@@ -340,22 +427,20 @@ public class CellCommands : ICellCommands
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public ShapeSheetRowResult AddRow(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, string? rowName = null)
+    public ShapeSheetRowResult AddRow(IVisioBatch batch, int pageIndex, string? shapeName, string? section = null, string? rowName = null, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         int sectionIndex = ShapeSheetSections.Resolve(section!);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             try
             {
                 if (!ShapeSheetSections.SectionExists(shape, sectionIndex))
@@ -372,7 +457,7 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     SectionName = ShapeSheetSections.GetName(sectionIndex),
                     SectionIndex = sectionIndex,
                     Row = ReadRowInfo(shape, sectionIndex, rowIndex)
@@ -380,23 +465,21 @@ public class CellCommands : ICellCommands
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public OperationResult DeleteRow(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0)
+    public OperationResult DeleteRow(IVisioBatch batch, int pageIndex, string? shapeName, string? section = null, int rowIndex = 0, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
 
         int sectionIndex = ShapeSheetSections.Resolve(section!);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             try
             {
                 int rowCount = ShapeSheetSections.RowCount(shape, sectionIndex);
@@ -421,15 +504,13 @@ public class CellCommands : ICellCommands
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public CellResult ReadSrc(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0)
+    public CellResult ReadSrc(IVisioBatch batch, int pageIndex, string? shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0, string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
         ArgumentOutOfRangeException.ThrowIfNegative(columnIndex);
 
@@ -437,8 +518,8 @@ public class CellCommands : ICellCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsSRC(sectionIndex, rowIndex, columnIndex);
             try
             {
@@ -450,22 +531,20 @@ public class CellCommands : ICellCommands
                     Success = true,
                     FilePath = ctx.DocumentPath,
                     PageIndex = pageIndex,
-                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    ShapeName = sheetRef.Label,
                     Cell = ReadCellInfo(cell, cellName, includeValue: true, includeFormula: true)
                 };
             }
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }
 
-    public OperationResult WriteSrc(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0, string formula = "")
+    public OperationResult WriteSrc(IVisioBatch batch, int pageIndex, string? shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0, string formula = "", string? sheetTarget = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
         ArgumentNullException.ThrowIfNull(formula);
         ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
         ArgumentOutOfRangeException.ThrowIfNegative(columnIndex);
@@ -474,8 +553,8 @@ public class CellCommands : ICellCommands
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic page = GetPage(ctx, pageIndex);
-            dynamic shape = page.Shapes.Item(shapeName);
+            var sheetRef = ResolveSheet(ctx, sheetTarget, pageIndex, shapeName);
+            dynamic shape = sheetRef.Sheet;
             dynamic cell = shape.CellsSRC(sectionIndex, rowIndex, columnIndex);
             try
             {
@@ -495,8 +574,7 @@ public class CellCommands : ICellCommands
             finally
             {
                 ComUtilities.Release(ref cell!);
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref page!);
+                sheetRef.Release();
             }
         });
     }

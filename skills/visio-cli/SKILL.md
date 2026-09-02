@@ -144,15 +144,16 @@ visiocli -q batch --input commands.json
 
 ### cell
 
-Visio ShapeSheet cell operations for reading and writing shape-level cells.
+Visio ShapeSheet cell operations for reading and writing cells on a shape, a page or the document.
 
 **Actions:** `read`, `read-formula`, `write`, `set-formula`, `list`, `list-sections`, `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`
 
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | 1-based page index (required) |
-| `--shape-name` | Shape name, exactly as reported by shape(list) (required) |
+| `--shape-name` | Shape name, exactly as reported by shape(list). Required when sheet_target is 'shape'; ignored otherwise |
 | `--cell-name` | ShapeSheet cell name, for example Width, PinX, FillForegnd, Char.Size or Prop.Cost. Section cells use the Section.Row.Cell form (required for: read, read-formula, write, set-formula) |
+| `--sheet-target` | Which ShapeSheet to address: 'shape' (the default), 'page' for the page's own ShapeSheet where page size and drawing scale live, or 'document' for the document's. shapeName is not needed for page or document |
 | `--value` | Literal value. Distance cells need explicit units such as '3 in' or '12 pt', and angles need ' deg'; a bare number is read in internal units (inches, radians) (required for: write) |
 | `--formula` | ShapeSheet expression, for example 'Width*0.5' or 'GUARD(2 in)'. A formula recalculates when its inputs change; a literal value does not (required for: set-formula) |
 | `--section` | Section name such as Prop, User, Connections, Actions or Hyperlink, or a numeric section index. Use list-sections to see what a shape has |
