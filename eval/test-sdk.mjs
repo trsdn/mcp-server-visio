@@ -21,7 +21,7 @@ async function main() {
   const prompt = `You are a slide builder. Read the design skill files, then build one slide.
 
 FIRST: Read these files for design guidance:
-- ${join(SKILLS_DIR, "slide-design-principles.md")}
+- ${join(SKILLS_DIR, "diagram-design-principles.md")}
 
 CLI TOOL: ${CLI_PATH}
 RULES: Use --color not --font-color. Use --alignment not --horizontal-alignment. Don't use \\n in --text. visiocli service is already running. Close existing sessions first via session list + session close.

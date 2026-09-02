@@ -178,7 +178,7 @@ See `references/` for detailed guidance:
 
 - [Core execution rules and LLM guidelines](./references/behavioral-rules.md)
 - [Generation pipeline](./references/generation-pipeline.md)
-- [Agent mode patterns](./references/ppt_agent_mode.md)
+- [Visible session mode](./references/visible-session-mode.md)
 
 For design catalog data (archetypes, palettes, grids, and styles), use the `design` tool:
 - `design(list-archetypes)` / `design(get-archetype)` — Primary unified archetype surface with curated layout guidance plus learned subtypes and concrete sanitized example details when local reference data is available

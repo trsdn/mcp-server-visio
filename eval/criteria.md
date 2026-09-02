@@ -77,9 +77,9 @@ When scoring reveals patterns, classify the gap:
 
 | Gap Type | Example | Fix Location |
 |---|---|---|
-| Missing guidance | LLM doesn't know to use action titles | `slide-design-principles.md` |
+| Missing guidance | LLM doesn't know to use action titles | `diagram-design-principles.md` |
 | Wrong archetype | Uses bullets when chart needed | `design(get-archetype)` tool |
 | Poor colors | Random colors, no palette selection | `design(get-palette)` tool |
 | Bad layout | Elements poorly positioned | `design(get-layout-grid)` tool |
-| No self-review | Obvious issues not caught | `slide-design-review.md` |
+| No self-review | Obvious issues not caught | `diagram-design-review.md` |
 | Profile mismatch | Sales deck looks like academic paper | `design(get-style-profile)` tool |

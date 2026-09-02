@@ -22,8 +22,8 @@ The harness only invokes you in **tuning** mode, and only when the prior loop pr
 All skill files are in: {SKILLS_DIR}
 
 Key files:
-- `slide-design-principles.md` — Universal design rules
-- `slide-design-review.md` — Quality scorecard, auto-reject triggers
+- `diagram-design-principles.md` — Universal design rules
+- `diagram-design-review.md` — Quality scorecard, auto-reject triggers
 - `generation-pipeline.md` — Data-to-visual mapping, intent-to-archetype mapping
 
 Archetype family files are in: {ARCHETYPES_DIR}

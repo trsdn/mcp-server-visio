@@ -37,8 +37,8 @@ If you need shapes, prefer `shape add-textbox` and `shape add-shape` over discov
 
 ## Design Reference
 Your design decisions MUST follow the skill reference files in `skills/shared/`:
-- `slide-design-principles.md` — Action titles, typography, contrast, sources
-- `slide-design-review.md` — Quality scorecard, auto-reject triggers
+- `diagram-design-principles.md` — Action titles, typography, contrast, sources
+- `diagram-design-review.md` — Quality scorecard, auto-reject triggers
 - `generation-pipeline.md` — Data-to-visual mapping, intent-to-archetype mapping
 
 The harness also provides archetype-specific layout files from `src/VisioMcp.Core/Data/archetypes/`:

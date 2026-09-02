@@ -42,7 +42,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   PowerPoint code path against a `.vsdx`. The suppressed-domain count drops from 26 to 12 and the
   Core interface-method count from 281 to 199.
 
+### Changed
+
+- **The shipped skill packages no longer install PowerPoint guidance** (#23). Both
+  `skills/visio-cli/references/` and `skills/visio-mcp/references/` are installed verbatim by
+  `npx skills add`, and nothing checked their contents.
+  `slide-design-review.md` was **9.5 KB of PowerPoint deck advice** — the Title Story Test, deck
+  length targets, *"Would an executive spend more than 3 seconds understanding any slide?"* —
+  replaced by `diagram-design-review.md`, a Visio self-review covering connector glue, label
+  clipping, grid drift and shape vocabulary. `ppt_agent_mode.md` and `slide-design-principles.md`
+  had already been rewritten for Visio but kept their PowerPoint filenames; renamed to
+  `visible-session-mode.md` and `diagram-design-principles.md`.
+  `cli-commands.md` was deleted: it claimed *"Auto-generated from `visiocli --help`. Do not edit
+  manually"* but had been committed by hand and listed `powerquery`, `pivottable`, `range`,
+  `slicer`, `worksheetstyle` and `slide` — an **Excel-era** command list, one migration further
+  back than the rest of the debt, in a shipped Visio skill.
+  `SkillReferenceQualityTests` now guards the reference folders, which only `SKILL.md` was covered
+  for before.
+
 ### Fixed
+
+- **The CLI skill documented two parameters that do not exist, and taught the wrong format for the
+  one that does** (#23). It instructed agents to pass `--values '{"text": "Hello"}'` and
+  `--selected-items '["Slide 1","Slide 3"]'`; neither parameter exists anywhere in the source. Its
+  "List Parameters Use JSON Arrays" section then declared comma-separated values *"WRONG: not
+  valid"* — but `--shape-names`, the only real list parameter, **is** comma-separated, so an agent
+  following the shipped skill would format the one working case incorrectly.
 
 - **The `shape` tool advertised twelve shape types it cannot draw** (#23). Its MCP description
   listed `auto_shape_type (MsoAutoShapeType): 1=Rectangle, 5=Triangle, 9=Oval, 10=Hexagon,

@@ -12,8 +12,8 @@
     "reuseSessionContext": true,
     "skillFiles": [
       "generation-pipeline.md",
-      "slide-design-principles.md",
-      "slide-design-review.md"
+      "diagram-design-principles.md",
+      "diagram-design-review.md"
     ],
     "instructionsFile": "agents/builder-instructions-mcp-design.md",
     "timeoutMs": 600000

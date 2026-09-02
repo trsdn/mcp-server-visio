@@ -10,7 +10,7 @@
     "reasoningEffort": "high",
     "transport": "mcp",
     "skillFiles": [
-      "slide-design-principles.md"
+      "diagram-design-principles.md"
     ],
     "instructionsFile": "agents/builder-instructions-mcp.md",
     "timeoutMs": 600000
