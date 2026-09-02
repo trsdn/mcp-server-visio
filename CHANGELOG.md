@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Cell operations now address a page or the document, not only a shape** (#36b). Every `cell`
+  action takes `sheet_target`: `'shape'` (the default, so nothing existing changes), `'page'` for
+  `Page.PageSheet`, `'document'` for `Document.DocumentSheet`.
+  This reaches settings that had no route at all. Page size and drawing scale live in `PageWidth`,
+  `PageHeight`, `DrawingScale` and `PageScale` on the PageSheet; the document's theme lives in
+  `ThemeIndex` and `VariationColorIndex` on the DocumentSheet — **`Document.Theme` does not exist**
+  in Visio, which is what made this look unreachable.
+  It cost a parameter rather than a tool because Visio exposes the *identical* section, row and cell
+  API on all three, established while probing for #33. `User.*` rows therefore work on a page and on
+  the document too, so a generated drawing can carry its own metadata.
+  Both failure paths name the way out rather than only stating the rule: an unknown target lists the
+  three valid ones, and omitting `shape_name` under the default target suggests `sheet_target`.
+  Both messages are asserted by tests that were confirmed to fail when the messages were weakened.
+
+### Added
+
 - **Every operation is now atomic and undoable in one step** (#36a). `VisioBatch.Execute` wraps each
   operation in a Visio undo scope: `EndUndoScope(id, commit: true)` on success,
   **`commit: false` on failure — which reverts the writes already made**.
