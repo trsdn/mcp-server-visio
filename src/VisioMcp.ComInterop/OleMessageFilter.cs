@@ -161,7 +161,7 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
     }
 
     /// <summary>
-    /// Handles rejected COM calls from PowerPoint.
+    /// Handles rejected COM calls from Visio.
     /// Implements automatic retry logic with exponential backoff for busy/unavailable conditions.
     /// </summary>
     /// <param name="htaskCallee">Handle to the task that rejected the call</param>
@@ -225,20 +225,18 @@ public sealed partial class OleMessageFilter : IOleMessageFilter
             //
             // This is safe because HandleInComingCall returns SERVERCALL_RETRYLATER,
             // which rejects the callback BEFORE any .NET dispatch occurs.
-            // No EnsureScanDefinedEvents, no IDispatch.TryGetTypeInfoCount, no re-entrant
-            // COM calls — the callback is rejected at the COM filter layer.
-            //
-            // The FormatConditions deadlock (failure mode 1 of WAITDEFPROCESS) is NOT
-            // reintroduced because HandleInComingCall rejects before dispatch.
+            // The callback is rejected at the COM filter layer, so no re-entrant
+            // COM call is ever made on the STA thread.
             return 2; // PENDINGMSG_WAITDEFPROCESS — dispatch to HandleInComingCall
         }
 
         // PENDINGMSG_WAITDEFPROCESS (2) — dispatch inbound messages via HandleInComingCall.
         //
-        // PowerPoint operations like AddChart activate embedded Excel OLE servers,
-        // which send COM callbacks to our STA thread. These must be dispatched
-        // so the OLE activation can complete. HandleInComingCall returns
-        // SERVERCALL_ISHANDLED (0) for normal operations, accepting the callback.
+        // Visio sends COM callbacks to our STA thread during operations that activate other
+        // documents or OLE servers — dropping a master from a stencil, opening a referenced
+        // document, or recalculating the ShapeSheet. These must be dispatched so the operation
+        // can complete. HandleInComingCall returns SERVERCALL_ISHANDLED (0) for normal
+        // operations, accepting the callback.
         return 2; // PENDINGMSG_WAITDEFPROCESS — dispatch inbound messages
     }
 
