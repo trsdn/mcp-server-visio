@@ -23,6 +23,7 @@ The following domains are implemented and covered by focused validation:
 | Stencil / Master | Yes | Yes | Via MCP extension | Validated MVP | List masters from installed stencils, drop masters on pages; manage the document's own masters (list, read, create from a shape, rename, delete, find instances) |
 | Export | Yes | Yes | Via MCP extension | Validated MVP | PDF/XPS document export, page export by file extension, save-copy |
 | Hyperlink | Yes | Yes | Via MCP extension | Validated MVP | List, read, add, update, delete. A shape may carry several, unlike PowerPoint |
+| Style | Yes | Yes | Via MCP extension | Validated MVP | List, read, create, rename, delete, apply; set a style's own ShapeSheet cells |
 | Visible live mode | Yes | Yes | Via MCP extension | Validated | Watch Visio while automation runs |
 
 ## Current recommended workflow

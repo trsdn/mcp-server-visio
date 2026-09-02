@@ -36,6 +36,7 @@ public sealed class ActionValidatorTests
         "shape",
         "shapealign",
         "stencil",
+        "style",
         "text",
         "window"
     ];
