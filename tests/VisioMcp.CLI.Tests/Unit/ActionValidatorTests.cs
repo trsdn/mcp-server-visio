@@ -43,14 +43,12 @@ public sealed class ActionValidatorTests
     private static readonly string[] HiddenLegacyCommands =
     [
         "accessibility",
-        "background",
         "comment",
         "design",
         "headerfooter",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public.
         "image",
-        "pagesetup",
         "printoptions",
         "tag",
         "vba"

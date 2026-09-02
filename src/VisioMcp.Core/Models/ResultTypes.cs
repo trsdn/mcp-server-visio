@@ -98,8 +98,31 @@ public class PageInfo
     public int PageIndex { get; set; }
     public string PageId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Whether this page is itself a background page.</summary>
     public bool IsBackground { get; set; }
+
+    /// <summary>Name of the background page shown behind this one, when it has one.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BackPageName { get; set; }
+
     public int ShapeCount { get; set; }
+}
+
+public class PageBackgroundResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string PageName { get; set; } = string.Empty;
+
+    /// <summary>Whether this page is itself a background page.</summary>
+    public bool IsBackground { get; set; }
+
+    /// <summary>Name of the background page shown behind this one, or null when none is attached.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BackPageName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; set; }
 }
 
 public class PageDetailResult : ResultBase

@@ -379,7 +379,9 @@ public sealed class VisioPageAndTextToolTests(ITestOutputHelper output)
         int lineJumpCode = 0,
         int lineJumpStyle = 0,
         int walkPreference = 0,
-        int placeStyle = 0)
+        int placeStyle = 0,
+        bool isBackground = false,
+        string? backPageName = null)
     {
         return VisioPageTool.VisioPage(
             action: action,
@@ -396,7 +398,9 @@ public sealed class VisioPageAndTextToolTests(ITestOutputHelper output)
             line_jump_code: lineJumpCode,
             line_jump_style: lineJumpStyle,
             walk_preference: walkPreference,
-            place_style: placeStyle);
+            place_style: placeStyle,
+            is_background: isBackground,
+            back_page_name: backPageName);
     }
 
     private static string AddBasicShape(string sessionId)

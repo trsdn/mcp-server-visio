@@ -167,11 +167,11 @@ Visio ShapeSheet cell operations for reading and writing cells on a shape, a pag
 
 Visio page lifecycle, guides, and routing commands.
 
-**Actions:** `list`, `read`, `create`, `set-name`, `delete`, `list-guides`, `add-guide`, `set-guide-position`, `delete-guide`, `get-routing-settings`, `set-route-style`, `set-connector-routing-extension`, `set-line-jump-code`, `set-line-jump-style`, `set-walk-preference`, `set-place-style`
+**Actions:** `list`, `read`, `create`, `set-name`, `delete`, `list-guides`, `add-guide`, `set-guide-position`, `delete-guide`, `get-routing-settings`, `set-route-style`, `set-connector-routing-extension`, `set-line-jump-code`, `set-line-jump-style`, `set-walk-preference`, `set-place-style`, `read-background`, `set-background`, `set-back-page`, `clear-back-page`
 
 | Parameter | Description |
 |-----------|-------------|
-| `--page-index` | 1-based page index (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, set-route-style, set-connector-routing-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style) |
+| `--page-index` | 1-based page index (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, set-route-style, set-connector-routing-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style, read-background, set-background, set-back-page, clear-back-page) |
 | `--position` | 1-based insertion position. Pass 0 to append the page at the end (required for: create) |
 | `--name` | Page name. Must be unique within the document (required for: create, set-name) |
 | `--guide-type` | 1 = point, 2 = horizontal guide line, 3 = vertical guide line (required for: add-guide) |
@@ -184,6 +184,8 @@ Visio page lifecycle, guides, and routing commands.
 | `--line-jump-style` | Shape of the jump drawn where connectors cross, written to the page LineJumpStyle cell (required for: set-line-jump-style) |
 | `--walk-preference` | Which side of a shape a connector prefers to leave from, written to the page WalkPreference cell (required for: set-walk-preference) |
 | `--place-style` | Automatic layout style used when shapes are placed, written to the page PlaceStyle cell (required for: set-place-style) |
+| `--is-background` | True to make it a background page, false to turn it back into a normal page (required for: set-background) |
+| `--back-page-name` | Name of the background page to show behind it, exactly as reported by list (required for: set-back-page) |
 
 
 

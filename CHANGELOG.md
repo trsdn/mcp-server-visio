@@ -8,6 +8,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Background pages** (#36c, and the background half of #67). Four new `page` actions:
+  `read-background`, `set-background`, `set-back-page`, `clear-back-page`. `page(list)` now also
+  reports `backPageName` alongside the `isBackground` flag it already had.
+  A Visio background page is a normal page marked as a background and then attached to other pages,
+  which draw it behind their own content — shared furniture such as a title block or logo, drawn
+  once. There is no PowerPoint analogue, which is why the suppressed `background` domain could not
+  simply be ported.
+  Three Visio behaviours are handled rather than passed through:
+  - **A page that is not itself a background cannot be used as one.** Visio's message is
+    *"Inappropriate target object for this action"*, naming neither the object nor the requirement;
+    ours names the page and the call that fixes it.
+  - **Detaching requires an empty string.** Assigning `null` to `BackPage` throws
+    `COMException: Invalid parameter`, so the obvious way fails.
+  - **Marking a page as a background moves it.** Visio orders background pages after normal ones,
+    so the index the caller passed is stale the moment the call returns. `set-background` now
+    returns the page's *new* index and says that it changed — returning the old one would send the
+    next call to a different page. Found by a test, not by reading.
+
+  The page-setup half of #67 needs no new actions: `PageWidth`, `PageHeight`, `DrawingScale`,
+  `PageScale` and the print margins are all reachable through
+  `cell(read | set-formula, sheet_target='page')` since #36b.
+
+### Removed
+
+- **The suppressed `background` and `pagesetup` domains** (#67). Both were fully superseded and had
+  been dead since #19, so they are deleted rather than left as a second, non-functioning
+  implementation of live capability:
+  - background *pages* → the four new `page` actions above
+  - background *fill* (`set-color`, `set-gradient`, `set-image`, `reset`) → PageSheet cells via
+    `cell(set-formula, sheet_target='page', cell_name='FillForegnd')`
+  - `pagesetup` `get`/`set-size` → `cell(…, sheet_target='page')`
+  - `pagesetup` `set-first-number` → **no Visio analogue**; `FirstPageNumber` does not exist (#22)
+
+### Added
+
 - **The `hyperlink` tool works, reimplemented on `Shape.Hyperlinks`** (#35). It was backed by
   PowerPoint `ActionSettings`/`ppActionHyperlink` and every action threw `RuntimeBinderException`
   on a `.vsdx`; it has been off the public surface since #19. Six actions: `list`,

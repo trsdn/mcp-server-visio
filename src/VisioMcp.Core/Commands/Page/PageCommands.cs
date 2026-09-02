@@ -7,6 +7,10 @@ namespace VisioMcp.Core.Commands.Page;
 public class PageCommands : IPageCommands
 {
     private const int VisTypeGuide = 5;
+
+    /// <summary>VBA True. Visio normalises any non-zero written to Background into this.</summary>
+    private const short VisTrue = -1;
+
     private const int VisGuidePoint = 1;
     private const int VisGuideHorizontal = 2;
     private const int VisGuideVertical = 3;
@@ -454,7 +458,8 @@ public class PageCommands : IPageCommands
             PageIndex = pageIndex,
             Name = page.Name?.ToString() ?? string.Empty,
             ShapeCount = GetShapeCount(page),
-            IsBackground = GetBackgroundFlag(page)
+            IsBackground = GetBackgroundFlag(page),
+            BackPageName = GetBackPageName(page)
         };
 
         try { info.PageId = page.UniqueID[(short)0]?.ToString() ?? string.Empty; } catch { }
@@ -617,6 +622,234 @@ public class PageCommands : IPageCommands
         finally
         {
             ComUtilities.Release(ref cell!);
+        }
+    }
+
+    // ── Background pages (#36c) ───────────────────────────────
+
+    public PageBackgroundResult ReadBackground(IVisioBatch batch, int pageIndex)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            try
+            {
+                return DescribeBackground(ctx, page, pageIndex, null);
+            }
+            finally
+            {
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageBackgroundResult SetBackground(IVisioBatch batch, int pageIndex, bool isBackground)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            try
+            {
+                // Visio normalises any non-zero to -1 (VBA True), so write the canonical value.
+                page.Background = isBackground ? VisTrue : 0;
+
+                // Marking a page as a background MOVES it in the Pages collection: Visio orders
+                // backgrounds after foregrounds. The index the caller passed is therefore stale,
+                // and returning it would send the next call to a different page.
+                int currentIndex = FindPageIndex(ctx, page, pageIndex);
+
+                string message = isBackground
+                    ? "Page is now a background. Attach it to a page with page(set-back-page). "
+                      + "Note that page_index changed: Visio orders background pages after normal ones."
+                    : "Page is no longer a background. Pages that showed it keep the attachment until cleared. "
+                      + "Note that page_index changed: Visio orders background pages after normal ones.";
+
+                return DescribeBackground(ctx, page, currentIndex, message);
+            }
+            finally
+            {
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageBackgroundResult SetBackPage(IVisioBatch batch, int pageIndex, string backPageName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(backPageName);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic? target = null;
+            try
+            {
+                target = ResolvePageByName(ctx, backPageName);
+
+                // Visio rejects a non-background target with "Inappropriate target object for this
+                // action", which does not say which object or why. Check first so the message can.
+                if (!GetBackgroundFlag(target))
+                {
+                    throw new ArgumentException(
+                        $"Page '{backPageName}' is not a background page, so it cannot be shown behind "
+                        + "another page. Call page(set-background, is_background=true) on it first.",
+                        nameof(backPageName));
+                }
+
+                if (string.Equals(page.Name?.ToString(), backPageName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(
+                        $"A page cannot show itself as its own background ('{backPageName}').",
+                        nameof(backPageName));
+                }
+
+                page.BackPage = target;
+
+                return DescribeBackground(ctx, page, pageIndex,
+                    $"Page now shows background page '{backPageName}'.");
+            }
+            finally
+            {
+                if (target != null) ComUtilities.Release(ref target!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageBackgroundResult ClearBackPage(IVisioBatch batch, int pageIndex)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            try
+            {
+                // Assigning null throws COMException "Invalid parameter"; an empty string is how
+                // Visio detaches a background page.
+                page.BackPage = string.Empty;
+
+                return DescribeBackground(ctx, page, pageIndex,
+                    "Background page detached. The background page itself still exists.");
+            }
+            finally
+            {
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    private static dynamic ResolvePageByName(VisioContext ctx, string pageName)
+    {
+        dynamic pages = ctx.Document.Pages;
+        try
+        {
+            try
+            {
+                return pages[pageName];
+            }
+            catch (Exception)
+            {
+                var available = new List<string>();
+                int count = (int)pages.Count;
+                for (int i = 1; i <= count; i++)
+                {
+                    dynamic? p = null;
+                    try
+                    {
+                        p = pages[i];
+                        available.Add(GetBackgroundFlag(p)
+                            ? $"{ComUtilities.SafeGetString(p, "Name")} (background)"
+                            : ComUtilities.SafeGetString(p, "Name"));
+                    }
+                    finally
+                    {
+                        if (p != null) ComUtilities.Release(ref p!);
+                    }
+                }
+
+                throw new ArgumentException(
+                    $"Page '{pageName}' not found. This document has: {string.Join(", ", available)}.",
+                    nameof(pageName));
+            }
+        }
+        finally
+        {
+            ComUtilities.Release(ref pages!);
+        }
+    }
+
+    /// <summary>
+    /// Finds a page's current 1-based index by identity.
+    /// </summary>
+    /// <remarks>
+    /// Needed because <c>Page.Background</c> reorders the collection: Visio keeps background pages
+    /// after normal ones, so an index obtained before the flag was changed points elsewhere after.
+    /// </remarks>
+    private static int FindPageIndex(VisioContext ctx, dynamic page, int fallbackIndex)
+    {
+        dynamic? pages = null;
+        try
+        {
+            int targetId = (int)page.ID;
+            pages = ctx.Document.Pages;
+            int count = (int)pages.Count;
+
+            for (int i = 1; i <= count; i++)
+            {
+                dynamic? candidate = null;
+                try
+                {
+                    candidate = pages[i];
+                    if ((int)candidate.ID == targetId)
+                    {
+                        return i;
+                    }
+                }
+                finally
+                {
+                    if (candidate != null) ComUtilities.Release(ref candidate!);
+                }
+            }
+
+            return fallbackIndex;
+        }
+        finally
+        {
+            if (pages != null) ComUtilities.Release(ref pages!);
+        }
+    }
+
+    private static PageBackgroundResult DescribeBackground(VisioContext ctx, dynamic page, int pageIndex, string? message)
+    {
+        return new PageBackgroundResult
+        {
+            Success = true,
+            PageIndex = pageIndex,
+            PageName = ComUtilities.SafeGetString(page, "Name"),
+            IsBackground = GetBackgroundFlag(page),
+            BackPageName = GetBackPageName(page),
+            Message = message,
+            FilePath = ctx.DocumentPath
+        };
+    }
+
+    /// <summary>
+    /// Name of the background page shown behind this one, or null when none is attached.
+    /// </summary>
+    private static string? GetBackPageName(dynamic page)
+    {
+        dynamic? backPage = null;
+        try
+        {
+            backPage = page.BackPage;
+            return backPage == null ? null : ComUtilities.SafeGetString(backPage, "Name");
+        }
+        catch (Exception)
+        {
+            // Older or restricted documents may not expose BackPage at all.
+            return null;
+        }
+        finally
+        {
+            if (backPage != null) ComUtilities.Release(ref backPage!);
         }
     }
 }

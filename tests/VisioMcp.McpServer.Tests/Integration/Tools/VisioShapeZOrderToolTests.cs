@@ -245,7 +245,9 @@ public sealed class VisioShapeZOrderToolTests(ITestOutputHelper output)
             line_jump_code: 0,
             line_jump_style: 0,
             walk_preference: 0,
-            place_style: 0);
+            place_style: 0,
+            is_background: false,
+            back_page_name: null);
 
         var pageJson = JsonDocument.Parse(pageResult).RootElement;
         Assert.True(pageJson.GetProperty("success").GetBoolean());
