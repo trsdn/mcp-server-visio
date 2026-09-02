@@ -68,10 +68,10 @@ word collides with the *unrelated* ShapeSheet sections tracked in
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
 | `hyperlink` | Port | @trsdn | `Shape.Hyperlinks` present; suppressed in #19 only because the implementation was PowerPoint's | [#35](https://github.com/trsdn/mcp-server-visio/issues/35) |
 | `master` | Port | @trsdn | `Document.Masters` present; suppressed in #19 for the same reason | [#34](https://github.com/trsdn/mcp-server-visio/issues/34) |
-| `accessibility` | Remap | @trsdn | No `Shape.AlternateText`; Visio alt text is the `Comment` ShapeSheet cell, already shipped as `shape(set-alt-text)` / `shape(read-alt-text)` | [#20](https://github.com/trsdn/mcp-server-visio/issues/20) |
+| `accessibility` | Remap | @trsdn | `audit` is remapped and shipped (`shape(set-alt-text)`, `text(alt-text-audit)`); `get-reading-order`/`set-reading-order` have no analogue — `TabOrder`, `ReadingOrder` and `AccessibilityOrder` are absent as properties and as cells | [#77](https://github.com/trsdn/mcp-server-visio/issues/77) |
 | `background` | Remap | @trsdn | `Page.Background` and `Page.BackPage` present; belongs on the public `page` tool | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
 | `pagesetup` | Remap | @trsdn | All settings are `PageSheet` cells: `PageWidth`, `PageHeight`, `PrintPageOrientation`, `PageScale`, `DrawingScale`, `PageLeftMargin`, `PaperKind`, `CenterX` | [#67](https://github.com/trsdn/mcp-server-visio/issues/67) |
-| `design` | Remap | @trsdn | **`Document.Theme` does not exist.** `Document.Styles` does (6 built-ins); themes are `DocumentSheet` cells `ThemeIndex`, `VariationColorIndex`, `VariationStyleIndex` | [#36](https://github.com/trsdn/mcp-server-visio/issues/36) |
+| `design` | Remap | @trsdn | Two unrelated halves: 5 theme actions (**`Document.Theme` does not exist**; `Document.Styles` does, themes are `DocumentSheet` cells) and 14 catalog actions serving a PowerPoint deck-archetype library from `Core/Data/archetypes/` | [#78](https://github.com/trsdn/mcp-server-visio/issues/78) |
 | `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
 
 <!-- END:LEGACY-DOMAIN-CLASSIFICATION -->
