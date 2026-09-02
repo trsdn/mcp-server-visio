@@ -167,11 +167,11 @@ public interface IShapeCommands
     OperationResult AddTextbox(IVisioBatch batch, int pageIndex, float left, float top, float width, float height, string text);
 
     /// <summary>
-    /// Add a rectangle, ellipse, or other auto-shape.
+    /// Draw a rectangle or an ellipse on a page.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="autoShapeType">MsoAutoShapeType integer (1=Rectangle, 9=Oval, etc.)</param>
+    /// <param name="autoShapeType">Shape to draw: 9 draws an ellipse, any other value draws a rectangle. Only these two primitives are supported — Visio has no auto-shape gallery, so richer shapes come from stencil masters via the 'stencil' tool.</param>
     /// <param name="left">Position from left in points</param>
     /// <param name="top">Position from top in points</param>
     /// <param name="width">Width in points</param>
@@ -389,11 +389,11 @@ public interface IShapeCommands
     OperationResult ReadLine(IVisioBatch batch, int pageIndex, string shapeName);
 
     /// <summary>
-    /// Find all shapes on a page that match a given MsoShapeType.
+    /// Find all shapes on a page whose <c>Shape.Type</c> matches a given Visio shape type.
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="shapeType">MsoShapeType integer (1=AutoShape, 6=Group, 13=Picture, 14=Placeholder, 17=TextBox, etc.)</param>
+    /// <param name="shapeType">Visio VisShapeTypes integer: 1=Page, 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide, 6=Document. An ordinary drawn or dropped shape is 3.</param>
     [ServiceAction("find-by-type")]
     OperationResult FindByType(IVisioBatch batch, int pageIndex, int shapeType);
 

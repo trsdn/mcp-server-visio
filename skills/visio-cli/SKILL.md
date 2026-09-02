@@ -202,7 +202,7 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--width` | Width in points (required for: add-textbox, add-shape) |
 | `--height` | Height in points (required for: add-textbox, add-shape) |
 | `--text` | Initial text content (required for: add-textbox, add-text-effect) |
-| `--auto-shape-type` | MsoAutoShapeType integer (1=Rectangle, 9=Oval, etc.) (required for: add-shape) |
+| `--auto-shape-type` | Shape to draw: 9 draws an ellipse, any other value draws a rectangle. Only these two primitives are supported — Visio has no auto-shape gallery, so richer shapes come from stencil masters via the 'stencil' tool. (required for: add-shape) |
 | `--z-order-cmd` | 1=BringToFront, 2=SendToBack, 3=BringForward, 4=SendBackward (required for: z-order) |
 | `--color-hex` | Hex color string like #FF0000 for red, or 'none' for no fill (required for: set-fill, set-line, set-glow) |
 | `--line-width` | Line width in points (default 0.75) (required for: set-line) |
@@ -229,7 +229,7 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--radius` | Glow radius in points (0 = remove glow) (required for: set-glow, set-soft-edge) |
 | `--reflection-type` | 0=None, 1-9=msoReflectionType1 through msoReflectionType9 (required for: set-reflection) |
 | `--opacity` | Opacity value from 0.0 (fully transparent) to 1.0 (fully opaque) (required for: set-opacity) |
-| `--shape-type` | MsoShapeType integer (1=AutoShape, 6=Group, 13=Picture, 14=Placeholder, 17=TextBox, etc.) (required for: find-by-type) |
+| `--shape-type` | Visio VisShapeTypes integer: 1=Page, 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide, 6=Document. An ordinary drawn or dropped shape is 3. (required for: find-by-type) |
 | `--source-shape-name` | Name of the shape to copy formatting from (required for: copy-formatting) |
 | `--action-type` | 0=None, 1=NextSlide, 2=PreviousSlide, 3=FirstSlide, 4=LastSlide, 7=Hyperlink (required for: set-action-settings) |
 | `--hyperlink-address` | URL for actionType=7 (Hyperlink), ignored for other types |

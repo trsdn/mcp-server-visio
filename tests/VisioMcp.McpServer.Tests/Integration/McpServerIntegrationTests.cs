@@ -92,11 +92,8 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
     private static readonly HashSet<string> HiddenLegacyToolNames =
     [
         "accessibility",
-        "animation",
         "background",
-        "chart",
         "comment",
-        "customshow",
         "design",
         "headerfooter",
         // hyperlink and master are PowerPoint-implemented and threw RuntimeBinderException on
@@ -105,20 +102,9 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         "hyperlink",
         "image",
         "master",
-        "media",
-        "notes",
         "pagesetup",
-        "placeholder",
         "printoptions",
-        "proofing",
-        "section",
-        "slide",
-        "slideimport",
-        "slideshow",
-        "slidetable",
-        "smartart",
         "tag",
-        "transition",
         "vba"
     ];
 

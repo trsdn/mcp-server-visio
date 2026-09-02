@@ -1,6 +1,5 @@
 using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
-using VisioMcp.Core.Commands.Slide;
 using VisioMcp.Core.Models;
 
 namespace VisioMcp.Core.Commands.Accessibility;
@@ -86,7 +85,7 @@ public class AccessibilityCommands : IAccessibilityCommands
                             entries.Add(new ReadingOrderEntry
                             {
                                 ShapeName = shape.Name?.ToString() ?? "",
-                                ShapeType = ShapeHelpers.GetShapeTypeName(shapeType),
+                                ShapeType = VisioShapeTypes.GetName(shapeType),
                                 ZOrderPosition = (int)shape.ZOrderPosition
                             });
                         }
@@ -303,7 +302,7 @@ public class AccessibilityCommands : IAccessibilityCommands
                             SlideIndex = slideIndex,
                             IssueType = "MissingAltText",
                             ShapeName = shapeName,
-                            Description = $"Shape '{shapeName}' ({ShapeHelpers.GetShapeTypeName(shapeType)}) has no alternative text."
+                            Description = $"Shape '{shapeName}' ({VisioShapeTypes.GetName(shapeType)}) has no alternative text."
                         });
                     }
                 }

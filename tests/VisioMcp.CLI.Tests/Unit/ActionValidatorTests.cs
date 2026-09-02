@@ -41,11 +41,8 @@ public sealed class ActionValidatorTests
     private static readonly string[] HiddenLegacyCommands =
     [
         "accessibility",
-        "animation",
         "background",
-        "chart",
         "comment",
-        "customshow",
         "design",
         "headerfooter",
         // hyperlink and master are PowerPoint-implemented and threw RuntimeBinderException on
@@ -54,20 +51,9 @@ public sealed class ActionValidatorTests
         "hyperlink",
         "image",
         "master",
-        "media",
-        "notes",
         "pagesetup",
-        "placeholder",
         "printoptions",
-        "proofing",
-        "section",
-        "slide",
-        "slideimport",
-        "slideshow",
-        "slidetable",
-        "smartart",
         "tag",
-        "transition",
         "vba"
     ];
 
