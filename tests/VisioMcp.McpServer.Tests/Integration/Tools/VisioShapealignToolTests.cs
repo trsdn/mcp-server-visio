@@ -151,7 +151,15 @@ public sealed class VisioShapealignToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
         var createJson = JsonDocument.Parse(createResult).RootElement;
         Assert.True(createJson.GetProperty("success").GetBoolean());
 
@@ -220,7 +228,15 @@ public sealed class VisioShapealignToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
     }
 
     private static JsonElement ReadShape(string sessionId, string shapeName)
@@ -281,7 +297,15 @@ public sealed class VisioShapealignToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
 
         return JsonDocument.Parse(result).RootElement.GetProperty("shape").Clone();
     }

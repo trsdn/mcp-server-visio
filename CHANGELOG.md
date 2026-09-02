@@ -8,6 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Connection point CRUD** (#32). Four new `shape` actions — `list-connection-points`,
+  `add-connection-point`, `set-connection-point`, `delete-connection-point`. The tool already had
+  *connectors* (the lines between shapes) and nothing for the *anchors those connectors glue to*;
+  the descriptions now distinguish them, since the two are easily confused.
+  Positions are ShapeSheet **formulas**, not co-ordinates: `Width*0.5` keeps a point centred when
+  the shape is resized, which is the entire reason these cells accept expressions. A test proves it
+  by widening a shape and asserting the point moved.
+  A named point becomes the glue target `Connections.<name>`, verified by gluing a connector to it
+  and reading back `PAR(PNT(Sheet.1!Connections.Top.X,…))`.
+  Built as a typed wrapper over #33's section/row primitives rather than new plumbing.
+
+### Fixed
+
+- **A single-character parameter name takes down the entire CLI** (#32). Adding `x` and `y` to the
+  shape tool generated `--x`/`--y`, and Spectre.Console throws *"Long option names must consist of
+  more than one character"* while building the command tree — so **every** CLI command stopped
+  working, not just `shape`. The pre-commit smoke test caught it, but only as a JSON parse error on
+  `session create` that named neither the parameter nor the tool.
+  `ParameterNameConstraintTests` now rejects single-character parameter names across the public
+  surface and explains why.
+
+### Added
+
 - **Generic ShapeSheet section and row access** (#33). Six new `cell` actions — `list-sections`,
   `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`. A caller could already read
   `Prop.Cost` by name but could not **create** it, and could not reach a row with no name at all.

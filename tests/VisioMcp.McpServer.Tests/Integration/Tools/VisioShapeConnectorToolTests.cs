@@ -80,7 +80,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
                 bevel_depth: null,
                 property_name: null,
                 property_value: null,
-                connector_end: null);
+                connector_end: null,
+
+                connection_point_x: null,
+
+                connection_point_y: null,
+
+                connection_point_name: null,
+
+                connection_point_index: 0);
             var addConnectorJson = JsonDocument.Parse(addConnectorResult).RootElement;
             Assert.True(addConnectorJson.GetProperty("success").GetBoolean());
 
@@ -140,7 +148,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
                 bevel_depth: null,
                 property_name: null,
                 property_value: null,
-                connector_end: null);
+                connector_end: null,
+
+                connection_point_x: null,
+
+                connection_point_y: null,
+
+                connection_point_name: null,
+
+                connection_point_index: 0);
             output.WriteLine(listResult);
 
             var listJson = JsonDocument.Parse(listResult).RootElement;
@@ -210,7 +226,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
                 bevel_depth: null,
                 property_name: null,
                 property_value: null,
-                connector_end: null);
+                connector_end: null,
+
+                connection_point_x: null,
+
+                connection_point_y: null,
+
+                connection_point_name: null,
+
+                connection_point_index: 0);
             output.WriteLine(readResult);
 
             var readJson = JsonDocument.Parse(readResult).RootElement;
@@ -296,7 +320,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
                 bevel_depth: null,
                 property_name: null,
                 property_value: null,
-                connector_end: null);
+                connector_end: null,
+
+                connection_point_x: null,
+
+                connection_point_y: null,
+
+                connection_point_name: null,
+
+                connection_point_index: 0);
             Assert.True(JsonDocument.Parse(addConnectorResult).RootElement.GetProperty("success").GetBoolean());
 
             var connectorName = FindConnectorName(sessionId, startShape, endShape);
@@ -414,7 +446,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
                 bevel_depth: null,
                 property_name: null,
                 property_value: null,
-                connector_end: null);
+                connector_end: null,
+
+                connection_point_x: null,
+
+                connection_point_y: null,
+
+                connection_point_name: null,
+
+                connection_point_index: 0);
             Assert.True(JsonDocument.Parse(addConnectorResult).RootElement.GetProperty("success").GetBoolean());
 
             var connectorName = FindConnectorName(sessionId, startShape, endShape);
@@ -549,7 +589,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
 
         var createJson = JsonDocument.Parse(createResult).RootElement;
         Assert.True(createJson.GetProperty("success").GetBoolean());
@@ -637,7 +685,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: connectorEnd);
+            connector_end: connectorEnd,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
     }
 
     private static void AssertConnectorEndpoints(JsonElement connectorJson, string? expectedStartShapeName, string? expectedEndShapeName)
@@ -715,7 +771,15 @@ public sealed class VisioShapeConnectorToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
     }
 
     private static void CloseSession(string? sessionId)

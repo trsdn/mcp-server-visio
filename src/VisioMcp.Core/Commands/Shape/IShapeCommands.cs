@@ -16,6 +16,9 @@ namespace VisioMcp.Core.Commands.Shape;
     + "z_order_cmd: 1=BringToFront, 2=SendToBack, 3=BringForward, 4=SendBackward. "
     + "merge_type: 1=Union, 2=Combine, 3=Fragment, 4=Intersect, 5=Subtract. "
     + "connector_type: 1=Straight, 2=Elbow, 3=Curve. flip_type: 0=Horizontal, 1=Vertical. "
+    + "CONNECTORS vs CONNECTION POINTS: a connector is the line between two shapes (add-connector, read-connector); "
+    + "a connection point is an anchor on a shape that a connector glues to (add-connection-point). "
+    + "Connection point x/y are ShapeSheet formulas such as 'Width*0.5' so the point follows the shape when it is resized. "
     + "gradient_style: 1=Horizontal, 2=Vertical, 3=DiagonalUp, 4=DiagonalDown. "
     + "find-by-type takes a Visio shape type: 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide. "
     + "Positions/sizes in points (72pt = 1 inch).")]
@@ -132,6 +135,53 @@ public interface IShapeCommands
     /// </summary>
     [ServiceAction("list-connections")]
     ShapeConnectionListResult ListConnections(IVisioBatch batch, int pageIndex, string shapeName);
+
+    /// <summary>
+    /// List the connection points on a shape — the anchors a connector can glue to.
+    /// </summary>
+    /// <remarks>
+    /// Connection points are not connectors. A connector is the line between two shapes; a
+    /// connection point is a position on a shape that a connector attaches to.
+    /// </remarks>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name, exactly as reported by list</param>
+    [ServiceAction("list-connection-points")]
+    ConnectionPointListResult ListConnectionPoints(IVisioBatch batch, int pageIndex, string shapeName);
+
+    /// <summary>
+    /// Add a connection point to a shape.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name, exactly as reported by list</param>
+    /// <param name="connectionPointX">X position as a ShapeSheet formula. Prefer a relative expression such as 'Width*0.5' so the point stays put when the shape is resized; a literal needs units, for example '1 in'</param>
+    /// <param name="connectionPointY">Y position as a ShapeSheet formula, for example 'Height*1' for the top edge. Visio measures Y upward</param>
+    /// <param name="connectionPointName">Optional name. A named point becomes the glue target 'Connections.&lt;name&gt;', which survives rows being added or deleted; an unnamed point is addressed only by index</param>
+    [ServiceAction("add-connection-point")]
+    ConnectionPointResult AddConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, string? connectionPointX = null, string? connectionPointY = null, string? connectionPointName = null);
+
+    /// <summary>
+    /// Move an existing connection point.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name, exactly as reported by list</param>
+    /// <param name="connectionPointIndex">0-based index in the shape's connection point list, as reported by list-connection-points</param>
+    /// <param name="connectionPointX">New X position as a ShapeSheet formula</param>
+    /// <param name="connectionPointY">New Y position as a ShapeSheet formula</param>
+    [ServiceAction("set-connection-point")]
+    ConnectionPointResult SetConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, int connectionPointIndex = 0, string? connectionPointX = null, string? connectionPointY = null);
+
+    /// <summary>
+    /// Delete a connection point from a shape.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name, exactly as reported by list</param>
+    /// <param name="connectionPointIndex">0-based index. Points below it shift up, so delete from the highest index first when removing several. Any connector glued to the point loses its attachment</param>
+    [ServiceAction("delete-connection-point")]
+    OperationResult DeleteConnectionPoint(IVisioBatch batch, int pageIndex, string shapeName, int connectionPointIndex);
 
     /// <summary>
     /// Disconnect one endpoint of a connector while keeping the connector shape on the page.

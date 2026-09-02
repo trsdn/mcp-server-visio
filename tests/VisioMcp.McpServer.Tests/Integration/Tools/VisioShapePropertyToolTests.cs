@@ -153,7 +153,15 @@ public sealed class VisioShapePropertyToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: property_name,
             property_value: property_value,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
     }
 
     private static string CreateSession(string path)
@@ -236,7 +244,15 @@ public sealed class VisioShapePropertyToolTests(ITestOutputHelper output)
             bevel_depth: null,
             property_name: null,
             property_value: null,
-            connector_end: null);
+            connector_end: null,
+
+            connection_point_x: null,
+
+            connection_point_y: null,
+
+            connection_point_name: null,
+
+            connection_point_index: 0);
         var createJson = JsonDocument.Parse(createResult).RootElement;
         Assert.True(createJson.GetProperty("success").GetBoolean());
 
