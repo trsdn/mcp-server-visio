@@ -11,14 +11,14 @@ namespace VisioMcp.ComInterop.Tests.Integration.Session;
 /// These tests validate the fix for Bug 8 (Feb 2026) where a stuck IDispatch.Invoke
 /// caused the MCP server to hang permanently because:
 /// 1. No timeout recovery existed — VisioBatch.Dispose() waited forever on STA thread join
-/// 2. No pre-emptive kill — PowerPoint process was never killed when operations timed out
+/// 2. No pre-emptive kill — Visio process was never killed when operations timed out
 /// 3. No session cleanup — WithSessionAsync didn't handle TimeoutException
 ///
 /// LAYER RESPONSIBILITY:
 /// - ✅ Test that Execute() throws TimeoutException when operation exceeds timeout
 /// - ✅ Test that _operationTimedOut triggers pre-emptive Process.Kill() in Dispose()
 /// - ✅ Test that Dispose() completes (doesn't hang) after timeout
-/// - ✅ Test that PowerPoint process is cleaned up after timeout + dispose
+/// - ✅ Test that Visio process is cleaned up after timeout + dispose
 /// - ✅ Test that cancelled operations also trigger cleanup
 /// </summary>
 [Trait("Category", "Integration")]
@@ -43,7 +43,7 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
         if (_staticTestFile == null)
         {
             var testFolder = Path.Join(AppContext.BaseDirectory, "Integration", "Session", "TestFiles");
-            _staticTestFile = Path.Join(testFolder, "batch-test-static.pptx");
+            _staticTestFile = Path.Join(testFolder, "batch-test-static.vsdx");
 
             if (!File.Exists(_staticTestFile))
             {
@@ -51,7 +51,7 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             }
         }
 
-        _testFileCopy = Path.Join(Path.GetTempPath(), $"batch-timeout-test-{Guid.NewGuid():N}.pptx");
+        _testFileCopy = Path.Join(Path.GetTempPath(), $"batch-timeout-test-{Guid.NewGuid():N}.vsdx");
         File.Copy(_staticTestFile, _testFileCopy, overwrite: true);
 
         return Task.Delay(500);
@@ -82,14 +82,14 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             operationTimeout: TimeSpan.FromSeconds(3),
             _testFileCopy!);
 
-        // Warm up — ensure PowerPoint is ready
+        // Warm up — ensure Visio is ready
         batch.Execute((ctx, ct) =>
         {
-            _ = ctx.Presentation.Slides.Count;
+            _ = ctx.Document.Pages.Count;
             return 0;
         });
 
-        _output.WriteLine("PowerPoint initialized, starting long-running operation...");
+        _output.WriteLine("Visio initialized, starting long-running operation...");
 
         // Act & Assert — operation that exceeds timeout must throw TimeoutException
         var sw = Stopwatch.StartNew();
@@ -122,28 +122,28 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// REGRESSION TEST: After timeout, the PowerPoint process must be killed and cleaned up.
-    /// Before Bug 8 fix, the hung PowerPoint process would remain alive permanently.
+    /// REGRESSION TEST: After timeout, the Visio process must be killed and cleaned up.
+    /// Before Bug 8 fix, the hung Visio process would remain alive permanently.
     /// </summary>
     [Fact]
-    public void Execute_AfterTimeout_PowerPointProcessIsCleaned()
+    public void Execute_AfterTimeout_VisioProcessIsCleaned()
     {
         // Arrange
-        var startingProcesses = Process.GetProcessesByName("POWERPNT");
+        var startingProcesses = Process.GetProcessesByName("VISIO");
         int startingCount = startingProcesses.Length;
-        _output.WriteLine($"PowerPoint processes before: {startingCount}");
+        _output.WriteLine($"Visio processes before: {startingCount}");
 
         var batch = VisioSession.BeginBatch(
             show: false,
             operationTimeout: TimeSpan.FromSeconds(3),
             _testFileCopy!);
 
-        // Get the PowerPoint process ID before timeout
-        int? pptPid = batch.PowerPointProcessId;
-        _output.WriteLine($"PowerPoint PID for this session: {pptPid}");
+        // Get the Visio process ID before timeout
+        int? visioPid = batch.VisioProcessId;
+        _output.WriteLine($"Visio PID for this session: {visioPid}");
 
         // Warm up
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         // Act — trigger timeout
         Assert.Throws<TimeoutException>(() =>
@@ -161,13 +161,13 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
         // Wait briefly for process cleanup
         Thread.Sleep(2000);
 
-        // Assert — PowerPoint process from this session should be gone
-        if (pptPid.HasValue)
+        // Assert — Visio process from this session should be gone
+        if (visioPid.HasValue)
         {
             bool processAlive;
             try
             {
-                using var process = Process.GetProcessById(pptPid.Value);
+                using var process = Process.GetProcessById(visioPid.Value);
                 processAlive = !process.HasExited;
             }
             catch (ArgumentException)
@@ -176,17 +176,17 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             }
 
             Assert.False(processAlive,
-                $"REGRESSION: PowerPoint process {pptPid.Value} is still alive after timeout + dispose. " +
+                $"REGRESSION: Visio process {visioPid.Value} is still alive after timeout + dispose. " +
                 "Pre-emptive kill in Dispose() may not be working.");
 
-            _output.WriteLine($"✓ PowerPoint process {pptPid.Value} was cleaned up after timeout");
+            _output.WriteLine($"✓ Visio process {visioPid.Value} was cleaned up after timeout");
         }
 
         // Also check total count hasn't leaked
-        int endingCount = Process.GetProcessesByName("POWERPNT").Length;
-        _output.WriteLine($"PowerPoint processes after: {endingCount}");
+        int endingCount = Process.GetProcessesByName("VISIO").Length;
+        _output.WriteLine($"Visio processes after: {endingCount}");
         Assert.True(endingCount <= startingCount,
-            $"PowerPoint process leak! Started with {startingCount}, ended with {endingCount}");
+            $"Visio process leak! Started with {startingCount}, ended with {endingCount}");
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             operationTimeout: TimeSpan.FromSeconds(3),
             _testFileCopy!);
 
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         // Trigger timeout
         Assert.Throws<TimeoutException>(() =>
@@ -245,7 +245,7 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             operationTimeout: TimeSpan.FromMinutes(5), // Normal timeout — not the trigger
             _testFileCopy!);
 
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         var cts = new CancellationTokenSource();
 
@@ -310,7 +310,7 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
             _testFileCopy!);
 
         // Warm up
-        batch.Execute((ctx, ct) => { _ = ctx.Presentation.Slides.Count; return 0; });
+        batch.Execute((ctx, ct) => { _ = ctx.Document.Pages.Count; return 0; });
 
         // Trigger timeout on first operation
         Assert.Throws<TimeoutException>(() =>
@@ -346,24 +346,24 @@ public class VisioBatchTimeoutTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Verify that PowerPointProcessId is captured during session creation.
+    /// Verify that VisioProcessId is captured during session creation.
     /// This is a prerequisite for the pre-emptive kill to work.
     /// </summary>
     [Fact]
-    public void BeginBatch_CapturesPowerPointProcessId()
+    public void BeginBatch_CapturesVisioProcessId()
     {
         // Arrange & Act
         using var batch = VisioSession.BeginBatch(_testFileCopy!);
 
         // Assert
-        Assert.NotNull(batch.PowerPointProcessId);
-        Assert.True(batch.PowerPointProcessId > 0, "PowerPointProcessId should be a valid PID");
+        Assert.NotNull(batch.VisioProcessId);
+        Assert.True(batch.VisioProcessId > 0, "VisioProcessId should be a valid PID");
 
         // Verify the process actually exists
-        using var process = Process.GetProcessById(batch.PowerPointProcessId.Value);
-        Assert.False(process.HasExited, "PowerPoint process should be running");
-        Assert.Equal("POWERPNT", process.ProcessName, ignoreCase: true);
+        using var process = Process.GetProcessById(batch.VisioProcessId.Value);
+        Assert.False(process.HasExited, "Visio process should be running");
+        Assert.Equal("VISIO", process.ProcessName, ignoreCase: true);
 
-        _output.WriteLine($"✓ PowerPointProcessId captured: {batch.PowerPointProcessId}");
+        _output.WriteLine($"✓ VisioProcessId captured: {batch.VisioProcessId}");
     }
 }

@@ -656,7 +656,7 @@ public class SessionManagerTests : IDisposable
         public Microsoft.Extensions.Logging.ILogger Logger => NullLogger.Instance;
         public IReadOnlyDictionary<string, object> Presentations { get; } = new Dictionary<string, object>();
         public IReadOnlyDictionary<string, object> Documents => Presentations;
-        public int? PowerPointProcessId => null;
+        public int? VisioProcessId => null;
         public TimeSpan OperationTimeout => TimeSpan.FromMinutes(5);
         public int SaveCallCount { get; private set; }
         public int DisposeCallCount { get; private set; }
@@ -666,7 +666,7 @@ public class SessionManagerTests : IDisposable
         public void Execute(Action<VisioContext, CancellationToken> operation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public T Execute<T>(Func<VisioContext, CancellationToken, T> operation, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public void Save(CancellationToken cancellationToken = default) => SaveCallCount++;
-        public bool IsPowerPointProcessAlive() => true;
+        public bool IsVisioProcessAlive() => true;
         public void Dispose()
         {
             DisposeCallCount++;

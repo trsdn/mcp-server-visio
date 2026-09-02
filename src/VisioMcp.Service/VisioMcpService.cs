@@ -590,7 +590,7 @@ public sealed class VisioMcpService : IDisposable
         }
 
         // Check if PowerPoint process is still alive before attempting save
-        if (!batch.IsPowerPointProcessAlive())
+        if (!batch.IsVisioProcessAlive())
         {
             _sessionManager.CloseSession(request.SessionId, save: false, force: true);
             return new ServiceResponse
@@ -702,7 +702,7 @@ public sealed class VisioMcpService : IDisposable
         }
 
         // Check if PowerPoint process is still alive before attempting operation
-        if (!batch.IsPowerPointProcessAlive())
+        if (!batch.IsVisioProcessAlive())
         {
             // PowerPoint died - clean up the dead session
             _sessionManager.CloseSession(sessionId, save: false, force: true);

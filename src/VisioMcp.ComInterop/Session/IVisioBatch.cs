@@ -56,14 +56,14 @@ public interface IVisioBatch : IDisposable
     void Save(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks if the underlying Office process is still alive.
+    /// Checks if the underlying Visio process is still alive.
     /// </summary>
-    bool IsPowerPointProcessAlive();
+    bool IsVisioProcessAlive();
 
     /// <summary>
-    /// Gets the underlying Office process ID, if captured.
+    /// Gets the underlying Visio process ID, if captured.
     /// </summary>
-    int? PowerPointProcessId { get; }
+    int? VisioProcessId { get; }
 
     /// <summary>
     /// Gets the operation timeout for this batch.
