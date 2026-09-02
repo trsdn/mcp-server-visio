@@ -83,7 +83,7 @@ applyTo: "**/*.md,docs/**,specs/**"
 
 ### ✅ Good Names (Discoverable)
 - `DEVELOPMENT.md`
-- `ADR-001-NO-UNIT-TESTS.md`
+- `ADR-001-TESTING-STRATEGY.md`
 - `RANGE-API-SPECIFICATION.md`
 - `PRE-COMMIT-SETUP.md`
 

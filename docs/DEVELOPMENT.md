@@ -164,7 +164,7 @@ dotnet test --filter "RunType=OnDemand"
 
 ### **Test Categories & Guidelines**
 
-**⚠️ No Unit Tests** - See `docs/ADR-001-NO-UNIT-TESTS.md` for architectural rationale
+**⚠️ Never mock COM** - Anything touching Visio COM must be an integration test; COM-free logic may be unit tested. See `docs/ADR-001-TESTING-STRATEGY.md` for the rationale
 
 **Integration Tests (`Category=Integration`)**
 - ✅ Test business logic with real PowerPoint COM interaction
@@ -229,7 +229,7 @@ dotnet build -c Release
 - ✅ Add integration tests for all PowerPoint operations
 - ✅ Test round-trip persistence (create → save → reload → verify)
 - ✅ Update documentation
-- ✅ No unit tests needed (see ADR-001-NO-UNIT-TESTS.md)
+- ✅ Integration test, not a mocked unit test (see ADR-001-TESTING-STRATEGY.md)
 
 ### **Source Agent Client (`src\VisioMcp.Agent`)**
 
@@ -338,7 +338,7 @@ The categories are currently hard-coded in the CLI generator because:
 - ✅ Add integration tests for all PowerPoint operations
 - ✅ Test round-trip persistence (create → save → reload → verify)
 - ✅ Update documentation
-- ✅ No unit tests needed (see ADR-001-NO-UNIT-TESTS.md)
+- ✅ Integration test, not a mocked unit test (see ADR-001-TESTING-STRATEGY.md)
 
 
 ## 📋 **MCP Server Configuration Management**
