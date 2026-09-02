@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Connect shapes with Visio's own dynamic connectors** (#36e). New `shape(connect-shapes)` action:
+  `shape_names='A,B,C'` chains them into A→B and B→C in one call, where `add-connector` needed one
+  call per pair.
+  What it produces is materially different from what `add-connector` produced. `add-connector` draws
+  a **straight line** and glues its ends. `connect-shapes` creates an instance of Visio's
+  `Dynamic connector` master, which **routes around shapes standing in the way** and re-routes when
+  either end moves. A test asserts exactly that: a connector drawn past an obstacle comes back with
+  more than two geometry vertices, which a straight line cannot have.
+
+### Fixed
+
+- **`add-connector` silently ignored `connector_type`** (#36e). The parameter was documented
+  *"1=Straight, 2=Elbow, 3=Curve"* and **never read** — every value produced an identical straight
+  line, together with a success message that named the type the caller asked for. This is the
+  failure mode that goes unnoticed longest: a confident wrong answer rather than an error.
+  It now sets the cells that actually control routing. Two are involved, which is why one value
+  could not map to one cell: `ShapeRouteStyle` chooses the path (1 = right angle, 2 = straight) and
+  `ConLineRouteExt` chooses how segments are drawn (1 = straight, 2 = curved) — so a curved
+  connector is a right-angle route drawn with curved segments. A drawn line also needs `ObjType=2`
+  before Visio treats it as routable at all.
+  Both actions are covered by a theory over all three types asserting the resulting cells.
+
+### Added
+
 - **Cell operations now address a page or the document, not only a shape** (#36b). Every `cell`
   action takes `sheet_target`: `'shape'` (the default, so nothing existing changes), `'page'` for
   `Page.PageSheet`, `'document'` for `Document.DocumentSheet`.

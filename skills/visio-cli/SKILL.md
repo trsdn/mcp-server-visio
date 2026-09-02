@@ -191,13 +191,13 @@ Visio page lifecycle, guides, and routing commands.
 
 Shape management: list, read, create, move, resize, delete, z-order.
 
-**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `list-connections`, `list-connection-points`, `add-connection-point`, `set-connection-point`, `delete-connection-point`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-slide`, `set-shadow`, `add-connector`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `set-action-settings`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
+**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `list-connections`, `list-connection-points`, `add-connection-point`, `set-connection-point`, `delete-connection-point`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-slide`, `set-shadow`, `add-connector`, `connect-shapes`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `set-action-settings`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
 
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | (required) |
 | `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, list-connections, list-connection-points, add-connection-point, set-connection-point, delete-connection-point, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-slide, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, set-action-settings, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
-| `--shape-names` | (required for: select-shapes, add-to-selection, remove-from-selection, group, merge) |
+| `--shape-names` | (required for: select-shapes, add-to-selection, remove-from-selection, group, connect-shapes, merge) |
 | `--property-name` | Shape Data property name, matched against the row label or the underlying Prop.<row> name, case-insensitively (required for: get-property, set-property, delete-property) |
 | `--property-value` | Property value, stored as a string. Omit to store an empty value |
 | `--connection-point-x` | X position as a ShapeSheet formula. Prefer a relative expression such as 'Width*0.5' so the point stays put when the shape is resized; a literal needs units, for example '1 in' |
@@ -221,7 +221,7 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--visible` | Show or hide shadow (required for: set-shadow) |
 | `--offset-x` | Shadow offset X in points (required for: set-shadow) |
 | `--offset-y` | Shadow offset Y in points (required for: set-shadow) |
-| `--connector-type` | 1=Straight, 2=Elbow, 3=Curve (required for: add-connector) |
+| `--connector-type` | Routing style: 1=Straight, 2=Elbow (right-angle), 3=Curved (required for: add-connector) |
 | `--start-shape-name` | Starting shape name (required for: add-connector) |
 | `--end-shape-name` | Ending shape name (required for: add-connector) |
 | `--merge-type` | 1=Union, 2=Combine, 3=Fragment, 4=Intersect, 5=Subtract (required for: merge) |

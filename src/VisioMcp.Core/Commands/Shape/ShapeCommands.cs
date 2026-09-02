@@ -39,6 +39,8 @@ public class ShapeCommands : IShapeCommands
     private const int VisTagDefault = 0;
     private const int VisDeselect = 1;
     private const int VisSelect = 2;
+    private const int VisSelTypeEmpty = 0;
+    private const int VisSelModeSkipSuper = 0;
     private const string StartShapeNameProperty = "VisioMcpStartShapeName";
     private const string EndShapeNameProperty = "VisioMcpEndShapeName";
 
@@ -1173,6 +1175,7 @@ public class ShapeCommands : IShapeCommands
 
                 beginX.GlueToPos(startShape, startXPercent, startYPercent);
                 endX.GlueToPos(endShape, endXPercent, endYPercent);
+                ApplyConnectorRouting(connector, connectorType);
                 WriteConnectorMetadata(connector, StartShapeNameProperty, startShapeName);
                 WriteConnectorMetadata(connector, EndShapeNameProperty, endShapeName);
 
@@ -1192,6 +1195,137 @@ public class ShapeCommands : IShapeCommands
                 if (connector != null) ComUtilities.Release(ref connector!);
                 if (endShape != null) ComUtilities.Release(ref endShape!);
                 if (startShape != null) ComUtilities.Release(ref startShape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Visio routing styles, as they appear in the ShapeSheet rather than as PowerPoint named them.
+    /// </summary>
+    /// <remarks>
+    /// Two cells are involved, which is why one <c>connectorType</c> cannot map to one value:
+    /// <c>ShapeRouteStyle</c> chooses the path (1 = right angle, 2 = straight) and
+    /// <c>ConLineRouteExt</c> chooses how the segments are drawn (1 = straight, 2 = curved).
+    /// A curved connector is therefore a right-angle route drawn with curved segments.
+    /// Verified against a live instance; both cells exist on a Dynamic connector and on any shape
+    /// whose <c>ObjType</c> is 2 (routable).
+    /// </remarks>
+    private static (string RouteStyle, string LineRouteExt) MapConnectorType(int connectorType) => connectorType switch
+    {
+        1 => ("2", "1"),
+        2 => ("1", "1"),
+        3 => ("1", "2"),
+        _ => throw new ArgumentException(
+            $"Unknown connector type {connectorType}. Use 1 for a straight connector, 2 for an elbow "
+            + "(right-angle) connector, or 3 for a curved one.",
+            nameof(connectorType))
+    };
+
+    /// <summary>
+    /// Applies a routing style to a connector, making <c>connectorType</c> mean something.
+    /// </summary>
+    private static void ApplyConnectorRouting(dynamic connector, int? connectorType)
+    {
+        if (connectorType is null)
+        {
+            return;
+        }
+
+        (string routeStyle, string lineRouteExt) = MapConnectorType(connectorType.Value);
+
+        // A plain drawn line is not routable until ObjType says so, and without it the two routing
+        // cells exist but are ignored.
+        ShapeSheetHelpers.SetFormula(connector, "ObjType", "2");
+        ShapeSheetHelpers.SetFormula(connector, "ShapeRouteStyle", routeStyle);
+        ShapeSheetHelpers.SetFormula(connector, "ConLineRouteExt", lineRouteExt);
+    }
+
+    public ConnectorListResult ConnectShapes(IVisioBatch batch, int pageIndex, string shapeNames, int? connectorType = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeNames);
+
+        string[] names = shapeNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (names.Length < 2)
+        {
+            throw new ArgumentException(
+                $"connect-shapes needs at least two shape names to connect, but got {names.Length}. "
+                + "Pass them comma-separated in the order they should be chained, for example "
+                + "'Start,Middle,End' — which creates two connectors.",
+                nameof(shapeNames));
+        }
+
+        // Fail before touching the document rather than after creating some of the connectors.
+        if (connectorType is not null)
+        {
+            _ = MapConnectorType(connectorType.Value);
+        }
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic? selection = null;
+            try
+            {
+                int before = (int)page.Shapes.Count;
+
+                // Page.CreateSelection rather than ActiveWindow.Selection: it is bound to the page
+                // being edited, so it works when that page is not the one on screen.
+                selection = page.CreateSelection(VisSelTypeEmpty, VisSelModeSkipSuper);
+                foreach (string name in names)
+                {
+                    dynamic? shape = null;
+                    try
+                    {
+                        shape = page.Shapes.Item(name);
+                        selection.Select(shape, VisSelect);
+                    }
+                    finally
+                    {
+                        if (shape != null) ComUtilities.Release(ref shape!);
+                    }
+                }
+
+                selection.ConnectShapes();
+
+                var connectors = new List<ConnectorInfo>();
+                int after = (int)page.Shapes.Count;
+                for (int i = before + 1; i <= after; i++)
+                {
+                    dynamic? created = null;
+                    try
+                    {
+                        created = page.Shapes.Item(i);
+                        ApplyConnectorRouting(created, connectorType);
+
+                        // ConnectShapes chains in selection order, so the nth new connector joins
+                        // the nth pair. Recording it saves the caller a list-connections round-trip.
+                        int pair = connectors.Count;
+                        connectors.Add(new ConnectorInfo
+                        {
+                            ShapeId = (int)created.ID,
+                            Name = ComUtilities.SafeGetString(created, "Name"),
+                            StartShapeName = pair < names.Length - 1 ? names[pair] : null,
+                            EndShapeName = pair < names.Length - 1 ? names[pair + 1] : null
+                        });
+                    }
+                    finally
+                    {
+                        if (created != null) ComUtilities.Release(ref created!);
+                    }
+                }
+
+                return new ConnectorListResult
+                {
+                    Success = true,
+                    PageIndex = pageIndex,
+                    Connectors = connectors,
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                if (selection != null) ComUtilities.Release(ref selection!);
                 ComUtilities.Release(ref page!);
             }
         });
