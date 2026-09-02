@@ -16,6 +16,14 @@ namespace VisioMcp.Core.Tests.Unit;
 /// These tests make the table an enforced invariant: the set of domains carrying
 /// <c>[McpTool(PublicSurface = false)]</c> must equal the set of rows in the table, exactly.
 /// They are deliberately COM-free (Rule 30) — reflection over the Core assembly plus a file read.
+///
+/// <para><b>Known limit.</b> These tests check that a disposition exists, not that it is
+/// <i>complete</i>. A domain whose actions split across two verdicts can hide the unresolved half
+/// behind one row, and nothing here notices: <c>accessibility</c> concealed two Delete actions
+/// behind a Remap row (#77), and <c>design</c> concealed fourteen (#78). Verifying completeness
+/// would mean asserting, per action, that a shipped equivalent exists — which the table does not
+/// model. When adding a Remap row, name the shipped action it remaps to in the evidence column so
+/// a reader can check it by hand.</para>
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Speed", "Fast")]
