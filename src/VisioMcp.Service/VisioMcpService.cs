@@ -413,7 +413,7 @@ public sealed class VisioMcpService : IDisposable
             return new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"File already exists: {fullPath}. Use session open to open an existing presentation."
+                ErrorMessage = $"File already exists: {fullPath}. Use session open to open the existing document."
             };
         }
 
@@ -546,7 +546,7 @@ public sealed class VisioMcpService : IDisposable
             return new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{request.SessionId}' has died. Session has been closed. Please create a new session."
+                ErrorMessage = $"Visio process for session '{request.SessionId}' has died. Session has been closed. Please create a new session."
             };
         }
 
@@ -659,7 +659,7 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' has died. Session has been closed. Please create a new session."
+                ErrorMessage = $"Visio process for session '{sessionId}' has died. Session has been closed. Please create a new session."
             });
         }
 
@@ -676,7 +676,7 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint operation timed out and the session has been closed: {ex.Message} " +
+                ErrorMessage = $"Visio operation timed out and the session has been closed: {ex.Message} " +
                                "Please reopen the file with a new session."
             });
         }
@@ -688,7 +688,7 @@ public sealed class VisioMcpService : IDisposable
             {
                 Success = false,
                 ErrorMessage = $"Operation was cancelled and the session has been closed. " +
-                               "The PowerPoint COM thread may have been unresponsive. " +
+                               "The Visio COM thread may have been unresponsive. " +
                                "Please reopen the file with a new session."
             });
         }
@@ -701,7 +701,7 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' has died. " +
+                ErrorMessage = $"Visio process for session '{sessionId}' has died. " +
                                "Session has been cleaned up. Please reopen the file with a new session."
             });
         }
@@ -714,7 +714,7 @@ public sealed class VisioMcpService : IDisposable
             return Task.FromResult(new ServiceResponse
             {
                 Success = false,
-                ErrorMessage = $"PowerPoint process for session '{sessionId}' is no longer running. " +
+                ErrorMessage = $"Visio process for session '{sessionId}' is no longer running. " +
                                "Session has been cleaned up. Please reopen the file with a new session."
             });
         }

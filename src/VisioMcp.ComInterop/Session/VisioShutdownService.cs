@@ -13,7 +13,7 @@ namespace VisioMcp.ComInterop.Session;
 public static class VisioShutdownService
 {
     private const int AlertResponseNo = 7;
-    private static readonly ResiliencePipeline _quitPipeline = ResiliencePipelines.CreatePowerPointQuitPipeline();
+    private static readonly ResiliencePipeline _quitPipeline = ResiliencePipelines.CreateVisioQuitPipeline();
 
     /// <summary>
     /// Saves the active document on the calling STA thread.
