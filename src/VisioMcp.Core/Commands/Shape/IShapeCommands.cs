@@ -77,26 +77,42 @@ public interface IShapeCommands
     /// <summary>
     /// List all custom Shape Data properties on a shape.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
     [ServiceAction("list-properties")]
     ShapePropertyListResult ListProperties(IVisioBatch batch, int pageIndex, string shapeName);
 
     /// <summary>
     /// Read a single custom Shape Data property from a shape.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="propertyName">Shape Data property name, matched against the row label or the underlying Prop.&lt;row&gt; name, case-insensitively</param>
     [ServiceAction("get-property")]
-    ShapePropertyResult GetProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null);
+    ShapePropertyResult GetProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName);
 
     /// <summary>
     /// Set a custom Shape Data property on a shape, creating the row if needed.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="propertyName">Shape Data property name. Names that are not valid Prop.&lt;row&gt; row names are normalized automatically</param>
+    /// <param name="propertyValue">Property value, stored as a string. Omit to store an empty value</param>
     [ServiceAction("set-property")]
-    OperationResult SetProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null, string? propertyValue = null);
+    OperationResult SetProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName, string? propertyValue = null);
 
     /// <summary>
     /// Delete a custom Shape Data property row from a shape.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="propertyName">Shape Data property name, matched against the row label or the underlying Prop.&lt;row&gt; name, case-insensitively</param>
     [ServiceAction("delete-property")]
-    OperationResult DeleteProperty(IVisioBatch batch, int pageIndex, string shapeName, string? propertyName = null);
+    OperationResult DeleteProperty(IVisioBatch batch, int pageIndex, string shapeName, string propertyName);
 
     /// <summary>
     /// List all 1-D connector shapes on a page together with their glued endpoints.
