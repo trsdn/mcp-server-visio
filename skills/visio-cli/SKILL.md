@@ -146,7 +146,7 @@ visiocli -q batch --input commands.json
 
 Visio ShapeSheet cell operations for reading and writing shape-level cells.
 
-**Actions:** `read`, `read-formula`, `write`, `set-formula`, `list`
+**Actions:** `read`, `read-formula`, `write`, `set-formula`, `list`, `list-sections`, `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`
 
 | Parameter | Description |
 |-----------|-------------|
@@ -155,6 +155,10 @@ Visio ShapeSheet cell operations for reading and writing shape-level cells.
 | `--cell-name` | ShapeSheet cell name, for example Width, PinX, FillForegnd, Char.Size or Prop.Cost. Section cells use the Section.Row.Cell form (required for: read, read-formula, write, set-formula) |
 | `--value` | Literal value. Distance cells need explicit units such as '3 in' or '12 pt', and angles need ' deg'; a bare number is read in internal units (inches, radians) (required for: write) |
 | `--formula` | ShapeSheet expression, for example 'Width*0.5' or 'GUARD(2 in)'. A formula recalculates when its inputs change; a literal value does not (required for: set-formula) |
+| `--section` | Section name such as Prop, User, Connections, Actions or Hyperlink, or a numeric section index. Use list-sections to see what a shape has |
+| `--row-name` | Optional row name. Named rows become addressable cells such as Prop.Cost or User.Origin; omit it for sections whose rows are positional, such as Connections |
+| `--row-index` | 0-based row index within the section. Rows below it shift up, so delete from the highest index first when removing several |
+| `--column-index` | 0-based column index within the row. This is the only way to reach a row that has no name |
 
 
 

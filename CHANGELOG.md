@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Generic ShapeSheet section and row access** (#33). Six new `cell` actions — `list-sections`,
+  `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`. A caller could already read
+  `Prop.Cost` by name but could not **create** it, and could not reach a row with no name at all.
+  `section` accepts a name (`Prop`, `User`, `Connections`, `Actions`, `Hyperlink`, `Geometry1`,
+  `Char`, `Para`…) or a numeric index, and an unknown name is rejected by listing the valid ones.
+  `read-src`/`write-src` address a cell by section, row and column, which is the only way to reach
+  a positional row such as a connection point — so #32 becomes a typed wrapper over this rather
+  than new plumbing, and #36b falls out because `PageSheet` and `DocumentSheet` expose the same API.
+
+  The issue's premise was wrong: there is **no allow-list**. `CellsU[name]` already accepted any
+  cell name; the gap was that the section and row primitives were private and duplicated —
+  `VisSectionProp = 243` declared separately in `ShapeCommands` and `DocumentPropertyCommands`,
+  `LayerCommands` carrying its own copy, and `ShapeCommands` writing `AddRow(1, 20, 0)` with no
+  constant at all. `ShapeSheetSections` now holds one authoritative map, derived by adding a named
+  row to each candidate index on a live Visio instance and reading the resulting cell name back.
+  That mattered: the widely-repeated mapping of Actions to 238 and Character to 4 is wrong — they
+  are **240** and **3**.
+
 ### Fixed
 
 - **Runtime error messages named the wrong product** (#76). #23 covered tool descriptions and #37

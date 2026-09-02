@@ -31,7 +31,11 @@ public sealed class VisioCellAndStencilToolTests(ITestOutputHelper output)
                 shape_name: shapeName,
                 cell_name: "Width",
                 value: null,
-                formula: null);
+                formula: null,
+                section: null,
+                row_name: null,
+                row_index: 0,
+                column_index: 0);
             output.WriteLine(readResult);
 
             var readJson = JsonDocument.Parse(readResult).RootElement;
@@ -46,7 +50,11 @@ public sealed class VisioCellAndStencilToolTests(ITestOutputHelper output)
                 shape_name: shapeName,
                 cell_name: "Width",
                 value: "3",
-                formula: null);
+                formula: null,
+                section: null,
+                row_name: null,
+                row_index: 0,
+                column_index: 0);
             output.WriteLine(writeResult);
 
             var writeJson = JsonDocument.Parse(writeResult).RootElement;
@@ -59,7 +67,11 @@ public sealed class VisioCellAndStencilToolTests(ITestOutputHelper output)
                 shape_name: shapeName,
                 cell_name: "Width",
                 value: null,
-                formula: null);
+                formula: null,
+                section: null,
+                row_name: null,
+                row_index: 0,
+                column_index: 0);
             var readAfterJson = JsonDocument.Parse(readAfterResult).RootElement;
             var afterValue = double.Parse(readAfterJson.GetProperty("cell").GetProperty("value").GetString()!, CultureInfo.InvariantCulture);
             Assert.Equal(3d, afterValue, 3);
