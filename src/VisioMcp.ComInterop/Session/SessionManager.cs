@@ -258,7 +258,7 @@ public sealed class SessionManager : IDisposable
         // Check if PowerPoint process is still alive
         if (!batch.IsVisioProcessAlive())
         {
-            _logger?.LogWarning("Session {SessionId} has dead PowerPoint process, auto-cleaning up", sessionId);
+            _logger?.LogWarning("Session {SessionId} has a dead Visio process, auto-cleaning up", sessionId);
             CleanupDeadSession(sessionId, batch);
             return null;
         }
@@ -518,7 +518,7 @@ public sealed class SessionManager : IDisposable
         }
 
         // Auto-cleanup dead session
-        _logger?.LogWarning("Session {SessionId} has dead PowerPoint process, auto-cleaning up during IsSessionAlive check", sessionId);
+        _logger?.LogWarning("Session {SessionId} has a dead Visio process, auto-cleaning up during IsSessionAlive check", sessionId);
         CleanupDeadSession(sessionId, batch);
         return false;
     }
@@ -574,7 +574,7 @@ public sealed class SessionManager : IDisposable
         // Clean up dead sessions after iteration
         foreach (var (sessionId, batch) in deadSessions)
         {
-            _logger?.LogWarning("Session {SessionId} has dead PowerPoint process, auto-cleaning up during GetActiveSessions", sessionId);
+            _logger?.LogWarning("Session {SessionId} has a dead Visio process, auto-cleaning up during GetActiveSessions", sessionId);
             CleanupDeadSession(sessionId, batch);
         }
 

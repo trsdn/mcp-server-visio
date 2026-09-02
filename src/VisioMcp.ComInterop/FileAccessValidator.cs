@@ -2,18 +2,18 @@ namespace VisioMcp.ComInterop;
 
 /// <summary>
 /// Utility class for validating file access and locking status.
-/// Provides OS-level file lock detection and IRM/AIP-encryption detection before PowerPoint COM operations.
+/// Provides OS-level file lock detection and IRM/AIP-encryption detection before Visio COM operations.
 /// </summary>
 public static class FileAccessValidator
 {
     // OLE2 Compound Document Format signature.
-    // IRM/AIP-protected PowerPoint files are stored as OLE2 containers with an EncryptedPackage
+    // IRM/AIP-protected Office files are stored as OLE2 containers with an EncryptedPackage
     // stream instead of the standard ZIP-based Office Open XML format.
     private static ReadOnlySpan<byte> Ole2Signature => [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
     /// <summary>
     /// Detects if the file is IRM/AIP-protected by checking for the OLE2 compound document
-    /// signature. IRM-protected files must be opened as read-only with PowerPoint visible so the
+    /// signature. IRM-protected files must be opened as read-only with Visio visible so the
     /// user can authenticate through the Information Rights Management credential prompt.
     /// </summary>
     /// <param name="filePath">The file path to inspect.</param>
@@ -45,7 +45,7 @@ public static class FileAccessValidator
     /// <summary>
     /// Validates that a file is not locked by attempting to open it with exclusive access.
     /// Throws InvalidOperationException if file is locked or inaccessible.
-    /// This is a fast OS-level check that doesn't require launching PowerPoint.
+    /// This is a fast OS-level check that does not require launching Visio.
     /// </summary>
     /// <param name="filePath">The file path to validate</param>
     /// <exception cref="InvalidOperationException">Thrown when file is locked or inaccessible</exception>
@@ -62,7 +62,7 @@ public static class FileAccessValidator
         }
         catch (IOException ioEx)
         {
-            // File is locked by another process (most likely already open in PowerPoint)
+            // File is locked by another process (most likely already open in Visio)
             throw CreateFileLockedError(filePath, ioEx);
         }
         catch (UnauthorizedAccessException uaEx)
@@ -87,9 +87,9 @@ public static class FileAccessValidator
     {
         return new InvalidOperationException(
             $"Cannot open '{Path.GetFileName(filePath)}'. " +
-            "The file is already open in PowerPoint or another process is using it. " +
+            "The file is already open in Visio or another process is using it. " +
             "Please close the file before running automation commands. " +
-            "VisioMcp requires exclusive access to presentations during operations.",
+            "VisioMcp requires exclusive access to the document during operations.",
             innerException);
     }
 }

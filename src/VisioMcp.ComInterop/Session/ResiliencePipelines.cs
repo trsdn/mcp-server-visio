@@ -34,7 +34,7 @@ public static class ResiliencePipelines
     public const int RPC_S_SERVER_UNAVAILABLE = unchecked((int)0x800706BA);     // -2147023174
 
     /// <summary>
-    /// CO_E_SERVER_EXEC_FAILURE - COM class factory failed to start the server (PowerPoint).
+    /// CO_E_SERVER_EXEC_FAILURE - COM class factory failed to start the server (Visio).
     /// Transient during session creation when system resources are constrained.
     /// </summary>
     public const int CO_E_SERVER_EXEC_FAILURE = unchecked((int)0x80080005);     // -2146959355
@@ -80,11 +80,11 @@ public static class ResiliencePipelines
     #region Factory Methods
 
     /// <summary>
-    /// Creates a retry pipeline for PowerPoint.Quit() operations.
+    /// Creates a retry pipeline for Visio Application.Quit() operations.
     /// Handles transient COM busy conditions with exponential backoff + jitter.
     /// </summary>
     /// <returns>Configured resilience pipeline</returns>
-    public static ResiliencePipeline CreatePowerPointQuitPipeline() => CreatePipeline(DefaultComConfig);
+    public static ResiliencePipeline CreateVisioQuitPipeline() => CreatePipeline(DefaultComConfig);
 
     /// <summary>
     /// Creates a retry pipeline for Data Model operations (measures, relationships, tables).
@@ -92,7 +92,7 @@ public static class ResiliencePipelines
     /// </summary>
     /// <remarks>
     /// The 0x800AC472 error occurs intermittently when performing Data Model operations
-    /// on Presentations with active Power Pivot models. The operation typically succeeds on retry.
+    /// while Visio is busy repainting or recalculating. The operation typically succeeds on retry.
     /// See GitHub Issue #315 for details.
     /// </remarks>
     /// <returns>Configured resilience pipeline</returns>

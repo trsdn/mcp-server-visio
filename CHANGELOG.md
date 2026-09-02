@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Runtime error messages named the wrong product** (#76). #23 covered tool descriptions and #37
+  covered parameter descriptions; neither reaches the strings returned when something *fails*.
+  Seven `ServiceResponse.ErrorMessage` sites said *"PowerPoint process for session 'X' has died"*,
+  and `FileAccessValidator` told a user whose `.vsdx` was locked to close **PowerPoint** — which
+  was not running, while Visio held the lock.
+  This surface arguably matters more than the descriptions: a description is read once while the
+  agent has full context, an error is read when the operation has already failed and the wrong
+  product name sends recovery in the wrong direction.
+  Also renamed `ResiliencePipelines.CreatePowerPointQuitPipeline` (a public method) and removed a
+  *"Presentations with active Power Pivot models"* comment — Power Pivot is Excel.
+  `RuntimeMessageTerminologyTests` scans the runtime layers' string literals, with an explicit
+  allow-list for the messages that name PowerPoint on purpose to explain a missing equivalent.
+
+### Fixed
+
 - **Every MCP parameter is now documented** (#37b). The remaining 35 placeholders were parameters
   with no `<param>` doc anywhere: `layer`, `page`, `stencil` and `window` had **none at all**.
   Written from the implementations rather than guessed — `add-guide`'s `guideType` is validated in
