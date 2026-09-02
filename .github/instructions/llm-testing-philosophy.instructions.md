@@ -115,11 +115,11 @@ which file is open, then use that file path.
 
 ### Natural Language Prompts
 
-Write prompts as a knowledgeable PowerPoint user would. They know PowerPoint concepts but NOT our specific CLI/MCP tool syntax.
+Write prompts as a knowledgeable Visio user would. They know Visio concepts but NOT our specific CLI/MCP tool syntax.
 
 ```python
 prompt = f"""
-Create a new PowerPoint file at {unique_path('sales-presentation')}
+Create a new Visio document at {unique_path('sales-presentation')}
 
 Add a title slide with:
 Title: "Q1 Sales Report"
@@ -323,7 +323,7 @@ C# Interfaces (XML /// docs)
 skills/shared/*.md (source of truth)
   → MSBuild EmbeddedResource with Link (embedded in assembly)
   → MSBuild GenerateSkillPromptsClass inline task
-    → PptSkillPrompts.g.cs (14 [McpServerPrompt] methods)
+    → VisioSkillPrompts.g.cs (14 [McpServerPrompt] methods)
       → Claude Desktop sees identical guidance as skill clients
 ```
 
@@ -334,7 +334,7 @@ skills/shared/*.md (source of truth)
 | Wrong tool/command description | `I*Commands.cs` XML `/// <summary>` | `SKILL.md` |
 | Wrong parameter docs | `I*Commands.cs` XML `/// <param>` | `SKILL.md` |
 | Wrong skill prose/rules/workflows | `skills/templates/SKILL.cli.sbn` or `SKILL.mcp.sbn` | `SKILL.md` |
-| Wrong reference doc content | `skills/shared/*.md` | `skills/ppt-*/references/*.md` |
+| Wrong reference doc content | `skills/shared/*.md` | `skills/visio-*/references/*.md` |
 | Wrong MCP prompt content | `skills/shared/*.md` | `Prompts/Content/Skills/` |
 | Wrong Tool Selection table (MCP) | `skills/templates/SKILL.mcp.sbn` | `SKILL.md` |
 | New skill reference needed | Add `.md` to `skills/shared/` + description in `.csproj` | Don't create separate prompt |
@@ -343,7 +343,7 @@ skills/shared/*.md (source of truth)
 
 - **Templates:** `skills/templates/SKILL.cli.sbn`, `skills/templates/SKILL.mcp.sbn`
 - **Reference docs (source of truth):** `skills/shared/*.md` → auto-synced to BOTH skill refs AND MCP prompts
-- **Generated files (NEVER edit):** `skills/visio-cli/SKILL.md`, `skills/visio-mcp/SKILL.md`, `obj/.../PptSkillPrompts.g.cs`
+- **Generated files (NEVER edit):** `skills/visio-cli/SKILL.md`, `skills/visio-mcp/SKILL.md`, `obj/.../VisioSkillPrompts.g.cs`
 - **Description overrides:** `src/VisioMcp.McpServer/VisioMcp.McpServer.csproj` → `GenerateSkillPromptsClass` task
 - **Build command:** `dotnet build -c Release` regenerates SKILL.md, copies references, and generates prompt class
 

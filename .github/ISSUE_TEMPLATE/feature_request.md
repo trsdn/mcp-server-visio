@@ -25,7 +25,7 @@ A clear and concise description of what you want to happen.
 
 **For CLI:**
 ```bash
-VisioMcp new-command <file.pptx> <parameters>
+VisioMcp new-command <file.vsdx> <parameters>
 ```
 
 **For MCP Server:**
@@ -42,26 +42,26 @@ Describe the specific use case this feature would address:
 - [ ] Slide operations  
 - [ ] Data analysis
 - [ ] Coding agent automation
-- [ ] Macro-enabled presentation (.pptm) operations
+- [ ] Macro-enabled presentation (.vsdm) operations
 - [ ] Other: [please specify]
 
 ## Target Users
 Who would benefit from this feature?
 - [ ] **AI Assistants** (GitHub Copilot, Claude, ChatGPT via MCP Server)
 - [ ] **Direct CLI Users** (Command-line automation)
-- [ ] **CI/CD Pipelines** (Automated PowerPoint development workflows)
-- [ ] **PowerPoint Developers** (VBA development)
+- [ ] **CI/CD Pipelines** (Automated Visio development workflows)
+- [ ] **Visio Developers** (VBA development)
 - [ ] **Data Engineers** (ETL workflows)
 - [ ] Other: [please specify]
 
-## PowerPoint Operations Involved
-What PowerPoint APIs or operations would this feature likely use?
+## Visio Operations Involved
+What Visio APIs or operations would this feature likely use?
 - [ ] Slides (Slide operations)
 - [ ] Shapes (Shape operations)
 - [ ] Charts
 - [ ] VBA/Macros (VBProject.VBComponents)
 - [ ] Animations/Transitions
-- [ ] Macro-enabled presentations (.pptm)
+- [ ] Macro-enabled presentations (.vsdm)
 - [ ] Other: [please specify]
 
 ## Additional context

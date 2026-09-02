@@ -18,7 +18,7 @@ public static class VisioShutdownService
     /// <summary>
     /// Saves the active document on the calling STA thread.
     /// </summary>
-    public static void SavePresentationWithTimeout(
+    public static void SaveDocumentWithTimeout(
         dynamic presentation,
         string? fileName = null,
         ILogger? logger = null,
@@ -85,7 +85,7 @@ public static class VisioShutdownService
 
             if (save && presentation != null)
             {
-                SavePresentationWithTimeout(presentation, fileName, logger);
+                SaveDocumentWithTimeout(presentation, fileName, logger);
             }
 
             bool closedDocumentsFromApplication = false;
@@ -125,11 +125,11 @@ public static class VisioShutdownService
             {
                 int attemptNumber = 0;
                 Exception? lastException = null;
-                using var quitTimeout = new CancellationTokenSource(ComInteropConstants.PowerPointQuitTimeout);
+                using var quitTimeout = new CancellationTokenSource(ComInteropConstants.VisioQuitTimeout);
 
                 try
                 {
-                    logger.LogDebug("Attempting to quit application for {FileName} with resilient retry ({Timeout} timeout)", fileName, ComInteropConstants.PowerPointQuitTimeout);
+                    logger.LogDebug("Attempting to quit application for {FileName} with resilient retry ({Timeout} timeout)", fileName, ComInteropConstants.VisioQuitTimeout);
 
                     _quitPipeline.Execute(cancellationToken =>
                     {
@@ -157,8 +157,8 @@ public static class VisioShutdownService
                 {
                     logger.LogError(
                         "Application quit TIMED OUT after {Timeout} for {FileName} (Attempts: {Attempts}). Visio is likely hung. Proceeding with forced COM cleanup.",
-                        ComInteropConstants.PowerPointQuitTimeout, fileName, attemptNumber);
-                    lastException = new TimeoutException($"Application.Quit() timed out after {ComInteropConstants.PowerPointQuitTimeout} for {fileName}");
+                        ComInteropConstants.VisioQuitTimeout, fileName, attemptNumber);
+                    lastException = new TimeoutException($"Application.Quit() timed out after {ComInteropConstants.VisioQuitTimeout} for {fileName}");
                 }
                 catch (COMException ex) when (ex.HResult == ResiliencePipelines.RPC_E_CALL_FAILED)
                 {

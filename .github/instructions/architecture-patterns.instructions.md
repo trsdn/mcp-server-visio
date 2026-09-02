@@ -46,8 +46,8 @@ Commands/Range/
 When adding or changing ANY feature, ALWAYS update BOTH entry points. See Rule 24 (Post-Change Sync).
 
 ```
-MCP Server (MCP tools, JSON-RPC) ──► In-process VisioMcpService ──► Core Commands ──► PowerPoint COM
-CLI (command-line args, console)  ──► CLI Daemon (named pipe) ─────► Core Commands ──► PowerPoint COM
+MCP Server (MCP tools, JSON-RPC) ──► In-process VisioMcpService ──► Core Commands ──► Visio COM
+CLI (command-line args, console)  ──► CLI Daemon (named pipe) ─────► Core Commands ──► Visio COM
 ```
 
 ---
@@ -75,7 +75,7 @@ return args[0] switch
 
 ## Resource Management Pattern
 
-**See ppt-com-interop.instructions.md** for complete WithPowerPoint() pattern and COM object lifecycle management.
+**See visio-com-interop.instructions.md** for complete WithVisio() pattern and COM object lifecycle management.
 
 ---
 
@@ -85,7 +85,7 @@ return args[0] switch
 
 ```csharp
 // ❌ WRONG: Suppressing exception with catch block
-public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
+public async Task<OperationResult> SomeAsync(IVisioBatch batch, string param)
 {
     try
     {
@@ -106,7 +106,7 @@ public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
 }
 
 // ✅ CORRECT: Let exception propagate through batch.Execute()
-public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
+public async Task<OperationResult> SomeAsync(IVisioBatch batch, string param)
 {
     return await batch.Execute((ctx, ct) => {
         // ... operation ...
@@ -117,13 +117,13 @@ public async Task<OperationResult> SomeAsync(IPptBatch batch, string param)
 }
 
 // ✅ CORRECT: Finally blocks still allowed for COM resource cleanup
-public async Task<OperationResult> ComplexAsync(IPptBatch batch, string param)
+public async Task<OperationResult> ComplexAsync(IVisioBatch batch, string param)
 {
     dynamic? shapeRef = null;
     try
     {
         return await batch.Execute((ctx, ct) => {
-            shapeRef = ctx.Presentation.Slides[1].Shapes.AddShape(...);
+            shapeRef = ctx.Document.Pages[1].Shapes.AddShape(...);
             // ... operation ...
             return ValueTask.FromResult(new OperationResult { Success = true });
         });
@@ -165,7 +165,7 @@ ServiceBridge holds the service reference and calls ProcessAsync() directly.
 9. `chart_config` - Chart configuration
 10. `animation` - Animation effects
 11. `transition` - Slide transitions
-12. `slide_master` - Slide master and layout management
+12. `slide_master` - Stencil master and layout management
 13. `notes` - Speaker notes
 14. `section` - Presentation sections
 15. `media` - Audio and video operations
@@ -177,19 +177,19 @@ ServiceBridge holds the service reference and calls ProcessAsync() directly.
 ### Action-Based Routing with ForwardToService
 ```csharp
 [McpServerTool]
-public static string PptSlide(string action, string sessionId, ...)
+public static string VisioPage(string action, string sessionId, ...)
 {
     return action.ToLowerInvariant() switch
     {
         "list" => ForwardList(sessionId),
-        "get" => ForwardGet(sessionId, slideIndex),
+        "get" => ForwardGet(sessionId, pageIndex),
         _ => throw new McpException($"Unknown action: {action}")
     };
 }
 
 private static string ForwardList(string sessionId)
 {
-    return PptToolsBase.ForwardToService("slide.list", sessionId);
+    return VisioToolsBase.ForwardToService("page.list", sessionId);
 }
 ```
 
@@ -197,7 +197,7 @@ private static string ForwardList(string sessionId)
 
 ## DRY Shared Utilities
 
-**PptHelper Methods:** `FindSlide()`, `FindShape()`, `GetShapeTypeName()`, `GetSlideLayout()`
+**Helper methods:** `GetPage()`, `ShapeSheetHelpers.SetFormula()`, `VisioShapeTypes.GetName()`
 
 **Why:** Prevents 60+ lines of duplicate code per feature
 
@@ -221,8 +221,8 @@ SavePassword = false  // Never export credentials by default
 
 ## Key Principles
 
-1. **WithPowerPoint() for everything** - See ppt-com-interop.instructions.md
-2. **Release intermediate objects** - Prevents PowerPoint hanging
+1. **WithVisio() for everything** - See visio-com-interop.instructions.md
+2. **Release intermediate objects** - Prevents Visio hanging
 3. **Batch/Session for MCP** - Multiple operations in single session
 4. **Resource-based tools** - 19 tools, not 33+ operations
 5. **DRY utilities** - Share common patterns

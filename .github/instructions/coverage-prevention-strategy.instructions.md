@@ -24,7 +24,7 @@ applyTo: "src/VisioMcp.Core/Commands/**/*.cs,src/VisioMcp.McpServer/**/*.cs"
 ```markdown
 1. ✅ Add method to Core Commands interface
    File: src/VisioMcp.Core/Commands/[Feature]/I[Feature]Commands.cs
-   Example: Task<OperationResult> NewMethodAsync(IPptBatch batch);
+   Example: Task<OperationResult> NewMethodAsync(IVisioBatch batch);
 
 2. ✅ Implement in Core Commands class  
    File: src/VisioMcp.Core/Commands/[Feature]/[Feature]Commands.cs

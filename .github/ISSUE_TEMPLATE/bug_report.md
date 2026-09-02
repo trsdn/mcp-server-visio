@@ -42,20 +42,20 @@ If applicable, paste the full error message:
 
 ## Environment
 - **Windows Version**: [e.g. Windows 11, Windows 10]
-- **PowerPoint Version**: [e.g. PowerPoint 365, PowerPoint 2019]
+- **Visio Version**: [e.g. Visio 365, Visio 2019]
 - **VisioMcp Version**: [e.g. v1.0.0]
 - **.NET Version**: [Run `dotnet --version`]
 - **Installation Method**: [NuGet tool / Binary download / Source build]
-- **File Format**: [e.g. .pptx, .pptm]
+- **File Format**: [e.g. .vsdx, .vsdm]
 - **VBA Trust Enabled**: [Yes/No - if VBA-related issue]
 - **AI Assistant** (if using MCP Server): [e.g., GitHub Copilot, Claude Desktop, ChatGPT, etc.]
 
 ## Sample File
-If possible, attach a sample PowerPoint file that reproduces the issue (remove sensitive data).
+If possible, attach a sample Visio document that reproduces the issue (remove sensitive data).
 
 ## VBA-Related Issues (if applicable)
 - [ ] VBA trust is properly configured (`VisioMcp check-vba-trust`)
-- [ ] Using .pptm file format for VBA commands
+- [ ] Using .vsdm file format for VBA commands
 - [ ] VBA module exists in the presentation
 - [ ] Macro security settings allow programmatic access
 
@@ -68,7 +68,7 @@ If possible, attach a sample PowerPoint file that reproduces the issue (remove s
 ## Additional Context
 Add any other context about the problem here.
 
-## PowerPoint Process Cleanup
-- [ ] PowerPoint processes clean up properly after the command
-- [ ] PowerPoint processes remain running (this is part of the bug)
+## Visio Process Cleanup
+- [ ] Visio processes clean up properly after the command
+- [ ] Visio processes remain running (this is part of the bug)
 - [ ] Not applicable/unsure

@@ -9,14 +9,14 @@
 - [Architecture Patterns](instructions/architecture-patterns.instructions.md) - Batch API, command pattern, resource management
 
 **Read based on task type:**
-- Adding/fixing commands → [PowerPoint COM Interop](instructions/ppt-com-interop.instructions.md)
+- Adding/fixing commands → [Visio COM Interop](instructions/visio-com-interop.instructions.md)
 - Writing tests → [Testing Strategy](instructions/testing-strategy.instructions.md)
 - MCP Server work → [MCP Server Guide](instructions/mcp-server-guide.instructions.md)
 - Creating PR → [Development Workflow](instructions/development-workflow.instructions.md)
 - Fixing bugs → [Bug Fixing Checklist](instructions/bug-fixing-checklist.instructions.md)
 
 **Less frequently needed:**
-- [PowerPoint Connection Types](instructions/ppt-com-patterns-guide.instructions.md) - Only for connection-specific work
+- [Visio ShapeSheet Patterns](instructions/visio-com-patterns-guide.instructions.md) - Only for connection-specific work
 - [README Management](instructions/readme-management.instructions.md) - Only when updating READMEs
 - [Documentation Structure](instructions/documentation-structure.instructions.md) - Only when creating docs
 
@@ -24,7 +24,7 @@
 
 ## What is VisioMcp?
 
-**VisioMcp** is a Windows-only toolset for programmatic PowerPoint automation via COM interop, designed for coding agents and automation scripts.
+**VisioMcp** is a Windows-only toolset for programmatic Visio automation via COM interop, designed for coding agents and automation scripts.
 
 > **⚠️ CRITICAL: VisioMcp has TWO equal entry points — MCP Server AND CLI.**
 > Both are first-class citizens. Every feature, action, and parameter must work identically through both.
@@ -33,8 +33,8 @@
 
 **Core Layers:**
 1. **ComInterop** (`src/VisioMcp.ComInterop`) - Reusable COM automation patterns (STA threading, session management, batch operations, OLE message filter)
-2. **Core** (`src/VisioMcp.Core`) - PowerPoint-specific business logic (slides, shapes, VBA, parameters)
-3. **Service** (`src/VisioMcp.Service`) - PowerPoint session management and command routing (in-process for MCP Server, named pipe for CLI daemon)
+2. **Core** (`src/VisioMcp.Core`) - Visio-specific business logic (slides, shapes, VBA, parameters)
+3. **Service** (`src/VisioMcp.Service`) - Visio session management and command routing (in-process for MCP Server, named pipe for CLI daemon)
 4. **CLI** (`src/VisioMcp.CLI`) - Command-line interface for scripting (EQUAL entry point)
 5. **MCP Server** (`src/VisioMcp.McpServer`) - Model Context Protocol for AI assistants (EQUAL entry point)
 
@@ -50,10 +50,10 @@
 # ALWAYS use surgical testing - test only what you changed!
 
 # Fast feedback (excludes VBA) - Still takes 10-15 minutes
-dotnet test --filter "Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust"
+dotnet test --filter "Category=Integration&RunType!=OnDemand&Feature!=Export"
 
 # Surgical testing - Feature-specific (2-5 minutes per feature)
-dotnet test --filter "Feature=Slide&RunType!=OnDemand"
+dotnet test --filter "Feature=Page&RunType!=OnDemand"
 dotnet test --filter "Feature=Shape&RunType!=OnDemand"
 dotnet test --filter "Feature=Text&RunType!=OnDemand"
 
@@ -65,13 +65,13 @@ dotnet test --filter "RunType=OnDemand"
 ```csharp
 // Core: NEVER wrap batch.Execute() in try-catch that returns error result
 // Let exceptions propagate naturally - batch.Execute() handles them via TaskCompletionSource
-public DataType Method(IPptBatch batch, string arg1)
+public DataType Method(IVisioBatch batch, string arg1)
 {
     return batch.Execute((ctx, ct) => {
         dynamic? item = null;
         try {
             // Operation code here
-            item = ctx.Presentation.SomeObject;
+            item = ctx.Document.SomeObject;
             // For CRUD: return void (throws on error)
             // For queries: return actual data
             return someData;
@@ -89,7 +89,7 @@ public DataType Method(IPptBatch batch, string arg1)
 public int Method(string[] args)
 {
     try {
-        using var batch = PptSession.BeginBatch(filePath);
+        using var batch = VisioSession.BeginBatch(filePath);
         _coreCommands.Method(batch, arg1);
         return 0;
     } catch (Exception ex) {
@@ -102,7 +102,7 @@ public int Method(string[] args)
 [Fact]
 public void TestMethod()
 {
-    using var batch = PptSession.BeginBatch(_testFile);
+    using var batch = VisioSession.BeginBatch(_testFile);
     var result = _commands.Method(batch, args);
     Assert.NotNull(result); // Or other appropriate assertion
 }
@@ -122,9 +122,9 @@ public void TestMethod()
 
 **Batch API:** Create NEW simple tests. CLI needs try-catch wrapping.
 
-**PowerPoint Quirks:** Shape Z-order requires explicit reordering. Slide indices are 1-based. Use `Slides.Item(index)` not zero-based access.
+**Visio Quirks:** Shape Z-order requires explicit reordering. Page indices are 1-based. Use `Pages.Item(index)` not zero-based access.
 
-**MCP Design:** Prompts are shortcuts, not tutorials. LLMs know PowerPoint/programming.
+**MCP Design:** Prompts are shortcuts, not tutorials. LLMs know Visio and programming.
 
 **Tool Priority:** `replace_string_in_file` > `grep_search` > `run_in_terminal`. Avoid PowerShell for code.
 
@@ -143,7 +143,7 @@ public void TestMethod()
 GitHub Copilot auto-loads instructions based on files you're editing:
 
 - `tests/**/*.cs` → [Testing Strategy](instructions/testing-strategy.instructions.md)
-- `src/VisioMcp.Core/**/*.cs` → [PowerPoint COM Interop](instructions/ppt-com-interop.instructions.md)
+- `src/VisioMcp.Core/**/*.cs` → [Visio COM Interop](instructions/visio-com-interop.instructions.md)
 - `src/VisioMcp.McpServer/**/*.cs` → [MCP Server Guide](instructions/mcp-server-guide.instructions.md)
 - `.github/workflows/**/*.yml` → [Development Workflow](instructions/development-workflow.instructions.md)
 - `**` (all files) → [CRITICAL-RULES.md](instructions/critical-rules.instructions.md)
@@ -229,7 +229,7 @@ dotnet build -c Release  # Generates SKILL.md, copies references, and generates 
 
 **Guidance architecture (single source of truth):**
 - `skills/shared/*.md` → auto-copied to skill references AND auto-generated as MCP prompts
-- Skill-based clients (VS Code, Cursor) read `skills/ppt-*/references/`
+- Skill-based clients (VS Code, Cursor) read `skills/visio-*/references/`
 - MCP-only clients (Claude Desktop) read auto-generated `[McpServerPrompt]` methods
 - NEVER create separate prompt files for content that belongs in `skills/shared/`
 
@@ -275,8 +275,8 @@ catch (Exception ex) {
 ### Service Architecture (TWO EQUAL ENTRY POINTS)
 
 ```
-MCP Server ──► In-process VisioMcpService ──► Core Commands ──► PowerPoint COM
-CLI ─────────► CLI Daemon (named pipe) ─────► Core Commands ──► PowerPoint COM
+MCP Server ──► In-process VisioMcpService ──► Core Commands ──► Visio COM
+CLI ─────────► CLI Daemon (named pipe) ─────► Core Commands ──► Visio COM
 ```
 
 **⚠️ MCP Server and CLI are BOTH first-class entry points.** Each hosts its own VisioMcpService instance:

@@ -46,19 +46,19 @@ applyTo: "**"
 
 **Forbidden in commits/PRs/issues:**
 - Customer project names (e.g., "CP Toolkit", "Contoso Deal")
-- Specific file paths from customer projects (e.g., "MSX Plan.pptx", "Milestone_Export")
+- Specific file paths from customer projects (e.g., "MSX Plan.vsdx", "Milestone_Export")
 - Internal tool names that reveal customer context
 - Any information that could identify a specific customer engagement
 
 **Allowed:**
-- Generic descriptions ("a slide shape", "a PowerPoint presentation")
+- Generic descriptions ("a slide shape", "a Visio document")
 - Technical details that don't identify the source ("a column with a hyphen in the name")
 - Error messages and stack traces (sanitized of paths/names)
 
 **Example:**
 ```
 # ❌ WRONG: Reveals confidential project
-Discovered while debugging Milestone_Export query in CP Toolkit's MSX Plan.pptx
+Discovered while debugging Milestone_Export query in CP Toolkit's MSX Plan.vsdx
 
 # ✅ CORRECT: Generic description
 Discovered while debugging a slide shape that referenced an embedded object
@@ -90,7 +90,7 @@ Discovered while debugging a slide shape that referenced an embedded object
 | 29. TDD | Write test FIRST → RED → implement → GREEN | Proves tests catch real bugs |
 | 30. Never mock COM | Integration tests for COM; unit tests only for COM-free logic | Mocked COM asserts the mock, not Visio |
 | 22. COM cleanup | ALWAYS use try-finally, NEVER swallow exceptions | Prevents leaks and silent failures |
-| 7. COM API | Use PowerPoint COM first, validate docs | Prevents wrong dependencies |
+| 7. COM API | Use Visio COM first, validate docs | Prevents wrong dependencies |
 | 9. GitHub search | Search OTHER repos for VBA/COM examples FIRST | Learn from working code |
 | 2. NotImplementedException | Never use, full implementation only | No placeholders allowed |
 | 15. Enum mappings | All enum values mapped in ToActionString() | Runtime errors otherwise |
@@ -199,12 +199,12 @@ try {
 
 ```csharp
 // ❌ CRITICAL BUG: Suppressing exceptions with error result
-public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
+public async Task<OperationResult> CreateAsync(IVisioBatch batch, string name)
 {
     try
     {
         return await batch.Execute((ctx, ct) => {
-            var slide = ctx.Presentation.Slides.Add(1, 1);
+            var slide = ctx.Document.Pages.Add(1, 1);
             slide.Name = name;
             return ValueTask.FromResult(new OperationResult { Success = true });
         });
@@ -221,10 +221,10 @@ public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
 }
 
 // ✅ CORRECT: Let exception propagate to batch.Execute()
-public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
+public async Task<OperationResult> CreateAsync(IVisioBatch batch, string name)
 {
     return await batch.Execute((ctx, ct) => {
-        var slide = ctx.Presentation.Slides.Add(1, 1);
+        var slide = ctx.Document.Pages.Add(1, 1);
         slide.Name = name;
         return ValueTask.FromResult(new OperationResult { Success = true });
     });
@@ -232,7 +232,7 @@ public async Task<OperationResult> CreateAsync(IPptBatch batch, string name)
 }
 
 // ✅ CORRECT: Finally blocks are allowed for COM resource cleanup
-public async Task<OperationResult> ComplexAsync(IPptBatch batch, dynamic item)
+public async Task<OperationResult> ComplexAsync(IVisioBatch batch, dynamic item)
 {
     dynamic? temp = null;
     try
@@ -283,7 +283,7 @@ Core Command Method (NO try-catch wrapping)
 
 ## Rule 2: No NotImplementedException
 
-**Every feature must be fully implemented with real PowerPoint COM operations and passing tests. No placeholders.**
+**Every feature must be fully implemented with real Visio COM operations and passing tests. No placeholders.**
 
 ---
 
@@ -305,7 +305,7 @@ Core Command Method (NO try-catch wrapping)
 
 All `dynamic` COM objects must be released in `finally` blocks using `ComUtilities.Release(ref obj!)`.
 
-Exception: Session management files (PptBatch.cs, PptSession.cs).
+Exception: Session management files (VisioBatch.cs, VisioSession.cs).
 
 ---
 
@@ -328,9 +328,9 @@ git commit -m "your message"                 # Commit to feature branch
 
 ## Rule 7: COM API First
 
-**Use PowerPoint COM API for everything it supports. Only use external libraries (TOM) for features PowerPoint COM doesn't provide.**
+**Use Visio COM API for everything it supports. Only use external libraries (TOM) for features Visio COM doesn't provide.**
 
-Validate against [Microsoft docs](https://learn.microsoft.com/office/vba/api/overview/powerpoint) before adding dependencies.
+Validate against [Microsoft docs](https://learn.microsoft.com/office/vba/api/overview/visio) before adding dependencies.
 
 ---
 
@@ -344,21 +344,21 @@ Delete commented-out code (use git history). Exception: Documentation files only
 
 ## Rule 9: Search External GitHub Repositories for Working Examples First
 
-**BEFORE creating new PowerPoint COM Interop code or troubleshooting COM issues:**
+**BEFORE creating new Visio COM Interop code or troubleshooting COM issues:**
 
 - **ALWAYS** search OTHER open source GitHub repositories for working examples
 - **NEVER** search your own repository - only search external projects
 - **NetOffice is THE BEST source for ALL COM Interop work**: https://github.com/NetOfficeFw/NetOffice
-  - Strongly-typed C# wrappers for ALL Office COM APIs (Excel, Word, PowerPoint, Outlook, etc.)
-  - Search for ANY PowerPoint COM operation: slides, shapes, animations, transitions, text frames, formatting, etc.
+  - Strongly-typed C# wrappers for ALL Office COM APIs (Visio, Excel, Word, Outlook, etc.)
+  - Search for ANY Visio COM operation: slides, shapes, animations, transitions, text frames, formatting, etc.
   - Study their patterns for dynamic interop conversion and proper COM object handling
-  - NetOffice source code is essentially a comprehensive reference for every PowerPoint COM API
-- Look for repositories with PowerPoint automation, VBA code, or Office interop projects
-- Search for the specific COM object/method you need (e.g., "Slide AddShape VBA", "Shape TextFrame VBA", "Presentation.Slides NetOffice")
+  - NetOffice source code is essentially a comprehensive reference for every Visio COM API
+- Look for repositories with Visio automation, VBA code, or Office interop projects
+- Search for the specific COM object/method you need (e.g., "Slide AddShape VBA", "Shape TextFrame VBA", "Document.Pages NetOffice")
 - Study proven patterns from other projects before writing new code
 - Avoid reinventing solutions - learn from working implementations in the wild
 
-**Why:** PowerPoint COM is quirky. Real-world VBA examples from other projects prevent common pitfalls (1-based indexing, object cleanup, async issues, variant types, etc.)
+**Why:** Visio COM is quirky. Real-world VBA examples from other projects prevent common pitfalls (1-based indexing, object cleanup, async issues, variant types, etc.)
 
 ---
 
@@ -404,9 +404,9 @@ Delete commented-out code (use git history). Exception: Documentation files only
 - ✅ Uses `IClassFixture<TempDirectoryFixture>` (NOT manual IDisposable)
 - ✅ Each test creates unique file via `CoreTestHelper.CreateUniqueTestFile()`
 - ✅ NEVER shares test files between tests
-- ✅ VBA tests use `.pptm` extension (NOT .pptx renamed)
+- ✅ VBA tests use `.vsdm` extension (NOT .vsdx renamed)
 - ✅ Binary assertions only (NO "accept both" patterns)
-- ✅ All required traits present (Category, Speed, Layer, RequiresPowerPoint, Feature)
+- ✅ All required traits present (Category, Speed, Layer, RequiresVisio, Feature)
 - ✅ Batch API pattern used correctly (no ValueTask.FromResult wrapper)
 - ✅ NO duplicate helper methods (use CoreTestHelper)
 
@@ -460,7 +460,7 @@ Delete commented-out code (use git history). Exception: Documentation files only
 | 4. Instructions | Update after significant work | 5-10 min |
 | 5. COM leaks | Run `scripts\check-com-leaks.ps1` | 1 min |
 | 6. PRs | Always use PRs, never direct commit | Always |
-| 7. COM API | Use PowerPoint COM first, validate docs | Always |
+| 7. COM API | Use Visio COM first, validate docs | Always |
 | 8. TODO markers | Must resolve before commit | 1 min |
 | 9. GitHub search | Search OTHER repos for VBA/COM examples FIRST | 1-2 min |
 | 10. Test debugging | Run tests one by one, never all together | Per test |
@@ -532,12 +532,12 @@ dotnet test --filter "Category=Integration&RunType!=OnDemand"
 **Correct:**
 ```bash
 # ✅ CORRECT: Test only the feature you changed
-dotnet test --filter "Feature=Slide&RunType!=OnDemand"       # Slide changes only
+dotnet test --filter "Feature=Page&RunType!=OnDemand"       # Slide changes only
 dotnet test --filter "Feature=Shape&RunType!=OnDemand"      # Shape changes only
 dotnet test --filter "Feature=Text&RunType!=OnDemand"       # Text changes only
 ```
 
-**Why Critical:** Integration tests require PowerPoint COM automation and are SLOW. Running all tests wastes time and resources.
+**Why Critical:** Integration tests require Visio COM automation and are SLOW. Running all tests wastes time and resources.
 
 **Enforcement:**
 - Only run tests for files you modified
@@ -619,7 +619,7 @@ if (string.IsNullOrWhiteSpace(tableName))
    
    // ✅ CORRECT: Clear purpose and use cases
    /// <summary>
-   /// Manage PowerPoint slide lifecycle: create, rename, copy, delete slides.
+   /// Manage Visio page lifecycle: create, rename, copy, delete pages.
    /// </summary>
    ```
 
@@ -769,7 +769,7 @@ finally
 
 **See Also:**
 - Rule 1b: Exception propagation pattern
-- ppt-com-interop.instructions.md for complete patterns
+- visio-com-interop.instructions.md for complete patterns
 
 ---
 
@@ -836,7 +836,7 @@ When adding a NEW action to an existing tool:
 | 3. Interface | `I*Commands.cs` - Add interface method |
 | 4. Core | `*Commands.*.cs` - Implement method |
 | 5. MCP Server | `Ppt*Tool.cs` - Add switch case + handler |
-| 6. CLI Daemon | `PptDaemon.cs` - Add switch case |
+| 6. CLI Daemon | `VisioDaemon.cs` - Add switch case |
 | 7. Feature Count | `FEATURES.md` - Update operation count |
 | 8. README Files | All READMEs with operation counts (main, MCP, CLI, mcpb, vscode) |
 | 9. Skills Docs | `skills/shared/ppt_*.md` - Document new action |
@@ -867,8 +867,8 @@ Slide `duplicate` action was added to:
 - ✅ ActionExtensions.cs mapping
 - ✅ ISlideCommands.cs interface
 - ✅ SlideCommands.Lifecycle.cs implementation
-- ✅ PptSlideTool.cs MCP handler
-- ❌ PptDaemon.cs CLI handler (MISSED!)
+- ✅ VisioPageTool.cs MCP handler
+- ❌ VisioDaemon.cs CLI handler (MISSED!)
 - ❌ FEATURES.md count (MISSED!)
 - ❌ README files (MISSED!)
 
@@ -884,18 +884,18 @@ Result: Caught during commit review, required additional fixes.
 # ❌ WRONG: bash syntax
 ```bash
 dotnet build
-visiocli sheet list --file "test.pptx"
+visiocli sheet list --file "test.vsdx"
 ```
 
 # ✅ CORRECT: PowerShell syntax
 ```powershell
 dotnet build
-visiocli sheet list --file "test.pptx"
+visiocli sheet list --file "test.vsdx"
 ```
 ```
 
 **Why Critical:**
-- VisioMcp requires Windows + PowerPoint COM interop
+- VisioMcp requires Windows + Visio COM interop
 - bash syntax confuses Windows users
 - PowerShell is the native Windows shell
 - Syntax highlighting differs between bash/powershell
@@ -976,29 +976,29 @@ Select-String -Path "**/*.md" -Pattern '```bash' -Recurse
 
 | COM API | COM Param | Our Param | Rationale |
 |---------|-----------|-----------|-----------|
-| `Slides.Add(Index, Layout)` | `Index` | `slideIndex` | ✅ Keep descriptive — `index` alone is ambiguous |
+| `Slides.Add(Index, Layout)` | `Index` | `pageIndex` | ✅ Keep descriptive — `index` alone is ambiguous |
 | `Shape.Rotation` | `Rotation` | `rotation` | ✅ `rotation` is self-describing in tool schema |
 | `Shape.Name` | `Name` | `shapeName` | ✅ Keep descriptive — COM's `Name` property is too generic in flat schema |
 | `TextFrame.Text` | (property) | `text` | ✅ Clear in context |
-| `SlideRange.Item(Index)` | `Index` | `slideIndex` | ✅ Keep descriptive — `index` alone is ambiguous |
+| `SlideRange.Item(Index)` | `Index` | `pageIndex` | ✅ Keep descriptive — `index` alone is ambiguous |
 
 **Implementation Pattern:**
 ```csharp
 // ✅ COM name is clear → use it directly
-void SetRotation(IPptBatch batch, string shapeName, float rotation, ...);
+void SetRotation(IVisioBatch batch, string shapeName, float rotation, ...);
 
 // ✅ COM name works in flat schema → use it
-OperationResult SetText(IPptBatch batch, string shapeName, string text);
+OperationResult SetText(IVisioBatch batch, string shapeName, string text);
 
 // ✅ COM name too generic → keep descriptive
-void AddShape(IPptBatch batch, int slideIndex, string shapeName, string shapeType);
+void AddShape(IVisioBatch batch, int pageIndex, string shapeName, string shapeType);
 ```
 
 **When Adding New Parameters:**
 1. Check the COM API docs for the original parameter name
 2. Ask: "Would an LLM understand `{com_param_name}` without seeing the method/class name?"
 3. If YES → use COM name (e.g., `rotation`, `text`, `left`)
-4. If NO → use descriptive name (e.g., `shapeName` not `Name`, `slideIndex` not `Index`)
+4. If NO → use descriptive name (e.g., `shapeName` not `Name`, `pageIndex` not `Index`)
 
 ---
 

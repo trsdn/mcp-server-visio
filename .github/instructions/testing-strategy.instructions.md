@@ -11,17 +11,17 @@ applyTo: "tests/**/*.cs"
 ### Core.Tests (Business Logic)
 ```bash
 # Development (fast - excludes VBA and Screenshot)
-dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Category=Integration&RunType!=OnDemand&Feature!=VBA&Feature!=VBATrust&Feature!=Screenshot"
+dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Category=Integration&RunType!=OnDemand&Feature!=Export&Feature!=Screenshot"
 
 
 # VBA tests (manual only - requires VBA trust)
-dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "(Feature=VBA|Feature=VBATrust)&RunType!=OnDemand"
+dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "(Feature=Cell|Feature=Cell)&RunType!=OnDemand"
 
 # Screenshot tests (isolated run only - clipboard contention when parallel)
 dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Screenshot"
 
 # Specific feature
-dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Slide"
+dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Feature=Page"
 ```
 
 ### ComInterop.Tests (Session/Batch Infrastructure)
@@ -56,7 +56,7 @@ dotnet test tests/VisioMcp.Core.Tests/VisioMcp.Core.Tests.csproj --filter "Fully
 
 ## Round-Trip Validation Pattern
 
-**Always verify actual PowerPoint state after operations:**
+**Always verify actual Visio state after operations:**
 
 ```csharp
 // ✅ CREATE → Verify exists
@@ -115,11 +115,11 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 | Mistake | Fix |
 |---------|-----|
 | Shared test file | Each test creates unique file |
-| Only test success flag | Verify actual PowerPoint state |
+| Only test success flag | Verify actual Visio state |
 | Save before assertions | Remove Save entirely |
 | Save in middle of test | Only at end or in persistence test |
 | Manual IDisposable | Use `IClassFixture<TempDirectoryFixture>` |
-| .pptx for VBA tests | Use `.pptm` |
+| .vsdx for VBA tests | Use `.vsdm` |
 | "Accept both" assertions | Binary assertions only |
 | Missing Feature trait | Add from valid feature list above |
 
@@ -129,7 +129,7 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 2. Check file isolation (unique files?)
 3. Check assertions (binary, not conditional?)
 4. Check Save (removed unless persistence test?)
-5. Verify PowerPoint state (not just success flag?)
+5. Verify Visio state (not just success flag?)
 
 **Full checklist**: See CRITICAL-RULES.md Rule 12
 
@@ -139,7 +139,7 @@ Assert.DoesNotContain(file1Content, viewResult.Content);  // ✅ file1 content g
 
 **Location**: `llm-tests/`
 
-**Purpose**: Validate that LLMs correctly use PowerPoint MCP Server and CLI tools using [pytest-aitest](https://github.com/sbroenne/pytest-aitest).
+**Purpose**: Validate that LLMs correctly use the Visio MCP Server and CLI tools using [pytest-aitest](https://github.com/sbroenne/pytest-aitest).
 
 ### When to Run
 
@@ -170,7 +170,7 @@ uv run pytest -m aitest -v
 ### Prerequisites
 
 - `AZURE_OPENAI_ENDPOINT` environment variable
-- Windows desktop with PowerPoint installed
+- Windows desktop with Visio installed
 - MCP Server built (Release) and CLI available on PATH
 
 ### Canonical Gate

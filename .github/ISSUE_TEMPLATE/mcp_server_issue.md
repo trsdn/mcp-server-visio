@@ -21,7 +21,7 @@ Which AI assistant are you using with the MCP Server?
 Which MCP tool and action are experiencing issues?
 - **Tool**: [e.g., slide, shape, text, chart, vba, file]
 - **Action**: [e.g., list, view, import, export, update, refresh, delete, etc.]
-- **File Path**: [e.g., "C:\Data\presentation.pptx"]
+- **File Path**: [e.g., "C:\Data\presentation.vsdx"]
 - **Additional Parameters**: [describe any other parameters used]
 
 ## Expected Behavior
@@ -57,7 +57,7 @@ How is the MCP Server configured?
 
 ## Environment
 - **Windows Version**: [e.g. Windows 11, Windows 10]
-- **PowerPoint Version**: [e.g. PowerPoint 365, PowerPoint 2019]
+- **Visio Version**: [e.g. Visio 365, Visio 2019]
 - **VisioMcp Version**: [e.g. v1.0.0 - run `mcp-visio --version` or `dotnet tool list -g`]
 - **.NET Version**: [Run `dotnet --version`]
 - **Installation Method**: 
@@ -85,8 +85,8 @@ AI: [response]
 [MCP Server error occurs]
 ```
 
-## PowerPoint File Details
-- **File Format**: [.pptx or .pptm]
+## Visio Document Details
+- **File Format**: [.vsdx or .vsdm]
 - **File Size**: [approximate size]
 - **Contains**: 
   - [ ] VBA Macros
@@ -95,12 +95,12 @@ AI: [response]
 
 ## VBA-Related Issues (if applicable)
 - [ ] VBA trust is properly configured (`VisioMcp check-vba-trust`)
-- [ ] Using .pptm file format for VBA operations
+- [ ] Using .vsdm file format for VBA operations
 - [ ] VBA module exists in the presentation
 - [ ] Macro security settings allow programmatic access
 
 ## Additional Context
 Add any other context about the problem here, including:
 - Screenshots of AI assistant interaction
-- Sample PowerPoint files (with sensitive data removed)
+- Sample Visio documents (with sensitive data removed)
 - Other relevant information

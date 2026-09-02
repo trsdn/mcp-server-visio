@@ -17,7 +17,7 @@ Since VisioMcp MCP Server hasn't been released yet, we can make breaking changes
 ### Key Changes
 
 1. **Better Terminology**: `batchId` → `sessionId` (clearer intent)
-2. **Consistent Naming**: `presentationPath` → `filePath`, `slideIndex` parameter changes
+2. **Consistent Naming**: `presentationPath` → `filePath`, `pageIndex` parameter changes
 3. **Standardized Errors**: Error codes and structured error responses
 4. **Cleaner Code**: Remove redundant validation attributes
 5. **Richer Responses**: Add metadata to all tool outputs
@@ -39,7 +39,7 @@ Since VisioMcp MCP Server hasn't been released yet, we can make breaking changes
   - `list_ppt_batches` → `list_ppt_sessions`
 - [ ] Update all `batchId` parameters to `sessionId` in:
   - All 9 tool files in `src/VisioMcp.McpServer/Tools/`
-  - `PptToolsBase.cs`
+  - `VisioToolsBase.cs`
   - All prompt files (4 files)
 - [ ] Update documentation:
   - `BATCH-SESSION-GUIDE.md` → `SESSION-GUIDE.md`
@@ -53,25 +53,25 @@ Since VisioMcp MCP Server hasn't been released yet, we can make breaking changes
 **Affected files**: 16 C# files
 
 - [ ] Update all tool files:
-  - `PptSlideTool.cs`
-  - `PptShapeTool.cs`
-  - `PptTextTool.cs`
-  - `PptChartTool.cs`
-  - `PptVbaTool.cs`
-  - `PptAnimationTool.cs`
-  - `PptTransitionTool.cs`
-  - `PptFileTool.cs`
-  - `PptNotesTool.cs`
-  - `PptMediaTool.cs`
+  - `VisioPageTool.cs`
+  - `VisioShapeTool.cs`
+  - `VisioTextTool.cs`
+  - `VisioCellTool.cs`
+  - `VisioLayerTool.cs`
+  - `VisioPageTool.cs`
+  - `VisioStencilTool.cs`
+  - `VisioFileTool.cs`
+  - `VisioExportTool.cs`
+  - `VisioWindowTool.cs`
 - [ ] Update all Core command interfaces
 - [ ] Update all Core command implementations
 - [ ] Update all tests
 - [ ] Update all prompt content and documentation
 
-#### 1.3 slideIndex parameter changes
+#### 1.3 pageIndex parameter changes
 **Affected files**: ~5 files
 
-- [ ] `PptSlideTool.cs`
+- [ ] `VisioPageTool.cs`
 - [ ] Slide Core commands
 - [ ] Related tests
 - [ ] Prompt content
@@ -89,7 +89,7 @@ Since VisioMcp MCP Server hasn't been released yet, we can make breaking changes
   INVALID_PARAMETER
   ANIMATION_ERROR
   VBA_TRUST_REQUIRED
-  POWERPOINT_BUSY
+  VISIO_BUSY
   SESSION_NOT_FOUND
   SESSION_FILE_MISMATCH
   ```
@@ -202,7 +202,7 @@ Since VisioMcp MCP Server hasn't been released yet, we can make breaking changes
 
 - [ ] All `batchId` references changed to `sessionId`
 - [ ] All `presentationPath` references changed to `filePath`
-- [ ] All `slideIndex` references updated consistently
+- [ ] All `pageIndex` references updated consistently
 - [ ] Error response format standardized with error codes
 - [ ] Validation attributes cleaned up
 - [ ] Rich metadata added to all responses

@@ -19,6 +19,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- **Three unused PowerPoint save-format constants** (#23). `ComInteropConstants` defined
+  `PpSaveAsOpenXMLPresentation = 24`, `PpSaveAsOpenXMLPresentationMacroEnabled = 25` and
+  `PpSaveAsDefault = 11` — PowerPoint `PpSaveAsFileType` codes, referenced from nowhere in the
+  tree. `PowerPointQuitTimeout` and `VisioShutdownService.SavePresentationWithTimeout`, which are
+  live, are renamed to `VisioQuitTimeout` and `SaveDocumentWithTimeout` so the corrected
+  instructions do not document PowerPoint-named APIs.
+
 - **The `VisioContext` and `IVisioBatch` PowerPoint aliases are gone** (#21). Both types exposed
   every member twice — `Presentation`/`Document`, `PresentationPath`/`DocumentPath`, `App`/
   `Application`, plus `Presentations` and `GetPresentation` on the batch. Because the properties
@@ -43,6 +50,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Core interface-method count from 281 to 199.
 
 ### Changed
+
+- **Contributor instructions no longer describe a PowerPoint product** (#23). `.github/`
+  carried **282 PowerPoint references**, opening with *"VisioMcp is a Windows-only toolset for
+  programmatic PowerPoint automation via COM interop"*. As #23 put it, every agent contributing to
+  this repository was told it was building a PowerPoint tool — a plausible reason the legacy
+  persisted through several rounds of migration work. Reduced to **one**, which describes migration
+  history and is exempted explicitly.
+  Much of it was not merely terminology but **wrong**: instructions documented `IPptBatch`,
+  `PptSession.BeginBatch`, `ctx.Presentation`, `PptToolsBase` and `PptShutdownService` — none of
+  which exist — and gave `--filter "Feature=Slide"`, `Feature=VBA` and `Feature=VBATrust` as test
+  commands, none of which match a single test. `ppt-com-interop.instructions.md` and
+  `ppt-com-patterns-guide.instructions.md` are renamed to `visio-*`.
+  `ContributorInstructionTerminologyTests` guards the result; verified it fails on an induced
+  regression.
 
 - **The shipped skill packages no longer install PowerPoint guidance** (#23). Both
   `skills/visio-cli/references/` and `skills/visio-mcp/references/` are installed verbatim by
