@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Every operation is now atomic and undoable in one step** (#36a). `VisioBatch.Execute` wraps each
+  operation in a Visio undo scope: `EndUndoScope(id, commit: true)` on success,
+  **`commit: false` on failure — which reverts the writes already made**.
+  Previously an operation that wrote several cells and then failed left the document half-edited,
+  with no way for the caller to know which writes had landed. A test now proves the rollback:
+  two cells written, an exception thrown, both values back to their originals.
+  It also groups: everything a command writes becomes a single entry in Visio's undo stack, so a
+  command that touches five cells is one Ctrl+Z for a user watching in visible mode rather than
+  five. Verified directly — after two cells were written inside one committed scope, a single
+  `Undo()` reverted both.
+  Cost is ~1 ms per scope, negligible beside the COM calls it wraps. If Visio refuses to open a
+  scope the operation still runs: losing atomicity is better than refusing to work.
+
+### Added
+
 - **Connection point CRUD** (#32). Four new `shape` actions — `list-connection-points`,
   `add-connection-point`, `set-connection-point`, `delete-connection-point`. The tool already had
   *connectors* (the lines between shapes) and nothing for the *anchors those connectors glue to*;
