@@ -1653,19 +1653,56 @@ public class ParameterValidationTests
     // ── Master Commands ─────────────────────────────────────
 
     [Fact]
-    public void MasterEditShapeText_NullShapeName_ThrowsArgumentNullException()
+    public void MasterRead_NullMasterName_ThrowsArgumentNullException()
     {
         var commands = new MasterCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.EditShapeText(null!, 1, null!, "text"));
+        Assert.Throws<ArgumentNullException>(() => commands.Read(null!, null!));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void MasterEditShapeText_EmptyShapeName_ThrowsArgumentException(string shapeName)
+    public void MasterRead_EmptyMasterName_ThrowsArgumentException(string masterName)
     {
         var commands = new MasterCommands();
-        Assert.Throws<ArgumentException>(() => commands.EditShapeText(null!, 1, shapeName, "text"));
+        Assert.Throws<ArgumentException>(() => commands.Read(null!, masterName));
+    }
+
+    [Fact]
+    public void MasterCreateFromShape_NullShapeName_ThrowsArgumentNullException()
+    {
+        var commands = new MasterCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.CreateFromShape(null!, 1, null!));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MasterCreateFromShape_EmptyShapeName_ThrowsArgumentException(string shapeName)
+    {
+        var commands = new MasterCommands();
+        Assert.Throws<ArgumentException>(() => commands.CreateFromShape(null!, 1, shapeName));
+    }
+
+    [Fact]
+    public void MasterRename_NullNewName_ThrowsArgumentNullException()
+    {
+        var commands = new MasterCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.Rename(null!, "Widget", null!));
+    }
+
+    [Fact]
+    public void MasterDelete_NullMasterName_ThrowsArgumentNullException()
+    {
+        var commands = new MasterCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.Delete(null!, null!));
+    }
+
+    [Fact]
+    public void MasterListInstances_NullMasterName_ThrowsArgumentNullException()
+    {
+        var commands = new MasterCommands();
+        Assert.Throws<ArgumentNullException>(() => commands.ListInstances(null!, null!));
     }
 
     // ── Slide Commands (Additional) ─────────────────────────

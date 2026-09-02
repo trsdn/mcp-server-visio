@@ -72,22 +72,42 @@ public static class ComUtilities
     }
 
     /// <summary>
-    /// Safely gets a string property from a COM object, returning empty string if null
+    /// Safely gets a string property from a COM object, returning empty string if null or if the
+    /// COM call fails.
     /// </summary>
+    /// <remarks>
+    /// Only the property names listed below are supported. A name outside that set throws, rather
+    /// than returning an empty string: an unsupported name is a mistake in the calling code, and
+    /// silently reporting a populated COM property as empty hides it. Add a case here to support a
+    /// new property.
+    /// </remarks>
     /// <param name="obj">COM object</param>
-    /// <param name="propertyName">Property name</param>
-    /// <returns>Property value or empty string</returns>
+    /// <param name="propertyName">One of: Name, NameU, Description, Prompt, UniqueID</param>
+    /// <returns>Property value, or empty string when the property is null or the COM call fails</returns>
+    /// <exception cref="ArgumentException">The property name is not one this method can read.</exception>
     public static string SafeGetString(dynamic? obj, string propertyName)
     {
         try
         {
-            var value = propertyName switch
+            object? value = propertyName switch
             {
                 "Name" => obj.Name,
+                "NameU" => obj.NameU,
                 "Description" => obj.Description,
-                _ => null
+                "Prompt" => obj.Prompt,
+                "UniqueID" => obj.UniqueID,
+                _ => throw new ArgumentException(
+                    $"SafeGetString cannot read '{propertyName}'. Supported: Name, NameU, Description, "
+                    + "Prompt, UniqueID. Add a case to ComUtilities.SafeGetString, or read the property "
+                    + "directly — returning an empty string here would hide a value that exists.",
+                    nameof(propertyName))
             };
             return value?.ToString() ?? string.Empty;
+        }
+        catch (ArgumentException)
+        {
+            // An unsupported property name is a coding error, not a COM failure to absorb.
+            throw;
         }
         catch (Exception)
         {
@@ -96,21 +116,36 @@ public static class ComUtilities
     }
 
     /// <summary>
-    /// Safely gets an integer property from a COM object, returning 0 if null or invalid
+    /// Safely gets an integer property from a COM object, returning 0 if null or if the COM call
+    /// fails.
     /// </summary>
+    /// <remarks>
+    /// As with <see cref="SafeGetString"/>, an unsupported property name throws rather than
+    /// returning 0 — a zero count that is really "this method cannot read that property" is
+    /// indistinguishable from an empty collection.
+    /// </remarks>
     /// <param name="obj">COM object</param>
-    /// <param name="propertyName">Property name</param>
-    /// <returns>Property value or 0</returns>
+    /// <param name="propertyName">Currently only: Count</param>
+    /// <returns>Property value, or 0 when the property is null or the COM call fails</returns>
+    /// <exception cref="ArgumentException">The property name is not one this method can read.</exception>
     public static int SafeGetInt(dynamic? obj, string propertyName)
     {
         try
         {
-            var value = propertyName switch
+            object? value = propertyName switch
             {
                 "Count" => obj.Count,
-                _ => 0
+                _ => throw new ArgumentException(
+                    $"SafeGetInt cannot read '{propertyName}'. Supported: Count. Add a case to "
+                    + "ComUtilities.SafeGetInt, or read the property directly — returning 0 here "
+                    + "would be indistinguishable from a genuine zero.",
+                    nameof(propertyName))
             };
-            return Convert.ToInt32(value);
+            return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        catch (ArgumentException)
+        {
+            throw;
         }
         catch (Exception)
         {

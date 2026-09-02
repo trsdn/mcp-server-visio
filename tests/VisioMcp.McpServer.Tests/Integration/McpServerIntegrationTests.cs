@@ -96,12 +96,11 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
         "comment",
         "design",
         "headerfooter",
-        // hyperlink and master are PowerPoint-implemented and threw RuntimeBinderException on
-        // every call against a .vsdx. Suppressed in #19; they rejoin the public set when
-        // reimplemented against Shape.Hyperlinks (#35) and Document.Masters (#34).
+        // hyperlink is PowerPoint-implemented and throws RuntimeBinderException on every call
+        // against a .vsdx. Suppressed in #19; it rejoins the public set when reimplemented against
+        // Shape.Hyperlinks (#35). master was reimplemented on Document.Masters in #34.
         "hyperlink",
         "image",
-        "master",
         "pagesetup",
         "printoptions",
         "tag",

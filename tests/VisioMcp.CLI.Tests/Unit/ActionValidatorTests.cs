@@ -30,6 +30,7 @@ public sealed class ActionValidatorTests
         "export",
         "file",
         "layer",
+        "master",
         "page",
         "shape",
         "shapealign",
@@ -45,12 +46,11 @@ public sealed class ActionValidatorTests
         "comment",
         "design",
         "headerfooter",
-        // hyperlink and master are PowerPoint-implemented and threw RuntimeBinderException on
-        // every call against a .vsdx. Suppressed in #19; they rejoin ExpectedCommands when
-        // reimplemented against Shape.Hyperlinks (#35) and Document.Masters (#34).
+        // hyperlink is PowerPoint-implemented and throws RuntimeBinderException on every call
+        // against a .vsdx. Suppressed in #19; it rejoins ExpectedCommands when reimplemented
+        // against Shape.Hyperlinks (#35). master was reimplemented on Document.Masters in #34.
         "hyperlink",
         "image",
-        "master",
         "pagesetup",
         "printoptions",
         "tag",
