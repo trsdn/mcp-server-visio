@@ -263,6 +263,283 @@ public class CellCommands : ICellCommands
         }
     }
 
+    public ShapeSheetSectionListResult ListSections(IVisioBatch batch, int pageIndex, string shapeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                var sections = new List<ShapeSheetSectionInfo>();
+
+                foreach (var (name, index) in ShapeSheetSections.Known)
+                {
+                    if (!ShapeSheetSections.SectionExists(shape, index))
+                    {
+                        continue;
+                    }
+
+                    sections.Add(new ShapeSheetSectionInfo
+                    {
+                        SectionName = name,
+                        SectionIndex = index,
+                        RowCount = ShapeSheetSections.RowCount(shape, index)
+                    });
+                }
+
+                return new ShapeSheetSectionListResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    Sections = sections
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public ShapeSheetRowListResult ListRows(IVisioBatch batch, int pageIndex, string shapeName, string? section = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+
+        int sectionIndex = ShapeSheetSections.Resolve(section!);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                var rows = new List<ShapeSheetRowInfo>();
+                int rowCount = ShapeSheetSections.RowCount(shape, sectionIndex);
+
+                for (int row = 0; row < rowCount; row++)
+                {
+                    rows.Add(ReadRowInfo(shape, sectionIndex, row));
+                }
+
+                return new ShapeSheetRowListResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    SectionName = ShapeSheetSections.GetName(sectionIndex),
+                    SectionIndex = sectionIndex,
+                    Rows = rows
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public ShapeSheetRowResult AddRow(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, string? rowName = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+
+        int sectionIndex = ShapeSheetSections.Resolve(section!);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                if (!ShapeSheetSections.SectionExists(shape, sectionIndex))
+                {
+                    shape.AddSection(sectionIndex);
+                }
+
+                int rowIndex = string.IsNullOrWhiteSpace(rowName)
+                    ? Convert.ToInt32(shape.AddRow(sectionIndex, ShapeSheetSections.RowLast, ShapeSheetSections.TagDefault))
+                    : Convert.ToInt32(shape.AddNamedRow(sectionIndex, rowName, ShapeSheetSections.TagDefault));
+
+                return new ShapeSheetRowResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    SectionName = ShapeSheetSections.GetName(sectionIndex),
+                    SectionIndex = sectionIndex,
+                    Row = ReadRowInfo(shape, sectionIndex, rowIndex)
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public OperationResult DeleteRow(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
+
+        int sectionIndex = ShapeSheetSections.Resolve(section!);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            try
+            {
+                int rowCount = ShapeSheetSections.RowCount(shape, sectionIndex);
+
+                if (rowIndex >= rowCount)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(rowIndex),
+                        rowIndex,
+                        $"Section '{ShapeSheetSections.GetName(sectionIndex)}' has {rowCount} row(s) on shape '{shapeName}'.");
+                }
+
+                shape.DeleteRow(sectionIndex, rowIndex);
+
+                return new OperationResult
+                {
+                    Success = true,
+                    Action = "delete-row",
+                    Message = $"Deleted row {rowIndex} from section '{ShapeSheetSections.GetName(sectionIndex)}' on shape '{shapeName}'. Rows below it have shifted up.",
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public CellResult ReadSrc(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
+        ArgumentOutOfRangeException.ThrowIfNegative(columnIndex);
+
+        int sectionIndex = ShapeSheetSections.Resolve(section!);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            dynamic cell = shape.CellsSRC(sectionIndex, rowIndex, columnIndex);
+            try
+            {
+                string cellName = TryGetCellName(cell)
+                    ?? $"{ShapeSheetSections.GetName(sectionIndex)}[{rowIndex},{columnIndex}]";
+
+                return new CellResult
+                {
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = shape.Name?.ToString() ?? shapeName,
+                    Cell = ReadCellInfo(cell, cellName, includeValue: true, includeFormula: true)
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref cell!);
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public OperationResult WriteSrc(IVisioBatch batch, int pageIndex, string shapeName, string? section = null, int rowIndex = 0, int columnIndex = 0, string formula = "")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
+        ArgumentNullException.ThrowIfNull(formula);
+        ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
+        ArgumentOutOfRangeException.ThrowIfNegative(columnIndex);
+
+        int sectionIndex = ShapeSheetSections.Resolve(section!);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic shape = page.Shapes.Item(shapeName);
+            dynamic cell = shape.CellsSRC(sectionIndex, rowIndex, columnIndex);
+            try
+            {
+                cell.FormulaU = formula;
+
+                string cellName = TryGetCellName(cell)
+                    ?? $"{ShapeSheetSections.GetName(sectionIndex)}[{rowIndex},{columnIndex}]";
+
+                return new OperationResult
+                {
+                    Success = true,
+                    Action = "write-src",
+                    Message = $"Set {cellName} to '{formula}' on shape '{shapeName}'.",
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                ComUtilities.Release(ref cell!);
+                ComUtilities.Release(ref shape!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Reads a row's identity from its first cell. A positional row such as a connection point has
+    /// no <c>RowName</c>, but its cell still carries a usable name like <c>Connections.X1</c>.
+    /// </summary>
+    private static ShapeSheetRowInfo ReadRowInfo(dynamic shape, int sectionIndex, int rowIndex)
+    {
+        dynamic? cell = null;
+        try
+        {
+            cell = shape.CellsSRC(sectionIndex, rowIndex, 0);
+
+            return new ShapeSheetRowInfo
+            {
+                RowIndex = rowIndex,
+                RowName = TryGetRowName(cell) ?? string.Empty,
+                CellName = TryGetCellName(cell) ?? string.Empty
+            };
+        }
+        finally
+        {
+            if (cell != null)
+            {
+                ComUtilities.Release(ref cell!);
+            }
+        }
+    }
+
+    private static string? TryGetRowName(dynamic cell)
+    {
+        try
+        {
+            return cell.RowName?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static readonly string[] KnownCellNames =
     [
         "PinX",

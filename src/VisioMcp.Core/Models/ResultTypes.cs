@@ -320,6 +320,57 @@ public class CellListResult : ResultBase
     public List<CellInfo> Cells { get; set; } = [];
 }
 
+/// <summary>One ShapeSheet section present on a sheet.</summary>
+public class ShapeSheetSectionInfo
+{
+    /// <summary>Section name, matching the prefix Visio puts on the section's cells.</summary>
+    public string SectionName { get; set; } = string.Empty;
+
+    /// <summary>Numeric section index, accepted anywhere the name is.</summary>
+    public int SectionIndex { get; set; }
+
+    /// <summary>Number of rows currently in the section.</summary>
+    public int RowCount { get; set; }
+}
+
+public class ShapeSheetSectionListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public List<ShapeSheetSectionInfo> Sections { get; set; } = [];
+}
+
+/// <summary>One row within a ShapeSheet section.</summary>
+public class ShapeSheetRowInfo
+{
+    /// <summary>0-based row index within the section.</summary>
+    public int RowIndex { get; set; }
+
+    /// <summary>Row name, empty for a positional row such as a connection point.</summary>
+    public string RowName { get; set; } = string.Empty;
+
+    /// <summary>Full name of the row's first cell, for example <c>Prop.Cost</c>.</summary>
+    public string CellName { get; set; } = string.Empty;
+}
+
+public class ShapeSheetRowListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public string SectionName { get; set; } = string.Empty;
+    public int SectionIndex { get; set; }
+    public List<ShapeSheetRowInfo> Rows { get; set; } = [];
+}
+
+public class ShapeSheetRowResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public string SectionName { get; set; } = string.Empty;
+    public int SectionIndex { get; set; }
+    public ShapeSheetRowInfo? Row { get; set; }
+}
+
 public class ShapePropertyInfo
 {
     public string PropertyName { get; set; } = string.Empty;
