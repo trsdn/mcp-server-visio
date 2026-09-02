@@ -795,6 +795,43 @@ public class HyperlinkInfo
     public string? ShapeName { get; set; }
 }
 
+// ── Style ─────────────────────────────────────────────────
+
+public class StyleListResult : ResultBase
+{
+    public List<StyleInfo> Styles { get; set; } = [];
+}
+
+public class StyleDetailResult : ResultBase
+{
+    public StyleInfo? Style { get; set; }
+}
+
+public class StyleInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public int Index { get; set; }
+    public int Id { get; set; }
+
+    /// <summary>Style this one inherits from. Visio reports 'No Style' when it inherits nothing.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BasedOn { get; set; }
+
+    public bool IncludesFill { get; set; }
+    public bool IncludesLine { get; set; }
+    public bool IncludesText { get; set; }
+    public bool Hidden { get; set; }
+}
+
+public class StyleCellResult : ResultBase
+{
+    public string StyleName { get; set; } = string.Empty;
+    public string CellName { get; set; } = string.Empty;
+
+    /// <summary>The raw ShapeSheet expression, which is what a style stores.</summary>
+    public string Formula { get; set; } = string.Empty;
+}
+
 // ── Section ───────────────────────────────────────────────
 
 public class SectionListResult : ResultBase

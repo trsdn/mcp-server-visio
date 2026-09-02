@@ -8,6 +8,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Named styles** (#36d). New `style` tool with eight actions: `list`, `read`, `create`, `rename`,
+  `delete`, `read-formula`, `set-formula`, `apply`.
+  A Visio style is reusable named formatting held by the document. Changing it restyles every shape
+  using it, which is the reason to use one — a test asserts exactly that, changing one cell and
+  checking two shapes both moved.
+  A style carries its **own ShapeSheet**, so `set-formula` takes the same cell names used on shapes
+  (`FillForegnd`, `LineWeight`, `Char.Size`) rather than a fixed list of formatting parameters.
+  `apply` sets fill, line and text together by default; `aspect='fill' | 'line' | 'text'` applies
+  one, letting a shape combine three different styles.
+
+  **`Styles.Add` takes its flags in the order text, line, fill** — the reverse of the intuitive
+  fill-line-text. Passing them the obvious way silently produces a style with the wrong three flags,
+  and Visio raises nothing. The resulting style then **silently refuses** both cell writes and
+  application: the write leaves the cell untouched, and `shape.FillStyle` stays `'Normal'`, in both
+  cases without an error. Established by probing all eight flag combinations:
+
+  ```
+     a b c  ->  Fill  Line  Text
+     1 0 0  ->     0     0    -1     ← the first flag controls TEXT
+     0 1 0  ->     0    -1     0
+     0 0 1  ->    -1     0     0     ← the third controls FILL
+  ```
+
+  Three defences, because a silent no-op reported as success is the worst outcome: `create` verifies
+  the flags came back as asked, `set-formula` verifies the cell actually changed, and `apply`
+  verifies the style actually landed on the shape. Each throws naming the aspect the style lacks.
+
+  `delete` counts the shapes using a style **before** removing it and reports the number: Visio
+  deletes a style in use without complaint and reverts those shapes to `'No Style'`, losing that
+  formatting with no way to tell afterwards which were affected.
+
+  Themes are deliberately not in this tool: `Document.Theme` does not exist (#22). `ThemeIndex` and
+  `VariationColorIndex` are DocumentSheet cells, reachable with `cell(sheet_target='document')`
+  since #36b.
+
+### Added
+
 - **Background pages** (#36c, and the background half of #67). Four new `page` actions:
   `read-background`, `set-background`, `set-back-page`, `clear-back-page`. `page(list)` now also
   reports `backPageName` alongside the `isBackground` flag it already had.
