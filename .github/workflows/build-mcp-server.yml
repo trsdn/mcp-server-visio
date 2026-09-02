@@ -12,7 +12,6 @@ on:
       - 'src/VisioMcp.ComInterop/**'
       - 'tests/VisioMcp.McpServer.Tests/**'
       - 'tests/VisioMcp.Core.Tests/**'
-      - 'tests/VisioMcp.Diagnostics.Tests/**'
       - 'tests/VisioMcp.ComInterop.Tests/**'
       - 'global.json'
       - 'Directory.Build.props'

@@ -29,11 +29,11 @@ dotnet test --filter "(Feature=VBA|Feature=VBATrust)&RunType!=OnDemand"
 
 ```
 tests/
-├── VisioMcp.Core.Tests/           # Core business logic (Integration)
-├── VisioMcp.Diagnostics.Tests/    # PowerPoint COM behavior research (OnDemand, Manual)
+├── VisioMcp.Core.Tests/           # Core business logic (Unit)
 ├── VisioMcp.McpServer.Tests/      # MCP protocol layer (Integration)
 ├── VisioMcp.CLI.Tests/            # CLI wrapper (Integration)
-└── VisioMcp.ComInterop.Tests/     # COM utilities (OnDemand)
+├── VisioMcp.ComInterop.Tests/     # COM utilities, session and batch (Integration, OnDemand)
+└── VisioMcp.SkillGeneration.Tests/# Generated SKILL.md quality (Unit)
 
 llm-tests/                          # LLM tool behavior validation (Manual)
 ```
@@ -42,48 +42,25 @@ llm-tests/                          # LLM tool behavior validation (Manual)
 
 | Category | Speed | Requirements | Run By Default |
 |----------|-------|--------------|----------------|
-| **Integration** | Medium (10-20 min) | PowerPoint + Windows | ✅ Yes (local) |
-| **OnDemand** | Slow (3-5 min) | PowerPoint + Windows | ❌ No (explicit only) |
-| **Diagnostics** | Slow (varies) | PowerPoint + Windows | ❌ No (manual, excluded from CI) |
-| **LLM Tests** | Slow (varies) | PowerPoint + Azure OpenAI | ❌ No (manual only) |
-
-## Diagnostics Tests
-
-Diagnostics tests are research/exploratory tests in `VisioMcp.Diagnostics.Tests` that document the actual behavior of PowerPoint's COM APIs without our abstraction layer. These tests are **excluded from CI** to keep automation focused on core functionality.
-
-**Purpose:**
-- Understand PowerPoint COM API behavior for Power Query, Data Model, PivotTables, etc.
-- Document findings and edge cases for future implementation decisions
-- Test alternative approaches to complex PowerPoint operations
-
-**Trait markers:**
-- `Layer=Diagnostics`  
-- `RunType=OnDemand`
-
-**Run diagnostics tests locally:**
-```powershell
-# All diagnostics tests
-dotnet test tests/VisioMcp.Diagnostics.Tests/ --filter "RunType=OnDemand&Layer=Diagnostics"
-
-# Specific diagnostic tests
-dotnet test tests/VisioMcp.Diagnostics.Tests/ --filter "Feature=PowerQuery&RunType=OnDemand"
-```
-
-**CI Behavior:**
-- Diagnostics tests are **NOT** run in CI workflows (GitHub Actions)
-- Path filter includes folder to trigger builds when tests change
-- Test execution uses `RunType!=OnDemand` filter to exclude them
+| **Unit** | Fast (seconds) | None — no Visio needed | ✅ Yes |
+| **Integration** | Medium (10-20 min) | Visio + Windows | ✅ Yes (local) |
+| **OnDemand** | Slow (3-5 min) | Visio + Windows | ❌ No (explicit only) |
+| **LLM Tests** | Slow (varies) | Visio + Azure OpenAI | ❌ No (manual only) |
 
 ## Feature-Specific Tests
 
+`Feature` trait values in use: `Cell`, `Export`, `File`, `Layer`, `Master`, `McpProtocol`,
+`Page`, `Shape`, `SessionManager`, `Window`, `VisioBatch`, `VisioSession`, `Batch`,
+`DocumentProperty`, `SkillGeneration`, and others.
+
 ```powershell
 # Test specific feature only
-dotnet test --filter "Feature=PowerQuery&RunType!=OnDemand"
-dotnet test --filter "Feature=DataModel&RunType!=OnDemand"
-dotnet test --filter "Feature=Tables&RunType!=OnDemand"
-dotnet test --filter "Feature=PivotTables&RunType!=OnDemand"
-dotnet test --filter "Feature=Ranges&RunType!=OnDemand"
-dotnet test --filter "Feature=Connections&RunType!=OnDemand"
+dotnet test --filter "Feature=Shape&RunType!=OnDemand"
+dotnet test --filter "Feature=Page&RunType!=OnDemand"
+dotnet test --filter "Feature=Text&RunType!=OnDemand"
+dotnet test --filter "Feature=Cell&RunType!=OnDemand"
+dotnet test --filter "Feature=Layer&RunType!=OnDemand"
+dotnet test --filter "Feature=SessionManager&RunType!=OnDemand"
 ```
 
 ## When to Run Which Tests

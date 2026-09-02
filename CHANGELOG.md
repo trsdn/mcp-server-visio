@@ -109,6 +109,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Regenerated skill and prompt surfaces aligned to the current Visio MVP
 - Updated root, CLI, MCP, extension, and installation docs to describe the current Visio-first state more truthfully
 
+### Removed
+
+- **`VisioMcp.Diagnostics.Tests` deleted** (#30). It contained no test files — only a `.csproj` —
+  yet sat in the solution, built on every `dotnet build`, and appeared in the path filters of
+  `build-cli.yml` and `build-mcp-server.yml` as though it contributed coverage. There is also no
+  `src/VisioMcp.Diagnostics` production project for it to test.
+  `tests/README.md` documented it as PowerPoint COM research into *"Power Query, Data Model,
+  PivotTables"* with a `Feature=PowerQuery` filter — all **Excel** features, inherited from the
+  ancestor repo, describing tests that never existed.
+  The same README's "Feature-Specific Tests" section listed six filters (`PowerQuery`, `DataModel`,
+  `Tables`, `PivotTables`, `Ranges`, `Connections`), none of which match any trait in the
+  repository; replaced with the values actually in use.
+
 ### Changed
 
 - **ADR-001 and Rule 30 rewritten to state the policy the repository actually follows** (#31).
