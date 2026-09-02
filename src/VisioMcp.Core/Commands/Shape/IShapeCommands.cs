@@ -10,13 +10,14 @@ namespace VisioMcp.Core.Commands.Shape;
 [ServiceCategory("shape")]
 [McpTool("shape", Title = "Shape Operations", Destructive = true, Category = "shapes",
     Description = "Create, move, resize, format, and manage shapes on pages. The primary building tool. "
-    + "auto_shape_type (MsoAutoShapeType): 1=Rectangle, 5=Triangle, 9=Oval, 10=Hexagon, 13=Pentagon, "
-    + "16=Cube, 23=RoundedRectangle, 55=Chevron, 61=RightArrow, 92=Heart, 106=Plus, 127=Callout. "
+    + "add-shape draws only two primitives: auto_shape_type=9 draws an ellipse, any other value draws a rectangle. "
+    + "For any other shape, drop a stencil master with stencil(drop-master) — Visio has no auto-shape gallery. "
     + "color_hex: '#RRGGBB' (e.g. '#0B3D91'). Use 'none' for transparent fill/line. "
     + "z_order_cmd: 1=BringToFront, 2=SendToBack, 3=BringForward, 4=SendBackward. "
     + "merge_type: 1=Union, 2=Combine, 3=Fragment, 4=Intersect, 5=Subtract. "
     + "connector_type: 1=Straight, 2=Elbow, 3=Curve. flip_type: 0=Horizontal, 1=Vertical. "
     + "gradient_style: 1=Horizontal, 2=Vertical, 3=DiagonalUp, 4=DiagonalDown. "
+    + "find-by-type takes a Visio shape type: 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide. "
     + "Positions/sizes in points (72pt = 1 inch).")]
 public interface IShapeCommands
 {

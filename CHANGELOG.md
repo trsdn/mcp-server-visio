@@ -44,6 +44,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The `shape` tool advertised twelve shape types it cannot draw** (#23). Its MCP description
+  listed `auto_shape_type (MsoAutoShapeType): 1=Rectangle, 5=Triangle, 9=Oval, 10=Hexagon,
+  13=Pentagon, 16=Cube, 23=RoundedRectangle, 55=Chevron, 61=RightArrow, 92=Heart, 106=Plus,
+  127=Callout`. The implementation is `9 => DrawOval, _ => DrawRectangle`, so eleven of the twelve
+  silently produced a rectangle **and returned success naming the type the agent asked for**. The
+  description now states the two primitives honestly and points at `stencil(drop-master)`, which is
+  how Visio actually provides richer shapes.
+
+- **PowerPoint terminology removed from every LLM- and user-facing string** (#23). The entry-point
+  `file` tool described itself as *"File management commands for PowerPoint presentations"* and its
+  `filePath` parameter as *"Path to the .pptx or .pptm file"*; `window` minimised *"the PowerPoint
+  window"*; the CLI's `session create` help read *"Create a new PowerPoint file"*; the tray UI's
+  `AccessibleDescription` and `AccessibleName` — read aloud by screen readers — said *"PowerPoint
+  automation for coding agents"*; and `list-actions` shipped a copy-paste example combining a
+  `.pptx` file with **Excel** range syntax (`range set-values --range A1`).
+  `McpDescriptionTerminologyTests` now reads the 141 descriptions the MCP SDK actually registers,
+  tool-level and per-parameter, and fails the build on PowerPoint terminology. `FEATURES.md` has
+  carried this rule since before the migration began; prose could not enforce it.
+
+- **The `text` tool's legacy note was out of date** (#23). It claimed `insert-datetime` and
+  `insert-slide-number` were *"presentation-era carryovers and not Visio-native"*, but #61
+  reimplemented both — they append literal text. The note now distinguishes the two actions that
+  genuinely throw (`empty-placeholder-audit`, `insert-link`) from the two that work with a caveat.
+
 - **The MCP server suggested a `.pptx` path to agents** (#21). When a caller passed a path that was
   not fully qualified, `VisioToolsBase.ValidateWindowsPath` built a corrected suggestion ending in
   `presentation.pptx` — so a Visio server told the LLM to retry with a PowerPoint file, which

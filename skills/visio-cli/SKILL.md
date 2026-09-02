@@ -298,7 +298,7 @@ Text operations within shapes: get, set, format, find, replace.
 | `--url` | URL for the hyperlink (required for: insert-link) |
 | `--case-type` | 1=Sentence, 2=Lower, 3=Upper, 4=Title, 5=Toggle (required for: change-case) |
 | `--char-number` | Unicode/character code of the symbol (required for: insert-symbol) |
-| `--date-time-format` | Legacy presentation date/time format value (1-13) (required for: insert-datetime) |
+| `--date-time-format` | Date/time format selector (1-13) (required for: insert-datetime) |
 
 
 
