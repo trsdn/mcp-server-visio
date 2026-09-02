@@ -4,275 +4,320 @@ using VisioMcp.Core.Models;
 
 namespace VisioMcp.Core.Commands.Master;
 
+/// <summary>
+/// Masters held inside the working document, backed by <c>Document.Masters</c> (#34).
+/// </summary>
 public class MasterCommands : IMasterCommands
 {
     public MasterListResult List(IVisioBatch batch)
     {
         return batch.Execute((ctx, ct) =>
         {
-            var result = new MasterListResult { Success = true, FilePath = ctx.DocumentPath };
-            dynamic pres = ctx.Document;
-            dynamic masters = pres.SlideMasters;
+            dynamic masters = ctx.Document.Masters;
             try
             {
-                int masterCount = (int)masters.Count;
-
-                for (int m = 1; m <= masterCount; m++)
-                {
-                    dynamic master = masters.Item(m);
-                    try
-                    {
-                        var masterInfo = new MasterInfo
-                        {
-                            Name = master.Name?.ToString() ?? $"Master {m}"
-                        };
-
-                        dynamic layouts = master.CustomLayouts;
-                        try
-                        {
-                            int layoutCount = (int)layouts.Count;
-                            for (int l = 1; l <= layoutCount; l++)
-                            {
-                                dynamic layout = layouts.Item(l);
-                                try
-                                {
-                                    masterInfo.Layouts.Add(new LayoutInfo
-                                    {
-                                        Name = layout.Name?.ToString() ?? $"Layout {l}",
-                                        Index = l
-                                    });
-                                }
-                                finally
-                                {
-                                    ComUtilities.Release(ref layout!);
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref layouts!);
-                        }
-
-                        result.Masters.Add(masterInfo);
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref master!);
-                    }
-                }
-
-                return result;
-            }
-            finally
-            {
-                ComUtilities.Release(ref masters!);
-            }
-        });
-    }
-
-    public OperationResult ListShapes(IVisioBatch batch, int masterIndex)
-    {
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
-            dynamic master = masters.Item(masterIndex);
-            dynamic shapes = master.Shapes;
-            try
-            {
-                int count = (int)shapes.Count;
-                var lines = new List<string>(count);
-
+                var found = new List<MasterInfo>();
+                int count = (int)masters.Count;
                 for (int i = 1; i <= count; i++)
                 {
-                    dynamic shape = shapes.Item(i);
+                    dynamic? master = null;
                     try
                     {
-                        string name = shape.Name?.ToString() ?? $"Shape {i}";
-                        int shapeType = Convert.ToInt32(shape.Type);
-                        string typeName = VisioShapeTypes.GetName(shapeType);
-                        lines.Add($"{name} ({typeName})");
+                        master = masters[i];
+                        found.Add(Describe(master));
                     }
                     finally
                     {
-                        ComUtilities.Release(ref shape!);
+                        if (master != null) ComUtilities.Release(ref master!);
                     }
                 }
 
-                return new OperationResult
+                return new MasterListResult
                 {
                     Success = true,
-                    Action = "list-shapes",
-                    Message = count > 0
-                        ? $"Master {masterIndex} has {count} shape(s):\n" + string.Join("\n", lines)
-                        : $"Master {masterIndex} has no shapes.",
+                    Masters = found,
                     FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                ComUtilities.Release(ref shapes!);
-                ComUtilities.Release(ref master!);
                 ComUtilities.Release(ref masters!);
             }
         });
     }
 
-    public OperationResult EditShapeText(IVisioBatch batch, int masterIndex, string shapeName, string text)
+    public MasterDetailResult Read(IVisioBatch batch, string masterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(masterName);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic? master = null;
+            try
+            {
+                master = GetMaster(ctx, masterName);
+                return new MasterDetailResult
+                {
+                    Success = true,
+                    Master = Describe(master),
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                if (master != null) ComUtilities.Release(ref master!);
+            }
+        });
+    }
+
+    public MasterDetailResult CreateFromShape(IVisioBatch batch, int pageIndex, string shapeName, string? masterName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
-            dynamic master = masters.Item(masterIndex);
-            dynamic shape = master.Shapes.Item(shapeName);
+            dynamic? page = null;
+            dynamic? shape = null;
+            dynamic? created = null;
             try
             {
-                if (Convert.ToInt32(shape.HasTextFrame) == 0)
-                    throw new InvalidOperationException($"Shape '{shapeName}' on master {masterIndex} does not have a text frame.");
+                page = ctx.Document.Pages[pageIndex];
+                shape = page.Shapes.Item(shapeName);
 
-                shape.TextFrame.TextRange.Text = text;
+                // Document.Drop copies the shape's definition into Masters. The coordinates place it
+                // within the master's own drawing space, not on any page, so the shape on the page
+                // is left exactly where it was.
+                created = ctx.Document.Drop(shape, 0.0, 0.0);
 
-                return new OperationResult
+                if (!string.IsNullOrWhiteSpace(masterName))
+                {
+                    created.Name = masterName;
+                }
+
+                return new MasterDetailResult
                 {
                     Success = true,
-                    Action = "edit-shape-text",
-                    Message = $"Set text on shape '{shapeName}' (master {masterIndex})",
+                    Master = Describe(created),
                     FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                ComUtilities.Release(ref shape!);
-                ComUtilities.Release(ref master!);
-                ComUtilities.Release(ref masters!);
+                if (created != null) ComUtilities.Release(ref created!);
+                if (shape != null) ComUtilities.Release(ref shape!);
+                if (page != null) ComUtilities.Release(ref page!);
             }
         });
     }
 
-    public OperationResult ListLayouts(IVisioBatch batch, int masterIndex)
+    public MasterDetailResult Rename(IVisioBatch batch, string masterName, string newName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(masterName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic masters = ((dynamic)ctx.Document).SlideMasters;
-            dynamic master = masters.Item(masterIndex);
-            dynamic layouts = master.CustomLayouts;
+            dynamic? master = null;
             try
             {
-                int count = (int)layouts.Count;
-                var layoutInfos = new List<LayoutInfo>(count);
+                master = GetMaster(ctx, masterName);
+                master.Name = newName;
 
-                for (int i = 1; i <= count; i++)
-                {
-                    dynamic layout = layouts.Item(i);
-                    try
-                    {
-                        string name = layout.Name?.ToString() ?? $"Layout {i}";
-                        string? matchingName = null;
-                        try { matchingName = layout.MatchingName?.ToString(); } catch { }
-
-                        layoutInfos.Add(new LayoutInfo
-                        {
-                            Name = name,
-                            Index = i,
-                            MatchingName = string.IsNullOrEmpty(matchingName) ? null : matchingName
-                        });
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref layout!);
-                    }
-                }
-
-                return new OperationResult
+                return new MasterDetailResult
                 {
                     Success = true,
-                    Action = "list-layouts",
-                    Message = $"Master {masterIndex} has {count} custom layout(s):\n" +
-                        string.Join("\n", layoutInfos.Select(l => l.MatchingName != null
-                            ? $"  {l.Index}. {l.Name} (matching: {l.MatchingName})"
-                            : $"  {l.Index}. {l.Name}")),
+                    Master = Describe(master),
                     FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                ComUtilities.Release(ref layouts!);
-                ComUtilities.Release(ref master!);
-                ComUtilities.Release(ref masters!);
+                if (master != null) ComUtilities.Release(ref master!);
             }
         });
     }
 
-    public OperationResult DeleteUnused(IVisioBatch batch)
+    public OperationResult Delete(IVisioBatch batch, string masterName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(masterName);
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Document;
-            dynamic designs = pres.Designs;
-            dynamic slides = pres.Slides;
+            dynamic? master = null;
             try
             {
-                int slideCount = (int)slides.Count;
-                int designCount = (int)designs.Count;
+                master = GetMaster(ctx, masterName);
+                string actual = ComUtilities.SafeGetString(master, "Name");
+                master.Delete();
 
-                // Build a set of design names that are in use
-                var usedDesignNames = new HashSet<string>();
-                for (int s = 1; s <= slideCount; s++)
+                return new OperationResult
                 {
-                    dynamic slide = slides.Item(s);
+                    Success = true,
+                    Action = "delete",
+                    Message = $"Deleted master '{actual}'. Shapes already placed from it are unaffected.",
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                if (master != null) ComUtilities.Release(ref master!);
+            }
+        });
+    }
+
+    public MasterInstanceListResult ListInstances(IVisioBatch batch, string masterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(masterName);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic? master = null;
+            dynamic? pages = null;
+            try
+            {
+                // Resolve first, so an unknown name fails the way it does everywhere else rather
+                // than quietly reporting zero instances.
+                master = GetMaster(ctx, masterName);
+                int targetId = (int)master.ID;
+                string resolvedName = ComUtilities.SafeGetString(master, "Name");
+
+                var instances = new List<MasterInstanceInfo>();
+                pages = ctx.Document.Pages;
+                int pageCount = (int)pages.Count;
+
+                for (int p = 1; p <= pageCount; p++)
+                {
+                    dynamic? page = null;
                     try
                     {
-                        string designName = slide.Design.Name?.ToString() ?? "";
-                        if (!string.IsNullOrEmpty(designName))
-                            usedDesignNames.Add(designName);
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref slide!);
-                    }
-                }
+                        page = pages[p];
+                        string pageName = ComUtilities.SafeGetString(page, "Name");
+                        int shapeCount = (int)page.Shapes.Count;
 
-                // Delete unused designs in reverse order to avoid index shifts
-                int deletedCount = 0;
-                for (int d = designCount; d >= 1; d--)
-                {
-                    // Never delete the last remaining design
-                    int currentCount = (int)designs.Count;
-                    if (currentCount <= 1)
-                        break;
-
-                    dynamic design = designs.Item(d);
-                    try
-                    {
-                        string name = design.Name?.ToString() ?? "";
-                        if (!usedDesignNames.Contains(name))
+                        for (int s = 1; s <= shapeCount; s++)
                         {
-                            design.Delete();
-                            deletedCount++;
+                            dynamic? shape = null;
+                            dynamic? shapeMaster = null;
+                            try
+                            {
+                                shape = page.Shapes[s];
+                                shapeMaster = shape.Master;
+                                if (shapeMaster == null || (int)shapeMaster.ID != targetId)
+                                {
+                                    continue;
+                                }
+
+                                instances.Add(new MasterInstanceInfo
+                                {
+                                    PageIndex = p,
+                                    PageName = pageName,
+                                    ShapeId = (int)shape.ID,
+                                    ShapeName = ComUtilities.SafeGetString(shape, "Name")
+                                });
+                            }
+                            finally
+                            {
+                                if (shapeMaster != null) ComUtilities.Release(ref shapeMaster!);
+                                if (shape != null) ComUtilities.Release(ref shape!);
+                            }
                         }
                     }
                     finally
                     {
-                        ComUtilities.Release(ref design!);
+                        if (page != null) ComUtilities.Release(ref page!);
                     }
                 }
 
-                return new OperationResult
+                return new MasterInstanceListResult
                 {
                     Success = true,
-                    Action = "delete-unused",
-                    Message = deletedCount > 0
-                        ? $"Deleted {deletedCount} unused master(s)"
-                        : "No unused masters found",
+                    MasterName = resolvedName,
+                    Instances = instances,
                     FilePath = ctx.DocumentPath
                 };
             }
             finally
             {
-                ComUtilities.Release(ref slides!);
-                ComUtilities.Release(ref designs!);
+                if (pages != null) ComUtilities.Release(ref pages!);
+                if (master != null) ComUtilities.Release(ref master!);
             }
         });
+    }
+
+    /// <summary>
+    /// Resolves a master by name, replacing Visio's bare "Object name not found".
+    /// </summary>
+    /// <remarks>
+    /// A blank Visio document owns no masters at all, so "not found" is the expected answer far
+    /// more often here than for a page or a shape. The message therefore says what the document
+    /// does have, and how to get a master when it has none.
+    /// </remarks>
+    private static dynamic GetMaster(VisioContext ctx, string masterName)
+    {
+        dynamic masters = ctx.Document.Masters;
+        try
+        {
+            try
+            {
+                return masters[masterName];
+            }
+            catch (Exception)
+            {
+                var available = new List<string>();
+                int count = (int)masters.Count;
+                for (int i = 1; i <= count; i++)
+                {
+                    dynamic? master = null;
+                    try
+                    {
+                        master = masters[i];
+                        available.Add(ComUtilities.SafeGetString(master, "Name"));
+                    }
+                    finally
+                    {
+                        if (master != null) ComUtilities.Release(ref master!);
+                    }
+                }
+
+                string detail = available.Count == 0
+                    ? "This document has no masters. They appear when a stencil shape is dropped "
+                      + "(stencil(drop-master)), or use master(create-from-shape) to promote a shape already on a page."
+                    : $"This document has: {string.Join(", ", available)}.";
+
+                throw new ArgumentException($"Master '{masterName}' not found. {detail}", nameof(masterName));
+            }
+        }
+        finally
+        {
+            ComUtilities.Release(ref masters!);
+        }
+    }
+
+    private static MasterInfo Describe(dynamic master)
+    {
+        dynamic? shapes = null;
+        try
+        {
+            shapes = master.Shapes;
+            string prompt = ComUtilities.SafeGetString(master, "Prompt");
+
+            return new MasterInfo
+            {
+                Name = ComUtilities.SafeGetString(master, "Name"),
+                UniversalName = ComUtilities.SafeGetString(master, "NameU"),
+                Index = (int)master.Index,
+                Id = (int)master.ID,
+                UniqueId = ComUtilities.SafeGetString(master, "UniqueID"),
+                ShapeCount = (int)shapes.Count,
+
+                // Visio returns a VBA short here, so a direct bool cast throws RuntimeBinderException.
+                Hidden = (short)master.Hidden != 0,
+                Prompt = string.IsNullOrWhiteSpace(prompt) ? null : prompt
+            };
+        }
+        finally
+        {
+            if (shapes != null) ComUtilities.Release(ref shapes!);
+        }
     }
 }

@@ -8,6 +8,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **The `master` tool works, reimplemented on `Document.Masters`** (#34). It was backed by
+  PowerPoint `SlideMasters`/`CustomLayouts` and every action threw `RuntimeBinderException` on a
+  `.vsdx`; it has been off the public surface since #19. Six actions, all Visio-native: `list`,
+  `read`, `create-from-shape`, `rename`, `delete`, `list-instances`.
+  A master is a reusable shape definition, and every shape dropped from a stencil is an instance of
+  one — which is what governs both reuse and file size, and is why `list-instances` matters. It is
+  deliberately distinct from `stencil`, which reads masters out of an external `.vssx`; this
+  operates on the masters the working document already owns.
+  `create-from-shape` promotes a shape already on a page into a master via `Document.Drop`, which is
+  the only way to define one without a stencil file. Two behaviours are asserted because both are
+  the opposite of the obvious guess: promoting a shape **leaves the original in place** and does not
+  turn it into an instance, and deleting a master **leaves existing instances intact**. The delete
+  message says so.
+  A blank Visio document owns no masters at all, so "not found" is the common case; the error lists
+  what the document does have, or how to get a master when it has none.
+
+### Fixed
+
+- **`ComUtilities.SafeGetString` silently returned an empty string for any property it did not
+  recognise** (#34). Its switch ended `_ => null`, so asking for `UniqueID` reported a populated
+  COM property as empty with no error — the caller could not distinguish "absent" from "this helper
+  cannot read that". `SafeGetInt` had the same shape with `_ => 0`, where a zero count is
+  indistinguishable from an empty collection.
+  Both now throw on an unrecognised property name, which is a mistake in the calling code, while
+  still absorbing genuine COM failures, which is what "safe" was for. `SafeGetString` also learned
+  `NameU`, `Prompt` and `UniqueID`.
+  Caught by an assertion on a value that had been verified against a live instance — the helper was
+  reporting `""` for a master whose `UniqueID` was `{0A395395-…}`.
+  A locale bug surfaced with it: `Convert.ToInt32(object)` without a format provider, on a machine
+  whose culture is not English. Now invariant.
+
+### Added
+
 - **Connect shapes with Visio's own dynamic connectors** (#36e). New `shape(connect-shapes)` action:
   `shape_names='A,B,C'` chains them into A→B and B→C in one call, where `add-connector` needed one
   call per pair.

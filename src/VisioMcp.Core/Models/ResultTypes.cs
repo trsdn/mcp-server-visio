@@ -495,26 +495,54 @@ public class SlideTableResult : ResultBase
     public List<List<string?>> Data { get; set; } = [];
 }
 
-// ── Master / Layout ───────────────────────────────────────
+// ── Master ────────────────────────────────────────────────
 
 public class MasterListResult : ResultBase
 {
     public List<MasterInfo> Masters { get; set; } = [];
 }
 
-public class MasterInfo
+public class MasterDetailResult : ResultBase
 {
-    public string Name { get; set; } = string.Empty;
-    public List<LayoutInfo> Layouts { get; set; } = [];
+    public MasterInfo? Master { get; set; }
 }
 
-public class LayoutInfo
+public class MasterInstanceListResult : ResultBase
 {
-    public string Name { get; set; } = string.Empty;
-    public int Index { get; set; }
+    public string MasterName { get; set; } = string.Empty;
+    public List<MasterInstanceInfo> Instances { get; set; } = [];
+}
 
+public class MasterInfo
+{
+    /// <summary>Local, possibly localised name. This is what users see and what <c>Masters[name]</c> matches.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Universal name, stable across Visio's UI language. Differs from <see cref="Name"/> on localised builds.</summary>
+    public string UniversalName { get; set; } = string.Empty;
+
+    public int Index { get; set; }
+    public int Id { get; set; }
+
+    /// <summary>Identifies this master; survives copying between documents, so it detects a shared origin.</summary>
+    public string UniqueId { get; set; } = string.Empty;
+
+    /// <summary>Number of shapes making up the definition. More than one means a group.</summary>
+    public int ShapeCount { get; set; }
+
+    public bool Hidden { get; set; }
+
+    /// <summary>Tooltip Visio shows for the master, when it has one.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? MatchingName { get; set; }
+    public string? Prompt { get; set; }
+}
+
+public class MasterInstanceInfo
+{
+    public int PageIndex { get; set; }
+    public string PageName { get; set; } = string.Empty;
+    public int ShapeId { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
 }
 
 // ── Notes ─────────────────────────────────────────────────
