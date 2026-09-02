@@ -166,19 +166,19 @@ Visio page lifecycle, guides, and routing commands.
 
 | Parameter | Description |
 |-----------|-------------|
-| `--page-index` | (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, set-route-style, set-connector-routing-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style) |
-| `--position` | (required for: create) |
-| `--name` | (required for: create, set-name) |
-| `--guide-type` | (required for: add-guide) |
-| `--x-position` | (required for: add-guide, set-guide-position) |
-| `--y-position` | (required for: add-guide, set-guide-position) |
-| `--guide-name` | (required for: set-guide-position, delete-guide) |
-| `--route-style` | (required for: set-route-style) |
-| `--connector-routing-extension` | (required for: set-connector-routing-extension) |
-| `--line-jump-code` | (required for: set-line-jump-code) |
-| `--line-jump-style` | (required for: set-line-jump-style) |
-| `--walk-preference` | (required for: set-walk-preference) |
-| `--place-style` | (required for: set-place-style) |
+| `--page-index` | 1-based page index (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, set-route-style, set-connector-routing-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style) |
+| `--position` | 1-based insertion position. Pass 0 to append the page at the end (required for: create) |
+| `--name` | Page name. Must be unique within the document (required for: create, set-name) |
+| `--guide-type` | 1 = point, 2 = horizontal guide line, 3 = vertical guide line (required for: add-guide) |
+| `--x-position` | Guide X position in points. Ignored for a horizontal guide (required for: add-guide, set-guide-position) |
+| `--y-position` | Guide Y position in points. Ignored for a vertical guide. Visio measures Y upward from the bottom of the page (required for: add-guide, set-guide-position) |
+| `--guide-name` | Guide shape name, as reported by list-guides (required for: set-guide-position, delete-guide) |
+| `--route-style` | Connector routing style, written to the page RouteStyle cell. Controls whether connectors run at right angles, straight, or along a tree or flowchart layout. Read the current value with get-routing-settings before changing it (required for: set-route-style) |
+| `--connector-routing-extension` | Routing extension, written to the page ConLineRouteExt cell. Selects whether connectors are drawn with straight or curved segments (required for: set-connector-routing-extension) |
+| `--line-jump-code` | Which connectors draw a jump where lines cross, written to the page LineJumpCode cell (required for: set-line-jump-code) |
+| `--line-jump-style` | Shape of the jump drawn where connectors cross, written to the page LineJumpStyle cell (required for: set-line-jump-style) |
+| `--walk-preference` | Which side of a shape a connector prefers to leave from, written to the page WalkPreference cell (required for: set-walk-preference) |
+| `--place-style` | Automatic layout style used when shapes are placed, written to the page PlaceStyle cell (required for: set-place-style) |
 
 
 
@@ -206,8 +206,8 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--z-order-cmd` | 1=BringToFront, 2=SendToBack, 3=BringForward, 4=SendBackward (required for: z-order) |
 | `--color-hex` | Hex color string like #FF0000 for red, or 'none' for no fill (required for: set-fill, set-line, set-glow) |
 | `--line-width` | Line width in points (default 0.75) (required for: set-line) |
-| `--degrees` | (required for: set-rotation) |
-| `--alt-text` | (required for: set-alt-text) |
+| `--degrees` | Rotation in degrees, clockwise. Visio's underlying Angle cell measures anticlockwise in radians; this parameter is converted for you (required for: set-rotation) |
+| `--alt-text` | Alternative text describing the shape for assistive technology. Stored in the shape's Comment ShapeSheet cell, which is where Visio keeps alt text (required for: set-alt-text) |
 | `--target-slide-index` | 1-based target page index (required for: copy-to-slide) |
 | `--visible` | Show or hide shadow (required for: set-shadow) |
 | `--offset-x` | Shadow offset X in points (required for: set-shadow) |
@@ -255,11 +255,11 @@ Visio stencil operations for listing masters and dropping them onto pages.
 
 | Parameter | Description |
 |-----------|-------------|
-| `--stencil-path` | (required) |
-| `--page-index` | (required for: drop-master) |
-| `--master-name` | (required for: drop-master) |
-| `--x-position` | (required for: drop-master) |
-| `--y-position` | (required for: drop-master) |
+| `--stencil-path` | Full path to a stencil file (.vssx or .vss), for example the installed BASIC_M.VSSX (required) |
+| `--page-index` | 1-based page index (required for: drop-master) |
+| `--master-name` | Master name, exactly as reported by list-masters (required for: drop-master) |
+| `--x-position` | Drop position X in points, measured from the left of the page (required for: drop-master) |
+| `--y-position` | Drop position Y in points. Visio measures Y upward from the bottom of the page, unlike most drawing APIs (required for: drop-master) |
 
 
 
@@ -273,7 +273,7 @@ Text operations within shapes: get, set, format, find, replace.
 |-----------|-------------|
 | `--page-index` | (required) |
 | `--shape-name` | (required for: get, set, format, format-advanced, set-spacing, set-bullets, insert-link, change-case, read-spacing, read-bullets, insert-symbol, insert-datetime, insert-slide-number) |
-| `--text` | (required for: set) |
+| `--text` | Replacement text for the whole shape. Existing text and its run formatting are discarded (required for: set) |
 | `--search-text` | Text to find (required for: find, replace) |
 | `--replace-text` | Replacement text (required for: replace) |
 | `--font-name` | Font family name or null to keep the current font (required for: insert-symbol) |

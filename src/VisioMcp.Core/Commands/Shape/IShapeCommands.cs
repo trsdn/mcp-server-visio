@@ -226,6 +226,10 @@ public interface IShapeCommands
     /// <summary>
     /// Set the rotation angle of a shape in degrees.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="degrees">Rotation in degrees, clockwise. Visio's underlying Angle cell measures anticlockwise in radians; this parameter is converted for you</param>
     [ServiceAction("set-rotation")]
     OperationResult SetRotation(IVisioBatch batch, int pageIndex, string shapeName, float degrees);
 
@@ -247,6 +251,10 @@ public interface IShapeCommands
     /// <summary>
     /// Set the alternative text (alt text) of a shape for accessibility.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="altText">Alternative text describing the shape for assistive technology. Stored in the shape's Comment ShapeSheet cell, which is where Visio keeps alt text</param>
     [ServiceAction("set-alt-text")]
     OperationResult SetAltText(IVisioBatch batch, int pageIndex, string shapeName, string altText);
 

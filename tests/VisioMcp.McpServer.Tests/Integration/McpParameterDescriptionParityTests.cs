@@ -85,6 +85,57 @@ public class McpParameterDescriptionParityTests
             + "Either SKILL.md was not generated or the parser no longer matches its format.");
     }
 
+    /// <summary>
+    /// Every MCP parameter must say something beyond "you must pass this".
+    /// </summary>
+    /// <remarks>
+    /// This is the ratchet. #37 started at 115 placeholder descriptions out of 151; carrying
+    /// descriptions across the metadata boundary and writing the missing <c>&lt;param&gt;</c> docs
+    /// took it to zero. Without a gate the rate creeps back the moment someone adds an action,
+    /// exactly as the PowerPoint terminology did before #23 put a test on it.
+    /// </remarks>
+    [Fact]
+    public void NoMcpParameter_IsDocumentedOnlyAsRequired()
+    {
+        var offenders = new List<string>();
+
+        var assembly = typeof(VisioFileTool).Assembly;
+
+        var toolMethods = assembly
+            .GetTypes()
+            .Where(t => t.GetCustomAttributes(typeof(McpServerToolTypeAttribute), inherit: false).Length > 0)
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(m => m.GetCustomAttribute<McpServerToolAttribute>() is not null);
+
+        var checkedCount = 0;
+
+        foreach (var method in toolMethods)
+        {
+            var toolName = method.GetCustomAttribute<McpServerToolAttribute>()!.Name ?? method.Name;
+
+            foreach (var parameter in method.GetParameters())
+            {
+                checkedCount++;
+
+                var description = parameter.GetCustomAttribute<DescriptionAttribute>()?.Description;
+
+                if (IsPlaceholder(description))
+                {
+                    offenders.Add($"  {toolName}.{parameter.Name}: {description ?? "(no description)"}");
+                }
+            }
+        }
+
+        Assert.True(checkedCount > 100, $"Expected to check the full MCP parameter surface, saw {checkedCount}.");
+
+        Assert.True(
+            offenders.Count == 0,
+            $"{offenders.Count} MCP parameter(s) carry no description beyond a required-for suffix:"
+            + Environment.NewLine + string.Join(Environment.NewLine, offenders)
+            + Environment.NewLine
+            + "Add a <param> doc on the Core interface; the generator carries it through.");
+    }
+
     private static bool TryGetMcpParameterDescription(string toolName, string parameterName, out string? description)
     {
         description = null;
