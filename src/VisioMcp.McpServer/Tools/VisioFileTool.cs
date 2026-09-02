@@ -44,13 +44,21 @@ public static class VisioFileTool
         + "OPTIONAL CONTEXT: page_name/page_index store an initial page target with the session. "
         + "show=true makes Visio visible (Agent Mode). timeout_seconds: max operation time (default 300).")]
     public static string VisioFile(
+        [Description("The action to perform")]
         VisioFileAction action,
+        [Description("Full Windows path to a Visio document, for example C:\\Users\\me\\Documents\\diagram.vsdx. Required for open, create and test")]
         [DefaultValue(null)] string? path,
+        [Description("Session ID returned by open or create. Required for close, save and every page/shape/text/cell/stencil call")]
         [DefaultValue(null)] string? session_id,
+        [Description("Optional page name to remember with the session as the default target")]
         [DefaultValue(null)] string? page_name = null,
+        [Description("Optional 1-based page index to remember with the session as the default target")]
         [DefaultValue(null)] int? page_index = null,
+        [Description("True to write changes to disk when closing. Edits are lost if this is false")]
         [DefaultValue(false)] bool save = false,
+        [Description("True to make the Visio window visible so the user can watch the automation run (Agent Mode). Slower, but useful for demonstration and debugging")]
         [DefaultValue(false)] bool show = false,
+        [Description("Maximum time in seconds for a single operation before the session is closed. Raise it for very large documents")]
         [DefaultValue(300)] int timeout_seconds = 300)
     {
         return VisioToolsBase.ExecuteToolAction("file", action.ToString().ToLowerInvariant(), path, () =>

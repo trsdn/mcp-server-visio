@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Every MCP parameter is now documented** (#37b). The remaining 35 placeholders were parameters
+  with no `<param>` doc anywhere: `layer`, `page`, `stencil` and `window` had **none at all**.
+  Written from the implementations rather than guessed — `add-guide`'s `guideType` is validated in
+  code as 1/2/3, snap strengths are validated as 1–999, and the page routing setters name the
+  ShapeSheet cell they write (`RouteStyle`, `ConLineRouteExt`, `LineJumpCode`) rather than invent
+  enum values that could not be verified.
+  **Placeholder descriptions: 158 of 158 → 0**, and a guard test now fails the build on any new one.
+
+- **The hand-written `file` tool had no parameter descriptions at all** (#37b). It is the entry
+  point for every workflow and is not generated, so nothing supplied them: `path`, `session_id`,
+  `save`, `show` and `timeout_seconds` reached the LLM as bare names. `save` now states that edits
+  are lost when it is false.
+
 - **The MCP schema documented parameters far worse than the CLI did** (#37). `ServiceRegistryGenerator`
   runs inside the Core compilation and can read XML `<param>` docs; `McpToolGenerator` runs in the
   MCP server compilation where Core is a **metadata reference**, and XML documentation is not

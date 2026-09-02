@@ -29,6 +29,10 @@ public interface ITextCommands
     /// <summary>
     /// Set the text content of a shape (replaces all existing text).
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape name</param>
+    /// <param name="text">Replacement text for the whole shape. Existing text and its run formatting are discarded</param>
     [ServiceAction("set")]
     OperationResult SetText(IVisioBatch batch, int pageIndex, string shapeName, string text);
 

@@ -51,66 +51,94 @@ public interface IWindowCommands
     /// <summary>
     /// Get the current zoom level of the drawing window for a page.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("get-zoom")]
     WindowViewportResult GetZoom(IVisioBatch batch, int pageIndex);
 
     /// <summary>
     /// Get the current viewport rectangle of the drawing window for a page.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("get-viewport")]
     WindowViewportResult GetViewport(IVisioBatch batch, int pageIndex);
 
     /// <summary>
     /// Fit the drawing page into the active Visio window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("fit-page")]
     OperationResult FitPage(IVisioBatch batch, int pageIndex);
 
     /// <summary>
     /// Fit the current selection into the active Visio window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("fit-selection")]
     OperationResult FitSelection(IVisioBatch batch, int pageIndex);
 
     /// <summary>
     /// Center the drawing window on a specific shape.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Shape to centre in the drawing window, as reported by shape(list)</param>
     [ServiceAction("pan-to-shape")]
     OperationResult PanToShape(IVisioBatch batch, int pageIndex, string shapeName);
 
     /// <summary>
     /// Move the drawing viewport by the given offsets in points.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="offsetX">Horizontal pan distance in points. Positive moves the view right</param>
+    /// <param name="offsetY">Vertical pan distance in points. Positive moves the view up</param>
     [ServiceAction("pan-by-offset")]
     OperationResult PanByOffset(IVisioBatch batch, int pageIndex, float offsetX, float offsetY);
 
     /// <summary>
     /// Get drawing-aid visibility for the active Visio drawing window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("get-visual-aids")]
     WindowVisualAidsResult GetVisualAids(IVisioBatch batch, int pageIndex);
 
     /// <summary>
     /// Show or hide the grid in the active drawing window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="visible">True to show the grid</param>
     [ServiceAction("set-grid-visible")]
     OperationResult SetGridVisible(IVisioBatch batch, int pageIndex, bool visible);
 
     /// <summary>
     /// Show or hide guides in the active drawing window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="visible">True to show guides</param>
     [ServiceAction("set-guides-visible")]
     OperationResult SetGuidesVisible(IVisioBatch batch, int pageIndex, bool visible);
 
     /// <summary>
     /// Show or hide rulers in the active drawing window.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="visible">True to show rulers</param>
     [ServiceAction("set-rulers-visible")]
     OperationResult SetRulersVisible(IVisioBatch batch, int pageIndex, bool visible);
 
     /// <summary>
     /// Enable or disable Visio drawing aids globally for the application.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="enabled">True to enable snap and glue</param>
     [ServiceAction("set-drawing-aids")]
     OperationResult SetDrawingAids(IVisioBatch batch, bool enabled);
 
@@ -123,36 +151,48 @@ public interface IWindowCommands
     /// <summary>
     /// Set grid snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to the grid from further away</param>
     [ServiceAction("set-grid-snap-strength")]
     OperationResult SetGridSnapStrength(IVisioBatch batch, int strength);
 
     /// <summary>
     /// Set guides snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to guides from further away</param>
     [ServiceAction("set-guides-snap-strength")]
     OperationResult SetGuidesSnapStrength(IVisioBatch batch, int strength);
 
     /// <summary>
     /// Set points snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to connection and vertex points from further away</param>
     [ServiceAction("set-points-snap-strength")]
     OperationResult SetPointsSnapStrength(IVisioBatch batch, int strength);
 
     /// <summary>
     /// Set ruler snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to ruler subdivisions from further away</param>
     [ServiceAction("set-ruler-snap-strength")]
     OperationResult SetRulerSnapStrength(IVisioBatch batch, int strength);
 
     /// <summary>
     /// Set geometry snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to shape geometry from further away</param>
     [ServiceAction("set-geometry-snap-strength")]
     OperationResult SetGeometrySnapStrength(IVisioBatch batch, int strength);
 
     /// <summary>
     /// Set extensions snap strength.
     /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="strength">Snap strength from 1 to 999. Higher values pull shapes to extension lines from further away</param>
     [ServiceAction("set-extensions-snap-strength")]
     OperationResult SetExtensionsSnapStrength(IVisioBatch batch, int strength);
 
