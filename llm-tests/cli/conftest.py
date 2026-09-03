@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def _resolve_cli_exe() -> Path:
     """Find the built visiocli.exe."""
-    exe = REPO_ROOT / "src/VisioMcp.CLI/bin/Release/net10.0-windows/visiocli.exe"
+    exe = REPO_ROOT / "src/VisioMcp.CLI/bin/Release/net9.0-windows/visiocli.exe"
     if exe.exists():
         return exe
     raise FileNotFoundError(f"visiocli.exe not found at {exe}. Run: dotnet build -c Release")

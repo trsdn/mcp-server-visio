@@ -71,16 +71,12 @@ if (-not $SkipBuild) {
 
 $cliPath = Find-BuildArtifact @(
     "src\VisioMcp.CLI\bin\Release\net9.0-windows\visiocli.exe",
-    "src\VisioMcp.CLI\bin\Debug\net9.0-windows\visiocli.exe",
-    "src\VisioMcp.CLI\bin\Release\net10.0-windows\visiocli.exe",
-    "src\VisioMcp.CLI\bin\Debug\net10.0-windows\visiocli.exe"
+    "src\VisioMcp.CLI\bin\Debug\net9.0-windows\visiocli.exe"
 )
 
 $mcpServerPath = Find-BuildArtifact @(
     "src\VisioMcp.McpServer\bin\Release\net9.0-windows\VisioMcp.McpServer.exe",
-    "src\VisioMcp.McpServer\bin\Debug\net9.0-windows\VisioMcp.McpServer.exe",
-    "src\VisioMcp.McpServer\bin\Release\net10.0-windows\VisioMcp.McpServer.exe",
-    "src\VisioMcp.McpServer\bin\Debug\net10.0-windows\VisioMcp.McpServer.exe"
+    "src\VisioMcp.McpServer\bin\Debug\net9.0-windows\VisioMcp.McpServer.exe"
 )
 
 if (-not $cliPath) {
@@ -97,25 +93,25 @@ $tests = @()
 
 if (-not $McpOnly) {
     $tests += @(
-        "cli/test_cli_table.py::test_cli_table_create_query",
-        "cli/test_cli_chart.py::test_cli_chart_workflows",
-        "cli/test_cli_styling.py::test_cli_styling_header_fill"
+        "cli/test_cli_page_shape.py::test_cli_creates_a_drawing_with_named_pages",
+        "cli/test_cli_diagram.py::test_cli_builds_a_connected_flowchart",
+        "cli/test_cli_diagram.py::test_cli_consults_the_design_catalog_first"
     )
 }
 
 if (-not $CliOnly) {
     $tests += @(
-        "mcp_tests/test_mcp_table.py::test_mcp_table_create_query",
-        "mcp_tests/test_mcp_chart.py::test_mcp_chart_workflows",
-        "mcp_tests/test_mcp_styling.py::test_mcp_styling_header_fill"
+        "mcp_tests/test_mcp_page_shape.py::test_mcp_creates_a_drawing_with_named_pages",
+        "mcp_tests/test_mcp_diagram.py::test_mcp_builds_a_connected_flowchart",
+        "mcp_tests/test_mcp_styling.py::test_mcp_uses_a_named_style_for_repeated_formatting"
     )
 }
 
-$previousCliCommand = [Environment]::GetEnvironmentVariable("VISIO_CLI_COMMAND", "Process")
-$previousMcpCommand = [Environment]::GetEnvironmentVariable("visio_mcp_SERVER_COMMAND", "Process")
+$previousCliCommand = [Environment]::GetEnvironmentVariable("CLI_COMMAND", "Process")
+$previousMcpCommand = [Environment]::GetEnvironmentVariable("MCP_SERVER_COMMAND", "Process")
 
-[Environment]::SetEnvironmentVariable("VISIO_CLI_COMMAND", $cliPath, "Process")
-[Environment]::SetEnvironmentVariable("visio_mcp_SERVER_COMMAND", $mcpServerPath, "Process")
+[Environment]::SetEnvironmentVariable("CLI_COMMAND", $cliPath, "Process")
+[Environment]::SetEnvironmentVariable("MCP_SERVER_COMMAND", $mcpServerPath, "Process")
 
 Push-Location $llmTestsDir
 
@@ -140,6 +136,6 @@ try {
 }
 finally {
     Pop-Location
-    [Environment]::SetEnvironmentVariable("VISIO_CLI_COMMAND", $previousCliCommand, "Process")
-    [Environment]::SetEnvironmentVariable("visio_mcp_SERVER_COMMAND", $previousMcpCommand, "Process")
+    [Environment]::SetEnvironmentVariable("CLI_COMMAND", $previousCliCommand, "Process")
+    [Environment]::SetEnvironmentVariable("MCP_SERVER_COMMAND", $previousMcpCommand, "Process")
 }

@@ -1,7 +1,7 @@
 [project]
-name = "pptmcp-llm-tests"
+name = "visiomcp-llm-tests"
 version = "0.1.0"
-description = "LLM integration tests for VisioMcp MCP Server and CLI"
+description = "LLM integration tests for the VisioMcp MCP Server and Visio CLI"
 requires-python = ">=3.11"
 dependencies = [
     "pytest>=9.0",

@@ -1,13 +1,12 @@
 import json, glob, os
 
 target_tests = [
-    "test_cli_file_and_slide_workflow",
-    "test_cli_table_create_query",
-    "test_cli_chart_workflows",
-    "test_cli_range_set_get",
-    "test_cli_range_updates",
-    "test_cli_table_updates",
-    "test_cli_chart_updates",
+    "test_cli_creates_a_drawing_with_named_pages",
+    "test_cli_closes_its_session",
+    "test_cli_reads_back_what_it_created",
+    "test_cli_builds_a_connected_flowchart",
+    "test_cli_consults_the_design_catalog_first",
+    "test_cli_discovers_commands_before_using_them",
 ]
 
 # Find the most recent file with CLI tests
@@ -18,7 +17,7 @@ for f in files:
         data = json.load(fh)
     tests = data.get("tests", data.get("results", []))
     cli_tests = [t for t in tests if "cli" in t.get("name", "").lower()]
-    if len(cli_tests) >= 7:
+    if len(cli_tests) >= len(target_tests):
         print(f"=== REPORT FILE: {os.path.basename(f)} ===")
         print(f"Total tests: {len(tests)}, CLI tests: {len(cli_tests)}\n")
         
@@ -55,4 +54,4 @@ for f in files:
                 print(f"TEST: {target} - NOT FOUND in report")
         break
 else:
-    print("No report with 7+ CLI tests found")
+    print(f"No report with {len(target_tests)}+ CLI tests found")
