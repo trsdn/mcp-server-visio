@@ -81,13 +81,19 @@ that drifts is worse than none, because it is trusted.
 ### Themes and connectors
 
 Two cross-cutting Visio-native areas are tracked outside the table because they are additive rather
-than inherited:
+than inherited. This table understated the position badly enough to invite duplicate work (#38), so
+each row now names the actions that exist:
 
 | Area | Disposition | Notes |
 |---|---|---|
-| Connectors / connection points / routing | Port / redesign | High-priority Visio-native domain ([#32](https://github.com/trsdn/mcp-server-visio/issues/32)) |
-| Groups / containers / lists / selection | Port / redesign | Important for real diagram workflows ([#36](https://github.com/trsdn/mcp-server-visio/issues/36)) |
-| Broader ShapeSheet coverage | Port | Generic section and row access beyond the current cell surface ([#33](https://github.com/trsdn/mcp-server-visio/issues/33)) |
+| Connectors and routing | **Shipped** | `shape`: `add-connector`, `connect-shapes`, `list-connectors`, `read-connector`, `list-connections`, `disconnect-connector`, `reconnect-connector`. `page`: `set-route-style`, `set-connector-routing-extension`, `set-line-jump-code`, `set-line-jump-style`, `set-walk-preference`, `set-place-style` ([#32](https://github.com/trsdn/mcp-server-visio/issues/32)) |
+| Connection points | **Shipped** | `shape`: `list-connection-points`, `add-connection-point`, `set-connection-point`, `delete-connection-point` |
+| Groups and selection | **Shipped** | `shape`: `group`, `ungroup`, `list-groups`, `read-group`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-selection` |
+| Shape Data | **Shipped** | `shape`: `list-properties`, `get-property`, `set-property`, `delete-property`, over `Prop.*` rows |
+| ShapeSheet section and row access | **Shipped** | `cell`: `list-sections`, `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`, addressing shape, page or document via `sheet_target` ([#33](https://github.com/trsdn/mcp-server-visio/issues/33)) |
+| Styles | **Shipped** | `style`: `list`, `read`, `create`, `rename`, `delete`, `read-formula`, `set-formula`, `apply` ([#36](https://github.com/trsdn/mcp-server-visio/issues/36)) |
+| Themes | Not implemented | `Document.Theme` does not exist; themes are `DocumentSheet` cells (`ThemeIndex`, `VariationColorIndex`) and are reachable today through `cell` with `sheet_target='document'`, but there is no dedicated action |
+| Containers, lists and callouts | Not implemented | Needs the Visio container API rather than a rename of anything inherited |
 | Data graphics / data recordsets | Redesign | Visio Professional only; needs a deliberate Visio-first model |
 
 ## Cleanup rules

@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`FEATURES.md` understated what is implemented** (#38). The connectors table said
+  *"Port / redesign"* for work that was already finished, which invites it to be done twice — the
+  costlier direction of drift, because nothing fails to reveal it.
+
+  The reporting issue was itself out of date: it listed connection points and generic ShapeSheet
+  row access as still missing, and both had shipped. Two layers of stale claims about the same
+  code.
+
+  Each row now names the actions that exist:
+
+  | Area | Was | Now |
+  |---|---|---|
+  | Connectors and routing | Port / redesign | **Shipped** — 7 `shape` actions, 6 `page` routing actions |
+  | Connection points | (not listed) | **Shipped** — 4 `shape` actions |
+  | Groups and selection | Port / redesign | **Shipped** — 9 `shape` actions |
+  | Shape Data | (not listed) | **Shipped** — 4 `shape` actions over `Prop.*` |
+  | ShapeSheet sections and rows | Port | **Shipped** — 6 `cell` actions |
+  | Styles | (not listed) | **Shipped** — 8 `style` actions |
+  | Themes | (not listed) | Not implemented — reachable via `cell` with `sheet_target='document'`, no dedicated action |
+  | Containers, lists, callouts | folded into "Groups" | Not implemented, listed separately |
+
+### Added
+
+- **`FeaturesDocumentAccuracyTests`** — asserts every action `FEATURES.md` marks `**Shipped**`
+  carries a matching `[ServiceAction]`, and fails if it finds no claims to check rather than
+  passing vacuously. Verified against an induced regression.
+
 ### Removed
 
 - **The `accessibility` domain** (#77). Classified *Remap*, but nothing was left to remap:
