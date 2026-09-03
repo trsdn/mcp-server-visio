@@ -9,7 +9,7 @@ description: >
 
 # Visio MCP Server Skill
 
-Provides 174 generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, shapes, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
+Provides 180 generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, shapes, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
 
 ## Workflow Checklist
 

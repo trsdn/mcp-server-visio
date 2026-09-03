@@ -24,6 +24,7 @@ The following domains are implemented and covered by focused validation:
 | Export | Yes | Yes | Via MCP extension | Validated MVP | PDF/XPS document export, page export by file extension, save-copy |
 | Hyperlink | Yes | Yes | Via MCP extension | Validated MVP | List, read, add, update, delete. A shape may carry several, unlike PowerPoint |
 | Style | Yes | Yes | Via MCP extension | Validated MVP | List, read, create, rename, delete, apply; set a style's own ShapeSheet cells |
+| Design guidance | Yes | Yes | Via MCP extension | Validated MVP | Nine diagram archetypes with their stencils and masters, the stencil catalog, cross-archetype patterns, colour palettes |
 | Visible live mode | Yes | Yes | Via MCP extension | Validated | Watch Visio while automation runs |
 
 ## Current recommended workflow
@@ -69,7 +70,6 @@ word collides with the *unrelated* ShapeSheet sections tracked in
 | `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
 | `accessibility` | Remap | @trsdn | `audit` is remapped and shipped (`shape(set-alt-text)`, `text(alt-text-audit)`); `get-reading-order`/`set-reading-order` have no analogue — `TabOrder`, `ReadingOrder` and `AccessibilityOrder` are absent as properties and as cells | [#77](https://github.com/trsdn/mcp-server-visio/issues/77) |
-| `design` | Remap | @trsdn | Two unrelated halves: 5 theme actions (**`Document.Theme` does not exist**; `Document.Styles` does, themes are `DocumentSheet` cells) and 14 catalog actions serving a PowerPoint deck-archetype library from `Core/Data/archetypes/` | [#78](https://github.com/trsdn/mcp-server-visio/issues/78) |
 | `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
 
 <!-- END:LEGACY-DOMAIN-CLASSIFICATION -->

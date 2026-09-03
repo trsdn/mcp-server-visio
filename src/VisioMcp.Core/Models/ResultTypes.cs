@@ -1073,13 +1073,18 @@ public class ArchetypeListItem
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string When { get; set; } = string.Empty;
-    public List<string> BestDensity { get; set; } = [];
+
+    /// <summary>Stencil file to drop this archetype's masters from, such as BASFLO_M.VSSX.</summary>
+    public string Stencil { get; set; } = string.Empty;
+
+    /// <summary>Master names within that stencil, verified present on a stock Visio install.</summary>
+    public List<string> Masters { get; set; } = [];
+
     public List<string> Variants { get; set; } = [];
     public string ExampleTitle { get; set; } = string.Empty;
-    public bool HasCuratedLayoutGuidance { get; set; }
-    public int ObservedSlideCount { get; set; }
-    public int ObservedSubtypeCount { get; set; }
-    public List<string> ObservedExampleSlides { get; set; } = [];
+
+    /// <summary>Whether a detail file with layout, build order and anti-patterns exists.</summary>
+    public bool HasDetail { get; set; }
 }
 
 public class ArchetypeDetailResult : ResultBase
@@ -1087,46 +1092,20 @@ public class ArchetypeDetailResult : ResultBase
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string When { get; set; } = string.Empty;
-    public List<string> BestDensity { get; set; } = [];
+    public string Stencil { get; set; } = string.Empty;
+    public List<string> Masters { get; set; } = [];
     public List<string> Variants { get; set; } = [];
-    public bool HasCuratedLayoutGuidance { get; set; }
-    public int ObservedSlideCount { get; set; }
-    public List<string> ObservedExampleSlides { get; set; } = [];
-    public List<ReferenceSlideInfo> ObservedExamples { get; set; } = [];
-    public List<ReferenceSubtypeInfo> ObservedSubtypes { get; set; } = [];
-    public List<ReferenceMisbucketedSampleInfo> AuditSamples { get; set; } = [];
+    public string ExampleTitle { get; set; } = string.Empty;
+
+    /// <summary>Markdown detail: layout spacing, build order and anti-patterns.</summary>
     public string Detail { get; set; } = string.Empty;
 }
 
-public class ReferenceSubtypeInfo
+/// <summary>A markdown reference document from the design catalog.</summary>
+public class DesignReferenceResult : ResultBase
 {
-    public string SubArchetypeId { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public List<string> HeuristicPhrases { get; set; } = [];
-    public int Count { get; set; }
-    public List<string> ExampleSlides { get; set; } = [];
-    public List<ReferenceSlideInfo> ExampleDetails { get; set; } = [];
+    public string Content { get; set; } = string.Empty;
 }
-
-public class ReferenceMisbucketedSampleInfo
-{
-    public string ReferenceId { get; set; } = string.Empty;
-    public string CurrentArchetypeId { get; set; } = string.Empty;
-    public string SuggestedArchetypeId { get; set; } = string.Empty;
-    public string Reason { get; set; } = string.Empty;
-}
-
-public class ReferenceSlideInfo
-{
-    public string Id { get; set; } = string.Empty;
-    public string ArchetypeId { get; set; } = string.Empty;
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SubArchetypeId { get; set; }
-
-    public string Rationale { get; set; } = string.Empty;
-}
-
 public class PaletteListResult : ResultBase
 {
     public List<PaletteListItem> Palettes { get; set; } = [];
@@ -1145,41 +1124,6 @@ public class PaletteDetailResult : ResultBase
     public string Name { get; set; } = string.Empty;
     public string BestFor { get; set; } = string.Empty;
     public Dictionary<string, string> Colors { get; set; } = [];
-}
-
-public class StyleProfileListResult : ResultBase
-{
-    public List<StyleProfileListItem> Profiles { get; set; } = [];
-}
-
-public class StyleProfileListItem
-{
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string BestFor { get; set; } = string.Empty;
-    public string ColorScheme { get; set; } = string.Empty;
-}
-
-public class StyleProfileDetailResult : ResultBase
-{
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string BestFor { get; set; } = string.Empty;
-    public string ColorScheme { get; set; } = string.Empty;
-    public string Font { get; set; } = string.Empty;
-    public string TitleStyle { get; set; } = string.Empty;
-    public int TitleSize { get; set; }
-    public int BodySize { get; set; }
-    public int FootnoteSize { get; set; }
-    public string BulletsPerSlide { get; set; } = string.Empty;
-    public string WordsPerBullet { get; set; } = string.Empty;
-    public string ContentDensity { get; set; } = string.Empty;
-    public List<string> PreferredArchetypes { get; set; } = [];
-    public string Whitespace { get; set; } = string.Empty;
-    public string Background { get; set; } = string.Empty;
-    public string ChartStyle { get; set; } = string.Empty;
-    public string SpecialRules { get; set; } = string.Empty;
 }
 
 public class LayoutGridResult : ResultBase

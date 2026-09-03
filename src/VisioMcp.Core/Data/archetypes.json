@@ -1,164 +1,83 @@
 [
   {
-    "id": "big-number",
-    "name": "Big Number",
-    "section": "1",
-    "when": "One headline metric dominates the message",
-    "bestDensity": ["D1", "D2"],
-    "variants": ["hero-only", "proof-oriented", "dual-proof", "benchmark", "pathway-breakdown"],
-    "exampleTitle": "Customer retention reached 94%, highest in 5 years"
+    "id": "flowchart",
+    "name": "Flowchart",
+    "when": "A process with steps, decisions and branches",
+    "stencil": "BASFLO_M.VSSX",
+    "masters": ["Start/End", "Process", "Decision", "Subprocess", "Document", "Data", "Database", "On-page reference", "Off-page reference"],
+    "variants": ["linear", "branching", "with-subprocess", "multi-page"],
+    "exampleTitle": "Order fulfilment from receipt to dispatch"
   },
   {
-    "id": "kpi-card-dashboard",
-    "name": "KPI Card Dashboard",
-    "section": "1b",
-    "when": "2-4 key metrics shown together with context",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["2x2-layout", "3-across", "5-card", "people-dashboard", "product-dashboard"],
-    "exampleTitle": "Q4 shows 3 green, 1 amber — churn needs immediate action"
+    "id": "cross-functional-flowchart",
+    "name": "Cross-Functional Flowchart",
+    "when": "A process where who performs each step matters as much as the order",
+    "stencil": "BASFLO_M.VSSX",
+    "masters": ["Start/End", "Process", "Decision", "Subprocess"],
+    "variants": ["horizontal-lanes", "vertical-lanes", "with-phases"],
+    "exampleTitle": "Purchase approval across Requester, Finance and Procurement"
   },
   {
-    "id": "operational-kpi",
-    "name": "Operational-KPI (Reliability Metrics)",
-    "section": "1c",
-    "when": "Target comparison + trend for uptime, SLA, system reliability",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["target-comparison", "incident-trend", "dual-evidence"],
-    "exampleTitle": "99.97% uptime exceeds SLA target, zero critical incidents in Q4"
+    "id": "bpmn-process",
+    "name": "BPMN Process",
+    "when": "A process that must follow BPMN notation for a technical or compliance audience",
+    "stencil": "BPMN_M.VSSX",
+    "masters": ["Start Event", "Task", "Gateway", "Intermediate Event", "End Event", "Collapsed Sub-Process", "Pool / Lane", "Data Object", "Data Store", "Text Annotation"],
+    "variants": ["single-pool", "collaboration", "with-message-flow"],
+    "exampleTitle": "Claims intake as a BPMN collaboration"
   },
   {
-    "id": "column-bar-chart",
-    "name": "Column/Bar Chart",
-    "section": "2",
-    "when": "Comparing values across categories or showing trends",
-    "bestDensity": ["D2", "D3"],
-    "variants": [],
-    "exampleTitle": "Revenue growth reaccelerating after Q2 restructure"
+    "id": "org-chart",
+    "name": "Organisation Chart",
+    "when": "Reporting lines and roles in a team or organisation",
+    "stencil": "ORGCH_M.VSSX",
+    "masters": ["Executive", "Manager", "Position", "Consultant", "Assistant", "Vacancy", "Staff", "Team frame", "Dotted-line report"],
+    "variants": ["hierarchy", "with-dotted-line", "with-vacancies", "team-view"],
+    "exampleTitle": "Engineering organisation after the Q1 reorganisation"
   },
   {
-    "id": "chart-insight-callout",
-    "name": "Chart + Insight Callout",
-    "section": "3",
-    "when": "Data visualization needs a 'so what' annotation",
-    "bestDensity": ["D2", "D3"],
-    "variants": [],
-    "exampleTitle": "Market share gains concentrated in enterprise segment"
+    "id": "network-diagram",
+    "name": "Network Diagram",
+    "when": "Servers, devices and the links between them",
+    "stencil": "PERIPH_M.VSSX",
+    "masters": ["Server", "Router", "Switch", "Firewall", "Ethernet", "Mainframe", "Printer", "Comm-link"],
+    "variants": ["logical", "physical", "with-sites", "detailed"],
+    "exampleTitle": "Production network segments and their firewall boundaries"
   },
   {
-    "id": "framework",
-    "name": "Framework (2×2, Venn, Value Chain)",
-    "section": "4",
-    "when": "Organizing concepts, showing relationships, strategic positioning",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["2x2-matrix", "venn", "strategic-pillars", "swot", "3x3-matrix", "maturity-model", "raci", "scoring-matrix", "stakeholder-map", "risk-matrix", "business-model-canvas", "scenario-planning"],
-    "exampleTitle": "Prioritize high-impact, low-effort items in the upper-right quadrant"
+    "id": "system-context",
+    "name": "System Context Diagram",
+    "when": "One system, the actors around it, and what flows between them",
+    "stencil": "BASIC_U.VSSX",
+    "masters": ["Rectangle", "Rounded Rectangle", "Ellipse", "Circle"],
+    "variants": ["c4-context", "actor-system-external", "with-boundaries"],
+    "exampleTitle": "Booking service and the systems it depends on"
   },
   {
-    "id": "simple-table",
-    "name": "Simple Table",
-    "section": "5",
-    "when": "Comparing structured data, financials, feature matrices",
-    "bestDensity": ["D3", "D4"],
-    "variants": [],
-    "exampleTitle": "Feature comparison shows Platform B leads on 4 of 6 criteria"
+    "id": "block-diagram",
+    "name": "Block Diagram",
+    "when": "Components and relationships where no formal notation applies",
+    "stencil": "BASIC_U.VSSX",
+    "masters": ["Rectangle", "Rounded Rectangle", "Circle", "Diamond", "Hexagon", "Pentagon"],
+    "variants": ["layered", "grouped", "with-arrows", "matrix"],
+    "exampleTitle": "Platform layers from ingestion to reporting"
   },
   {
-    "id": "waterfall-chart",
-    "name": "Waterfall Chart",
-    "section": "6",
-    "when": "Showing how a value builds up or breaks down step by step",
-    "bestDensity": ["D2", "D3"],
-    "variants": [],
-    "exampleTitle": "Three factors drove the $12M cost increase"
+    "id": "fault-tree",
+    "name": "Fault Tree",
+    "when": "How component failures combine into a top-level failure",
+    "stencil": "FAULT_M.VSSX",
+    "masters": ["AND gate", "OR gate", "Basic event", "Undeveloped event", "Event", "House event", "Transfer symbol"],
+    "variants": ["single-tree", "with-transfers"],
+    "exampleTitle": "Causes of an unplanned production outage"
   },
   {
-    "id": "comparison",
-    "name": "Comparison Slide",
-    "section": "7",
-    "when": "Side-by-side evaluation of 2-3 options",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["2-column", "3-column", "decision-matrix", "build-vs-buy", "scenario-comparison", "before-after"],
-    "exampleTitle": "Platform A outperforms on cost, but B is stronger on scalability"
-  },
-  {
-    "id": "timeline-roadmap",
-    "name": "Timeline/Roadmap",
-    "section": "8",
-    "when": "Project plans, milestones, strategic phases",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["horizontal-timeline", "swimlane", "now-next-later", "milestone-phases"],
-    "exampleTitle": "A two-wave plan captures quick wins now and de-risks change"
-  },
-  {
-    "id": "process-diagram",
-    "name": "Process Diagram",
-    "section": "9",
-    "when": "Showing a workflow, decision flow, or transformation",
-    "bestDensity": ["D2", "D3"],
-    "variants": ["linear", "chevron-chain", "swimlane", "funnel", "stage-gate"],
-    "exampleTitle": "Current process breaks at 3 handoffs, adding 5 days"
-  },
-  {
-    "id": "executive-summary",
-    "name": "Executive Summary",
-    "section": "10",
-    "when": "Opening or closing a section with key findings",
-    "bestDensity": ["D1", "D2"],
-    "variants": ["numbered-findings", "incident-postmortem-cover"],
-    "exampleTitle": "Three priorities will drive growth in 2027"
-  },
-  {
-    "id": "recommendations",
-    "name": "Recommendations / Next Steps",
-    "section": "11",
-    "when": "Closing a presentation with actions",
-    "bestDensity": ["D2"],
-    "variants": ["structured-table"],
-    "exampleTitle": "Three initiatives to launch in Q3"
-  },
-  {
-    "id": "quote",
-    "name": "Quote Slide",
-    "section": "12",
-    "when": "Adding a human voice, customer testimony, or expert opinion",
-    "bestDensity": ["D1", "D2"],
-    "variants": ["quantified-testimonial", "nps-before-after", "saas-retention", "security-compliance", "trade-off-resolved"],
-    "exampleTitle": "300% ROI in 8 months validates platform as growth driver"
-  },
-  {
-    "id": "map",
-    "name": "Map Slide",
-    "section": "13",
-    "when": "Geographic distribution, market presence, expansion plans",
-    "bestDensity": ["D2", "D3"],
-    "variants": [],
-    "exampleTitle": "EMEA expansion complete — APAC launch in Q2"
-  },
-  {
-    "id": "appendix",
-    "name": "Appendix",
-    "section": "14",
-    "when": "Backup data that supports but doesn't drive the narrative",
-    "bestDensity": ["D5"],
-    "variants": [],
-    "exampleTitle": "Appendix: Methodology and detailed financials"
-  },
-  {
-    "id": "title-slide",
-    "name": "Title Slide",
-    "section": "15",
-    "when": "Opening slide with strategic framing for investor, cost, ESG, launch, or integration presentations",
-    "bestDensity": ["D1"],
-    "variants": ["investor", "cost-program", "climate-esg", "product-launch", "integration-review"],
-    "exampleTitle": "Path to $500M ARR — AI-led expansion strategy"
-  },
-  {
-    "id": "evidence-design",
-    "name": "Evidence Design",
-    "section": "cross-cutting",
-    "when": "Cross-cutting guidance for supporting quantitative claims with visual proof",
-    "bestDensity": [],
-    "variants": [],
-    "exampleTitle": ""
+    "id": "annotated-diagram",
+    "name": "Annotated Diagram",
+    "when": "An existing diagram that needs callouts explaining what the reader should notice",
+    "stencil": "CALOUT_M.VSSX",
+    "masters": ["Annotation", "Side box callout", "Mid box callout", "Bend callout", "Centre text callout"],
+    "variants": ["review-markup", "explanatory", "risk-highlight"],
+    "exampleTitle": "Current architecture with the three failure points marked"
   }
 ]

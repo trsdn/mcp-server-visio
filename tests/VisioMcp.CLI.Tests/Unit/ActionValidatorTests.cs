@@ -26,6 +26,7 @@ public sealed class ActionValidatorTests
     [
         "session",
         "cell",
+        "design",
         "docproperty",
         "export",
         "file",
@@ -45,7 +46,6 @@ public sealed class ActionValidatorTests
     [
         "accessibility",
         "comment",
-        "design",
         "headerfooter",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public.

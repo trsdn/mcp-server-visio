@@ -8,6 +8,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The design catalog describes Visio diagrams, not PowerPoint slides** (#98). `design` is back on
+  the public surface — **15 tools**.
+
+  It was ~150 KB of slide-design knowledge: archetypes such as `big-number`, `kpi-card-dashboard`,
+  `quote` and `title-slide`; `density-profiles.json` (how much text fits on a slide);
+  `deck-sequences.json` (deck narrative order); `slide-patterns-detail.md`; and a second subsystem
+  whose fields — `ObservedSlideCount`, `ObservedExampleSlides` — were learned from a corpus of real
+  slides. None of that has a diagram meaning.
+
+  Nine archetypes replace the seventeen: `flowchart`, `cross-functional-flowchart`, `bpmn-process`,
+  `org-chart`, `network-diagram`, `system-context`, `block-diagram`, `fault-tree`,
+  `annotated-diagram`. Each names **the stencil and the masters to drop**, which is what an agent
+  can act on; `BestDensity` is gone.
+
+  **Every stencil and master named was verified against a live Visio instance**, and an integration
+  test keeps it that way — a guidance file naming a master that is not installed is worse than no
+  guidance, because the agent follows it, builds the page, and fails at the first `drop-master`.
+  `get-stencil-catalog` therefore also lists what is **not** installed by default — `CROSFN_M`,
+  `TIMEL_M`, `VALUE_M`, `MIND_M` and others — with fallbacks.
+
+  Actions: 19 → 6. The five theme actions were dropped (`Document.Theme` does not exist; themes are
+  DocumentSheet cells reached with `cell(sheet_target='document')`), as were density profiles,
+  deck sequences, the context model and the slide-corpus reference catalog. `get-slide-patterns`
+  became `get-diagram-patterns` — layers, background pages, shape data, masters, styles, routing —
+  and `get-icon-shapes` became `get-stencil-catalog`.
+
+### Fixed
+
+- **`stencil` rejected installed stencils** (#98). `OpenStencilDocument` called `File.Exists` before
+  Visio was ever asked, so `stencil_path='BASFLO_M.VSSX'` — the form every piece of guidance
+  naturally writes, and which Visio resolves against its own stencil folders — failed with
+  *"Stencil file was not found"* for a stencil that **is** installed. It now tries the literal path
+  first, so an explicit path still wins, then lets Visio resolve the name, and only then fails with
+  a message naming two stencils that do exist.
+
+  Found by the integration test above: every archetype in the new catalog failed to open its
+  stencil, and the catalog was right.
+
+### Changed
+
 - **`VisioMcp.Agent` is a Visio diagram agent, not a PowerPoint deck agent** (#93). It survived the
   migration intact and was the last thing in `src/` that actually **ran PowerPoint**:
 
