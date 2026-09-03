@@ -2,7 +2,6 @@ using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using VisioMcp.ComInterop.Session;
-using VisioMcp.Core.Commands.Accessibility;
 using VisioMcp.Core.Commands.Cell;
 using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
@@ -58,7 +57,6 @@ public sealed class VisioMcpService : IDisposable
     private readonly WindowCommands _windowCommands = new();
     private readonly HyperlinkCommands _hyperlinkCommands = new();
     private readonly DocumentPropertyCommands _documentPropertyCommands = new();
-    private readonly AccessibilityCommands _accessibilityCommands = new();
 
     public VisioMcpService()
     {
@@ -252,9 +250,6 @@ public sealed class VisioMcpService : IDisposable
                 "docproperty" => await DispatchSimpleAsync<DocpropertyAction>(action, request,
                     ServiceRegistry.Docproperty.TryParseAction,
                     (a, batch) => ServiceRegistry.Docproperty.DispatchToCore(_documentPropertyCommands, a, batch, request.Args)),
-                "accessibility" => await DispatchSimpleAsync<AccessibilityAction>(action, request,
-                    ServiceRegistry.Accessibility.TryParseAction,
-                    (a, batch) => ServiceRegistry.Accessibility.DispatchToCore(_accessibilityCommands, a, batch, request.Args)),
                 _ => new ServiceResponse { Success = false, ErrorMessage = $"Unknown command category: {category}" }
             };
         }

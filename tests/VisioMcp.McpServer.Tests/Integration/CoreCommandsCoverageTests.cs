@@ -1,7 +1,6 @@
 // Suppress IDE0005 (unnecessary using) – explicit usings kept for clarity in test reflection code
 #pragma warning disable IDE0005
 using System.Reflection;
-using VisioMcp.Core.Commands.Accessibility;
 using VisioMcp.Core.Commands.Comment;
 using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
@@ -355,15 +354,6 @@ public class CoreCommandsCoverageTests
     }
 
     [Fact]
-    public void IAccessibilityCommands_AllMethodsHaveEnumValues()
-    {
-        var coreMethodCount = GetServiceActionMethodCount(typeof(IAccessibilityCommands));
-        var enumValueCount = Enum.GetValues<AccessibilityAction>().Length;
-        Assert.True(enumValueCount >= coreMethodCount,
-            $"IAccessibilityCommands has {coreMethodCount} [ServiceAction] methods but AccessibilityAction has only {enumValueCount} enum values.");
-    }
-
-    [Fact]
     public void PrintoptionsAction_AllEnumValuesHaveMappings()
     {
         foreach (var action in Enum.GetValues<PrintoptionsAction>())
@@ -374,16 +364,6 @@ public class CoreCommandsCoverageTests
         }
     }
 
-    [Fact]
-    public void AccessibilityAction_AllEnumValuesHaveMappings()
-    {
-        foreach (var action in Enum.GetValues<AccessibilityAction>())
-        {
-            var exception = Record.Exception(() => ServiceRegistry.Accessibility.ToActionString(action));
-            Assert.Null(exception);
-            Assert.NotEmpty(ServiceRegistry.Accessibility.ToActionString(action));
-        }
-    }
 
     /// <summary>
     /// Helper: Counts methods with [ServiceAction] attribute in an interface.

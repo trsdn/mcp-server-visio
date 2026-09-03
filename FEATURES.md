@@ -69,7 +69,6 @@ word collides with the *unrelated* ShapeSheet sections tracked in
 | `image` | Port | @trsdn | `Page.Import` returned a shape with `Type=4` (`visTypeForeignObject`); `Shape.Export` wrote it back to disk | [#64](https://github.com/trsdn/mcp-server-visio/issues/64) |
 | `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |
-| `accessibility` | Remap | @trsdn | `audit` is remapped and shipped (`shape(set-alt-text)`, `text(alt-text-audit)`); `get-reading-order`/`set-reading-order` have no analogue — `TabOrder`, `ReadingOrder` and `AccessibilityOrder` are absent as properties and as cells | [#77](https://github.com/trsdn/mcp-server-visio/issues/77) |
 | `tag` | Remap | @trsdn | `Shape.Data1/2/3` present; Shape Data (`Prop.*`) and user cells (`User.*`) both accept named rows | [#33](https://github.com/trsdn/mcp-server-visio/issues/33) |
 
 <!-- END:LEGACY-DOMAIN-CLASSIFICATION -->
