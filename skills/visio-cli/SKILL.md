@@ -458,9 +458,9 @@ Named formatting held by the document
 
 ### window
 
-Visio window management for drawing windows: state, zoom, viewport, navigation, visual aids, and snap settings
+Control the active Visio drawing window: zoom, viewport bounds, page navigation, visual aids, and snap strengths.
 
-**Actions:** `get-info`, `minimize`, `restore`, `maximize`, `set-zoom`, `get-zoom`, `get-viewport`, `fit-page`, `fit-selection`, `pan-to-shape`, `pan-by-offset`, `get-visual-aids`, `set-grid-visible`, `set-guides-visible`, `set-rulers-visible`, `set-drawing-aids`, `get-snap-settings`, `set-grid-snap-strength`, `set-guides-snap-strength`, `set-points-snap-strength`, `set-ruler-snap-strength`, `set-geometry-snap-strength`, `set-extensions-snap-strength`, `set-view`, `get-view`
+**Actions:** `set-zoom`, `get-zoom`, `get-viewport`, `fit-page`, `fit-selection`, `pan-to-shape`, `pan-by-offset`, `get-visual-aids`, `set-grid-visible`, `set-guides-visible`, `set-rulers-visible`, `set-drawing-aids`, `get-snap-settings`, `set-grid-snap-strength`, `set-guides-snap-strength`, `set-points-snap-strength`, `set-ruler-snap-strength`, `set-geometry-snap-strength`, `set-extensions-snap-strength`
 
 | Parameter | Description |
 |-----------|-------------|
@@ -472,8 +472,6 @@ Visio window management for drawing windows: state, zoom, viewport, navigation, 
 | `--visible` | True to show the grid (required for: set-grid-visible, set-guides-visible, set-rulers-visible) |
 | `--enabled` | True to enable snap and glue (required for: set-drawing-aids) |
 | `--strength` | Snap strength from 1 to 999. Higher values pull shapes to the grid from further away (required for: set-grid-snap-strength, set-guides-snap-strength, set-points-snap-strength, set-ruler-snap-strength, set-geometry-snap-strength, set-extensions-snap-strength) |
-| `--view-type` | 1=Normal, 2=Outline, 3=SlideSorter, 4=NotesPage, 5=SlideMaster (required for: set-view) |
-
 
 ## Common Pitfalls
 

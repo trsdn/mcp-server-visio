@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Six `window` actions that could not work, and permanently broke the session** (#109).
+  `get-info`, `minimize`, `restore`, `maximize`, `set-view` and `get-view` targeted PowerPoint's
+  application-window model: `Application.WindowState` and `Window.ViewType`, neither of which Visio
+  has. Every call failed with `RuntimeBinderException`.
+
+  The more serious half is what they did on the way out. Each released `ctx.Application` in its
+  `finally` — the **shared** session application object — destroying the RCW for the whole session:
+
+  ```
+  window get-view  ->  RuntimeBinderException          (the call that does the damage)
+  page   list      ->  succeeds                        (document-based, unaffected)
+  window get-view  ->  InvalidComObjectException: COM object separated from its RCW
+  ```
+
+  Document-based commands keep working, so the session looks healthy while an arbitrary subset of
+  it is broken, and the command that caused the damage is not the one that reports it.
+
+  Removed rather than repaired: Visio's own `Window.WindowState` **silently ignores writes** —
+  setting 1, 2 and 4 all left it at `1275068416` — and `Window.Left/Top/Width/Height` do not exist.
+  The default session also runs `Visio.InvisibleApp`, which has no window for these to mean
+  anything about. That silent no-op is the same failure family as the crippled style in #92.
+
+  `window` goes from 25 to 19 actions; the public surface from 185 to 179. The remaining 19 — zoom,
+  viewport, pan, visual aids, snap settings — are unaffected.
+
+### Added
+
+- **`SharedApplicationLifetimeTests`** — asserts no command releases `ctx.Application`. Objects a
+  command *fetches* must still be released; this is only about the application it was handed.
+  Verified against an induced regression.
+
+  `BundleReadmeAccuracyTests`, added hours earlier, caught the action-count change in this very PR
+  without being asked: *"claims 15 tools with 185 actions; the public surface is 15 tools with 179
+  actions"*.
+
 ### Fixed
 
 - **The shipped CLI skill documented 5 of 15 commands** (#57). `skills/visio-cli/SKILL.md` is what
