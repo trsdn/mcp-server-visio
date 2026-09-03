@@ -18,7 +18,7 @@ VisioMcp includes several security measures:
 
 - **Path Traversal Protection**: All file paths are validated with `Path.GetFullPath()`
 - **File Size Limits**: 1GB maximum file size to prevent DoS attacks
-- **Extension Validation**: Only `.pptx` and `.pptm` files are accepted
+- **Extension Validation**: Only `.vsdx` and `.vsdm` files are accepted
 - **Path Length Validation**: Maximum 32,767 characters (Windows limit)
 
 ### Code Analysis
@@ -29,13 +29,15 @@ VisioMcp includes several security measures:
 
 ### COM Security
 
-- **Controlled PowerPoint Automation**: PowerPoint.Application runs with `Visible=false` and `DisplayAlerts=false`
+- **Controlled Visio automation**: sessions start `Visio.InvisibleApp`, which is windowless by
+  construction rather than by a `Visible` flag, and set `AlertResponse = 7` so a modal dialog is
+  answered rather than blocking the automation thread indefinitely
 - **Resource Cleanup**: Comprehensive COM object disposal and garbage collection
-- **No Remote Connections**: Only local PowerPoint automation supported
+- **No Remote Connections**: Only local Visio automation supported
 
 ### VisioMcp Service Security
 
-The VisioMcp Service manages PowerPoint COM automation sessions:
+The VisioMcp Service manages Visio COM automation sessions:
 
 **MCP Server**: The service runs fully **in-process** — no inter-process communication. There is no attack surface beyond the MCP Server process itself.
 
@@ -50,7 +52,7 @@ The VisioMcp Service manages PowerPoint COM automation sessions:
 
 **What This Means:**
 
-1. **Same-user access**: Any application running under your Windows user account can connect to the CLI daemon and execute PowerPoint operations. This is by design, similar to how Docker and database servers work.
+1. **Same-user access**: Any application running under your Windows user account can connect to the CLI daemon and execute Visio operations. This is by design, similar to how Docker and database servers work.
 
 2. **No cross-user access**: User A cannot connect to User B's CLI daemon. Each user has a separate named pipe with their SID.
 
@@ -58,8 +60,8 @@ The VisioMcp Service manages PowerPoint COM automation sessions:
 
 **Security Implications:**
 
-- If malware runs under your user account, it could theoretically connect to the CLI daemon and control PowerPoint
-- However, such malware could already control PowerPoint directly (or do anything else you can do)
+- If malware runs under your user account, it could theoretically connect to the CLI daemon and control Visio
+- However, such malware could already control Visio directly (or do anything else you can do)
 - The service does not elevate privileges or provide capabilities beyond what the user already has
 
 ### Dependency Management
@@ -137,7 +139,7 @@ We follow responsible disclosure practices:
 
 ### MCP Server Security
 
-- **Validate AI Requests**: Review PowerPoint operations requested by AI assistants
+- **Validate AI Requests**: Review Visio operations requested by AI assistants
 - **File Path Restrictions**: Only allow MCP Server access to specific directories
 - **Audit Logs**: Monitor MCP Server operations in logs
 - **Trust Configuration**: Only enable VBA trust when necessary
@@ -145,9 +147,9 @@ We follow responsible disclosure practices:
 ### CLI Security
 
 - **Script Validation**: Review automation scripts before execution
-- **File Permissions**: Ensure PowerPoint files have appropriate permissions
+- **File Permissions**: Ensure Visio files have appropriate permissions
 - **Isolated Environment**: Run in sandboxed environment when processing untrusted files
-- **PowerPoint Security Settings**: Maintain appropriate PowerPoint macro security settings
+- **Visio Security Settings**: Maintain appropriate Visio macro security settings
 
 ### Development Security
 
@@ -158,11 +160,13 @@ We follow responsible disclosure practices:
 
 ## Known Security Considerations
 
-### PowerPoint COM Automation
+### Visio COM Automation
 
-- **Local Only**: VisioMcp only supports local PowerPoint automation
-- **Windows Only**: Requires Windows with PowerPoint installed
-- **PowerPoint Process**: Creates PowerPoint.Application COM objects
+- **Local Only**: VisioMcp only supports local Visio automation
+- **Windows Only**: Requires Windows with Visio installed
+- **Visio Process**: Creates `Visio.InvisibleApp` COM objects, falling back to `Visio.Application`
+  where the invisible ProgID is unavailable; visible-session mode uses `Visio.Application`
+  deliberately so the user can watch
 - **Macro Security**: VBA operations require user consent via `setup-vba-trust`
 
 ### File System Access
@@ -174,7 +178,7 @@ We follow responsible disclosure practices:
 ### AI Integration (MCP Server)
 
 - **Trusted AI Assistants**: Only use with trusted AI platforms
-- **Request Validation**: Review operations before PowerPoint executes them
+- **Request Validation**: Review operations before Visio executes them
 - **Sensitive Data**: Avoid exposing presentations with sensitive data to AI assistants
 - **Audit Trail**: MCP Server logs all operations
 

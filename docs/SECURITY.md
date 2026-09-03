@@ -42,16 +42,16 @@ VisioMcp implements comprehensive security measures:
 - **Code Analysis**: Enhanced security rules enforced (CA2100, CA3003, CA3006, etc.)
 - **Quality Enforcement**: All warnings treated as errors for robust code
 
-### PowerPoint COM Automation
+### Visio COM Automation
 
-VisioMcp uses PowerPoint COM automation with security safeguards:
+VisioMcp uses Visio COM automation with security safeguards:
 
 - **Macro Execution**: VisioMcp can execute VBA macros when using script-run command
-- **VBA Trust**: VBA operations require "Trust access to the VBA project object model" to be manually enabled in PowerPoint settings (one-time setup)
-- **File Validation**: Strict file extension validation (.pptx, .pptm, .ppt only)
-- **File Access**: VisioMcp requires read/write access to PowerPoint files with size validation
+- **VBA Trust**: VBA operations require "Trust access to the VBA project object model" to be manually enabled in Visio settings (one-time setup)
+- **File Validation**: Strict file extension validation (.vsdx, .vsdm, .ppt only)
+- **File Access**: VisioMcp requires read/write access to Visio files with size validation
 - **Process Isolation**: Each command runs in a separate process that terminates after completion
-- **PowerPoint Instance**: Creates temporary PowerPoint instances that are properly cleaned up
+- **Visio Instance**: Creates temporary Visio instances that are properly cleaned up
 - **Input Sanitization**: All arguments validated for length and content
 
 ### Power Query Privacy Levels
@@ -67,28 +67,28 @@ VisioMcp implements security-first privacy level handling:
 ### VBA Security Considerations
 
 - **Macro Content**: VBA scripts imported via script-import will be executed when called
-- **Manual Trust Setup**: VBA trust must be enabled manually through PowerPoint's Trust Center settings (never modified automatically by VisioMcp)
-- **File Format**: Only .pptm files can contain and execute VBA code
+- **Manual Trust Setup**: VBA trust must be enabled manually through Visio's Trust Center settings (never modified automatically by VisioMcp)
+- **File Format**: Only .vsdm files can contain and execute VBA code
 - **Code Injection**: Always validate VBA source files before importing
 - **User Control**: VisioMcp never modifies registry settings or security configurations automatically
 
 ### Best Practices for Users
 
-1. **File Validation**: Only run VisioMcp on trusted PowerPoint files
+1. **File Validation**: Only run VisioMcp on trusted Visio files
 2. **VBA Source Control**: Validate VBA code files before importing with script-import
 3. **Network Files**: Be cautious when processing files from network locations
 4. **Permissions**: Run VisioMcp with minimal necessary permissions
-5. **Backup**: Always backup important PowerPoint files before processing
-6. **VBA Trust**: Only enable VBA trust in PowerPoint settings on systems where it's needed (manual one-time setup)
+5. **Backup**: Always backup important Visio files before processing
+6. **VBA Trust**: Only enable VBA trust in Visio settings on systems where it's needed (manual one-time setup)
 7. **Code Review**: Review VBA scripts before execution, especially from external sources
 8. **Privacy Levels**: Choose appropriate Power Query privacy levels based on data sensitivity (Private for sensitive data, Organizational for internal data, Public for public APIs)
 9. **Environment Variables**: Use `PPT_DEFAULT_PRIVACY_LEVEL` environment variable for consistent automation security
 
 ### Known Limitations
 
-- **Windows Only**: VisioMcp only works on Windows with PowerPoint installed
-- **COM Dependencies**: Relies on PowerPoint COM objects which may have their own security considerations
-- **File System Access**: Requires appropriate file system permissions for PowerPoint file access
+- **Windows Only**: VisioMcp only works on Windows with Visio installed
+- **COM Dependencies**: Relies on Visio COM objects which may have their own security considerations
+- **File System Access**: Requires appropriate file system permissions for Visio file access
 
 ## Dependency Security
 

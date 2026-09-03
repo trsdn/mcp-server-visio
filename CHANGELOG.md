@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Developer and operator documentation described PowerPoint** (#87, part 2). The existing
+  terminology guard only scanned `.github/`, so everything a contributor reads first went
+  unchecked. Four of these were not cosmetic:
+
+  - **`docs/AZURE_SELFHOSTED_RUNNER_SETUP.md` told the operator to add the `powerpoint` label** to
+    the integration runner. `integration-tests.yml` requires `[self-hosted, windows, visio]`, so a
+    runner built by following the documentation would never have matched the job it exists to run.
+  - **`docs/DEVELOPMENT.md` told contributors to tag tests `[Trait("RequiresPowerPoint", "true")]`.**
+    The convention is `RequiresVisio`, used by 48 tests — and three tests had followed the
+    documentation instead, leaving them outside the filters used in CI and the pre-commit hook.
+  - **`SECURITY.md` described the threat model of `PowerPoint.Application`**, including alert
+    handling this codebase does not use.
+  - **`docs/TIMEOUT-IMPLEMENTATION-GUIDE.md`** documented `IPptBatch`, `PptBatch.cs` and
+    `PowerQueryRefreshResult` — none of which exist — and stated a 2-minute default timeout where
+    the code uses 5. Referenced by nothing, and wrong in every constant. Rewritten against the real
+    implementation, including the one relationship that is load-bearing:
+    `StaThreadJoinTimeout >= VisioQuitTimeout`, or `Dispose()` returns while `CloseAndQuit()` is
+    still running and leaves a live `VISIO` process holding the document.
+
+  A mechanical rename is not enough here, and the sweep proved it: renaming the words first
+  produced *"Visio.InvisibleApp runs with `Visible=false` and `DisplayAlerts=false`"* — plausible,
+  Visio-shaped, and still false, because `InvisibleApp` is windowless by construction and the code
+  sets `AlertResponse = 7`.
+
 - **The README shipped inside the Claude Desktop bundle advertised PowerPoint** (#87, part 1).
   `mcpb/README.md` — the first thing anyone reads after installing — opened with
   *"# PowerPoint (Windows)"*, described building presentations, slides and SmartArt, and claimed
@@ -28,6 +52,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `FEATURES.md` for documentation and `SECURITY.md` for the privacy statement.
 
 ### Added
+
+- **`ProseDocumentationTerminologyTests`** — extends the terminology rule from `.github/` to
+  `docs/`, `examples/`, `mcpb/`, `skills/`, `tests/` and the root policy documents, and asserts no
+  test carries a `RequiresPowerPoint` trait.
+
+  `FEATURES.md`, `README.md`, the testing ADR and the archetype pipeline are allow-listed: they
+  exist to explain the migration, so naming the ancestor is the point. An explicit list is honest
+  about that where a cleverer heuristic would be guessing.
+
+  It excludes itself, for the same reason an earlier guard had to: its comments name the wrong
+  product in order to explain the rule.
 
 - **`BundleReadmeAccuracyTests`** — asserts the bundle README's stated surface size matches the
   real count, and that no shipped file links to a host we do not publish. The count is computed

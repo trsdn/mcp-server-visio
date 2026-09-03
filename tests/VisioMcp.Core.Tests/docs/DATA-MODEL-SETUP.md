@@ -28,7 +28,7 @@ Data Model tests use a **fixture-as-test pattern** where the fixture initializat
 ### Data Model Structure
 
 **Created by fixture:**
-- 3 PowerPoint Tables: SalesTable (10 rows), CustomersTable (5 rows), ProductsTable (5 rows)
+- 3 Visio Tables: SalesTable (10 rows), CustomersTable (5 rows), ProductsTable (5 rows)
 - 2 Relationships: SalesTable→CustomersTable, SalesTable→ProductsTable
 - 3 DAX Measures: Total Sales, Average Sale, Total Customers
 
@@ -180,7 +180,7 @@ TESTING: Data Model Creation (via fixture initialization)
    📊 3 tables created and loaded
    🔗 2 relationships established
    📏 3 DAX measures defined
-   💾 File: C:\Temp\DataModelTests_abc123\DataModel.pptx
+   💾 File: C:\Temp\DataModelTests_abc123\DataModel.vsdx
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -192,8 +192,8 @@ TESTING: Data Model Creation (via fixture initialization)
 
 **Solution**: 
 1. Check fixture output for specific error
-2. Verify PowerPoint is installed and accessible
-3. Check TOM library availability (Data Model requires PowerPoint 2013+)
+2. Verify Visio is installed and accessible
+3. Check TOM library availability (Data Model requires Visio 2013+)
 
 ### Tests Interfere With Each Other
 

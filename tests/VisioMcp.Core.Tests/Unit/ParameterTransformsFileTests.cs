@@ -11,7 +11,7 @@ namespace VisioMcp.Core.Tests.Unit;
 [Trait("Category", "Unit")]
 [Trait("Feature", "ParameterTransforms")]
 [Trait("Speed", "Fast")]
-[Trait("RequiresPowerPoint", "false")]
+[Trait("RequiresVisio", "false")]
 public sealed class ParameterTransformsFileTests : IDisposable
 {
     private readonly string _tempDir;
