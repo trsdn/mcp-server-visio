@@ -76,7 +76,7 @@ export function createLoopState({
   loopNumber,
   prompt,
   pngPath,
-  pptxPath,
+  drawingPath,
   sequence = [],
   carryoverSnapshot = {},
   metadata = {},
@@ -88,7 +88,7 @@ export function createLoopState({
     prompt,
     artifacts: {
       pngPath,
-      pptxPath,
+      drawingPath,
     },
     stepSequence,
     stepIndex: 0,

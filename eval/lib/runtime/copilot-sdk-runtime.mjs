@@ -102,7 +102,7 @@ async function executePromptRequest(runtime, request) {
 }
 
 async function executeFreshBuildRequest(agent, request) {
-  const initialPowerPointPids = getPowerPointProcessIds();
+  const initialVisioPids = getVisioProcessIds();
   let runtime = null;
   let result = null;
 
@@ -125,7 +125,7 @@ async function executeFreshBuildRequest(agent, request) {
     return result;
   } finally {
     if (agent.transport === "mcp") {
-      cleanupExtraPowerPointProcesses(initialPowerPointPids);
+      cleanupExtraVisioProcesses(initialVisioPids);
     }
     if (runtime?.client || runtime?.session) {
       await destroyCopilotSdkRuntime(runtime, { force: true });
@@ -134,15 +134,15 @@ async function executeFreshBuildRequest(agent, request) {
 }
 
 async function executeSessionBuildRequest(runtime, request) {
-  const initialPowerPointPids = getPowerPointProcessIds();
+  const initialVisioPids = getVisioProcessIds();
 
   try {
     return await executeBuildLoop(runtime, request);
   } finally {
-    // When reusing session context, the MCP server manages its own PowerPoint
+    // When reusing session context, the MCP server manages its own Visio
     // lifecycle — don't kill its process between loops.
     if (runtime.agent.transport === "mcp" && !runtime.agent.reuseSessionContext) {
-      cleanupExtraPowerPointProcesses(initialPowerPointPids);
+      cleanupExtraVisioProcesses(initialVisioPids);
     }
   }
 }
@@ -165,11 +165,7 @@ async function executeBuildLoop(runtime, request, hooks = {}) {
         if (hooks.afterSuccess) {
           await hooks.afterSuccess();
         }
-        return {
-          ok: true,
-          completion: "png-detected",
-          summaryContent,
-        };
+        return buildSuccess("png-detected", summaryContent, request);
       }
 
       await sleep(BUILD_POLL_INTERVAL_MS);
@@ -181,17 +177,17 @@ async function executeBuildLoop(runtime, request, hooks = {}) {
 
     const delayedArtifact = await verifyBuildArtifacts({
       pngPath: request.pngPath,
-      pptxPath: request.pptxPath,
-      requirePptx: existsSync(request.pptxPath),
+      drawingPath: request.drawingPath,
+      requireDrawing: existsSync(request.drawingPath),
       timeoutMs: 2500,
     });
 
     if (delayedArtifact.ok) {
-      return { ok: true, completion: "png-detected-after-destroy", summaryContent: "" };
+      return buildSuccess("png-detected-after-destroy", "", request);
     }
 
-    if (existsSync(request.pptxPath) && tryExportFirstSlide(request.pptxPath, request.pngPath)) {
-      return { ok: true, completion: "manual-export-after-timeout", summaryContent: "" };
+    if (existsSync(request.drawingPath) && tryExportFirstPage(request.drawingPath, request.pngPath)) {
+      return buildSuccess("manual-export-after-timeout", "", request);
     }
 
     return { ok: false, error: `Timeout after ${request.timeoutMs}ms waiting for build artifact` };
@@ -202,21 +198,35 @@ async function executeBuildLoop(runtime, request, hooks = {}) {
 
     const recoveredArtifact = await verifyBuildArtifacts({
       pngPath: request.pngPath,
-      pptxPath: request.pptxPath,
-      requirePptx: existsSync(request.pptxPath),
+      drawingPath: request.drawingPath,
+      requireDrawing: existsSync(request.drawingPath),
       timeoutMs: 2500,
     });
 
     if (recoveredArtifact.ok) {
-      return { ok: true, completion: "png-detected-after-error", summaryContent: "" };
+      return buildSuccess("png-detected-after-error", "", request);
     }
 
-    if (existsSync(request.pptxPath) && tryExportFirstSlide(request.pptxPath, request.pngPath)) {
-      return { ok: true, completion: "manual-export-after-error", summaryContent: "" };
+    if (existsSync(request.drawingPath) && tryExportFirstPage(request.drawingPath, request.pngPath)) {
+      return buildSuccess("manual-export-after-error", "", request);
     }
 
     return { ok: false, error: getErrorMessage(error) };
   }
+}
+
+/**
+ * Every success path returns through here so the structural read is never skipped, and never runs
+ * before the runtime has been torn down — the agent's own Visio session holds the drawing open
+ * until then, and a second session on a locked file returns nothing useful.
+ */
+function buildSuccess(completion, summaryContent, request) {
+  return {
+    ok: true,
+    completion,
+    summaryContent,
+    structure: readDrawingStructure(request.drawingPath),
+  };
 }
 
 async function requestBuildSummary(session, request) {
@@ -230,9 +240,9 @@ async function requestBuildSummary(session, request) {
   return response?.data?.content || "";
 }
 
-function tryExportFirstSlide(pptxPath, pngPath) {
+function tryExportFirstPage(drawingPath, pngPath) {
   try {
-    const openOut = execSync(`"${CLI_PATH}" session open "${pptxPath}"`, { encoding: "utf-8", timeout: 15000 });
+    const openOut = execSync(`"${CLI_PATH}" session open "${drawingPath}"`, { encoding: "utf-8", timeout: 15000 });
     const match = openOut.match(/\{[\s\S]*\}/);
     if (!match) return false;
     const data = JSON.parse(match[0]);
@@ -241,12 +251,15 @@ function tryExportFirstSlide(pptxPath, pngPath) {
 
     try {
       execSync(
-        `"${CLI_PATH}" export slide-to-image -s ${sessionId} --slide-index 1 --destination-path "${pngPath}" --width 1920 --height 1080`,
+        `"${CLI_PATH}" export page-export -s ${sessionId} --page-index 1 --destination-path "${pngPath}"`,
         { encoding: "utf-8", timeout: 30000 }
       );
     } finally {
       try {
-        execSync(`"${CLI_PATH}" session close -s ${sessionId} --save`, { encoding: "utf-8", timeout: 15000 });
+        // --save false, not --no-save: the flag takes an explicit value. This is a
+        // recovery path for a build that already failed, so nothing here should
+        // write to the drawing under evaluation.
+        execSync(`"${CLI_PATH}" session close -s ${sessionId} --save false`, { encoding: "utf-8", timeout: 15000 });
       } catch {}
     }
 
@@ -256,10 +269,88 @@ function tryExportFirstSlide(pptxPath, pngPath) {
   }
 }
 
-function getPowerPointProcessIds() {
+/**
+ * Reads the drawing's structure through the CLI.
+ *
+ * The judge cannot score a diagram from a picture. Connectivity and completeness — whether the
+ * shapes are actually joined, whether a path terminates — are the two things that most often go
+ * wrong, and a drawing whose boxes are placed but unconnected renders as a perfectly plausible
+ * PNG. Scoring the image alone reliably praises the wrong output.
+ *
+ * Returns null rather than throwing: this augments the artifact, and a build that produced a
+ * valid PNG should not be failed because the structural read did not come back.
+ */
+function readDrawingStructure(drawingPath) {
+  if (!existsSync(drawingPath)) return null;
+
+  let sessionId = null;
+
+  try {
+    const openOut = execSync(`"${CLI_PATH}" session open "${drawingPath}"`, { encoding: "utf-8", timeout: 15000 });
+    const openMatch = openOut.match(/\{[\s\S]*\}/);
+    if (!openMatch) return null;
+    sessionId = JSON.parse(openMatch[0]).sessionId;
+    if (!sessionId) return null;
+
+    const pages = runCliJson(`page list -s ${sessionId}`);
+    if (!pages) return null;
+
+    const structure = { pages: [] };
+
+    for (const page of pages.pages || []) {
+      const pageIndex = page.pageIndex;
+      if (!Number.isFinite(pageIndex)) continue;
+
+      const shapes = runCliJson(`shape list -s ${sessionId} --page-index ${pageIndex}`);
+      const connectors = runCliJson(`shape list-connectors -s ${sessionId} --page-index ${pageIndex}`);
+
+      // shape list returns connectors alongside nodes, distinguished by shapeType. Keeping the
+      // discriminator means the judge can count nodes without counting the lines between them.
+      structure.pages.push({
+        pageIndex,
+        name: page.name ?? null,
+        isBackground: page.isBackground ?? null,
+        shapes: (shapes?.shapes || []).map((shape) => ({
+          shapeId: shape.shapeId ?? null,
+          name: shape.name ?? null,
+          shapeType: shape.shapeType ?? null,
+          text: shape.text ?? "",
+        })),
+        connectors: (connectors?.connectors || []).map((connector) => ({
+          shapeId: connector.shapeId ?? null,
+          name: connector.name ?? null,
+          startShapeName: connector.startShapeName ?? null,
+          endShapeName: connector.endShapeName ?? null,
+        })),
+      });
+    }
+
+    return structure;
+  } catch {
+    return null;
+  } finally {
+    if (sessionId) {
+      try {
+        execSync(`"${CLI_PATH}" session close -s ${sessionId} --save false`, { encoding: "utf-8", timeout: 15000 });
+      } catch {}
+    }
+  }
+}
+
+function runCliJson(argumentText) {
+  try {
+    const out = execSync(`"${CLI_PATH}" ${argumentText}`, { encoding: "utf-8", timeout: 20000 });
+    const match = out.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getVisioProcessIds() {
   try {
     const out = execSync(
-      "powershell -NoProfile -Command \"Get-Process -Name POWERPNT -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id\"",
+      "powershell -NoProfile -Command \"Get-Process -Name VISIO -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id\"",
       { encoding: "utf-8", timeout: 10000 }
     );
 
@@ -276,8 +367,8 @@ function getPowerPointProcessIds() {
   }
 }
 
-function cleanupExtraPowerPointProcesses(initialPids) {
-  const currentPids = getPowerPointProcessIds();
+function cleanupExtraVisioProcesses(initialPids) {
+  const currentPids = getVisioProcessIds();
   for (const pid of currentPids) {
     if (!initialPids.has(pid)) {
       try {

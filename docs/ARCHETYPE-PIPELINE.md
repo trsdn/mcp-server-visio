@@ -114,7 +114,7 @@ Preferred asset roots live under:
 
 If you keep eval assets in a separate private repo clone, set:
 
-- `PPTMCP_EVAL_ASSET_REPO_ROOT`
+- `VISIOMCP_EVAL_ASSET_REPO_ROOT`
 
 ## Runtime Surface
 

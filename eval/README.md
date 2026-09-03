@@ -225,7 +225,7 @@ The archetype harness calls service startup defensively, but having the CLI serv
 
 The eval code stays in this repo, but the large/private assets can live in a separate private repo clone.
 
-Set `PPTMCP_EVAL_ASSET_REPO_ROOT` to the **root of that private repo**. When set, the harnesses read and write eval assets under:
+Set `VISIOMCP_EVAL_ASSET_REPO_ROOT` to the **root of that private repo**. When set, the harnesses read and write eval assets under:
 
 - `<asset-repo>\eval\input`
 - `<asset-repo>\eval\output`

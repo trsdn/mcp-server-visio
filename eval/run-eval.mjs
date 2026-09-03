@@ -147,19 +147,19 @@ async function runBuilder(prompt, outputPath, opts, builderRuntime = null) {
       errorCategory: failure.category,
       failure,
       requestEnvelope: null,
-      pptxPath: outputPath.replace(".png", ".pptx"),
+      drawingPath: outputPath.replace(".png", ".vsdx"),
     };
   }
 
   const builderInstructions = builderInstructionsFile.text.replace("{CLI_PATH}", CLI_PATH);
-  const pptxPath = outputPath.replace(".png", ".pptx");
+  const drawingPath = outputPath.replace(".png", ".vsdx");
   const requestEnvelope = createEvaluationRequestEnvelope({
     promptId: prompt.id,
     prompt: prompt.prompt,
     archetype: prompt.category,
     transport: "cli",
     pngPath: outputPath,
-    pptxPath,
+    drawingPath,
   });
   const skillPaths = SKILL_FILES.map((file) => join(SKILLS_DIR, file)).join("\n- ");
   const buildPrompt = `${builderInstructions}
@@ -175,7 +175,7 @@ FIRST: Read these design skill files for guidance:
 THEN: Build ONE slide for this request:
 "${prompt.prompt}" (category: ${prompt.category})
 
-OUTPUT: ${pptxPath} (PPTX) and ${outputPath} (PNG export)
+OUTPUT: ${drawingPath} (PPTX) and ${outputPath} (PNG export)
 
 Steps: read skills → pick archetype → create session → build slide → export PNG → close --save.
 `;
@@ -197,7 +197,7 @@ Steps: read skills → pick archetype → create session → build slide → exp
       success: true,
       response: response.content || "completed",
       requestEnvelope,
-      pptxPath,
+      drawingPath,
     }
     : (() => {
       const failure = createFailureDetails(response.error, {
@@ -209,7 +209,7 @@ Steps: read skills → pick archetype → create session → build slide → exp
         errorCategory: failure.category,
         failure,
         requestEnvelope,
-        pptxPath,
+        drawingPath,
       };
     })();
 }
@@ -449,7 +449,7 @@ async function main() {
           loopNumber: index + 1,
           prompt: item,
           pngPath,
-          pptxPath: pngPath.replace(".png", ".pptx"),
+          drawingPath: pngPath.replace(".png", ".vsdx"),
           sequence: createStepSequence({ includeJudge: true }),
           carryoverSnapshot: context.carryover,
           metadata: {
@@ -517,8 +517,8 @@ async function main() {
         [ORCHESTRATOR_STEPS.verifyArtifact]: async (loopState) => {
           const artifactStatus = await verifyBuildArtifacts({
             pngPath: loopState.artifacts.pngPath,
-            pptxPath: loopState.artifacts.pptxPath,
-            requirePptx: true,
+            drawingPath: loopState.artifacts.drawingPath,
+            requireDrawing: true,
             timeoutMs: 3500,
           });
 
@@ -676,7 +676,7 @@ async function main() {
           improvement: { attempted: false },
           artifacts: [
             { role: "png", kind: "image", path: loopState.artifacts.pngPath },
-            { role: "pptx", kind: "presentation", path: loopState.artifacts.pptxPath },
+            { role: "drawing", kind: "drawing", path: loopState.artifacts.drawingPath },
           ],
           skills: {
             beforeLoop: loopState.metadata.persistence?.skillSnapshotBefore || null,
