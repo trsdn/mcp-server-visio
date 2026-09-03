@@ -8,7 +8,7 @@ The session mode demo shows how to use sessions for high-performance multi-opera
 
 ### Requirements
 
-- Windows with PowerPoint installed
+- Windows with Visio installed
 - VisioMcp installed (`dotnet tool install --global VisioMcp.McpServer`)
 
 ### Running the Demo
@@ -25,7 +25,7 @@ The session mode demo shows how to use sessions for high-performance multi-opera
 
 ### What the Demo Does
 
-1. Creates a test presentation (`test-session.pptx`)
+1. Creates a test presentation (`test-session.vsdx`)
 2. Opens a session and captures the session ID
 3. Performs multiple operations using the same PowerPoint instance:
    - Creates 3 slides (Sales, Customers, Products)
@@ -45,12 +45,12 @@ Session mode is **75-90% faster** than running individual commands because:
 ### Cleanup
 
 ```powershell
-rm test-session.pptx
+rm test-session.vsdx
 ```
 
 Or in PowerShell:
 ```powershell
-Remove-Item test-session.pptx
+Remove-Item test-session.vsdx
 ```
 
 ## Use Cases

@@ -32,7 +32,7 @@ Select the configuration file for your AI assistant and follow the instructions 
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a PowerPoint file called "test.vsdx"
 ```
 
 ---
@@ -56,7 +56,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a PowerPoint file called "test.vsdx"
 ```
 
 ---
@@ -79,7 +79,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a PowerPoint file called "test.vsdx"
 ```
 
 ---
@@ -101,7 +101,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a PowerPoint file called "test.vsdx"
 ```
 
 ---
@@ -125,7 +125,7 @@ Create a PowerPoint file called "test.pptx"
 
 **Test it:**
 ```
-Create a PowerPoint file called "test.pptx"
+Create a PowerPoint file called "test.vsdx"
 ```
 
 ---
@@ -154,7 +154,7 @@ Create a PowerPoint file called "test.pptx"
 ### PowerPoint Not Found
 
 - Ensure Microsoft PowerPoint Desktop (2016+) is installed
-- VisioMcp requires Windows OS with PowerPoint installed
+- VisioMcp requires Windows OS with Visio installed
 
 ### Permission Issues
 

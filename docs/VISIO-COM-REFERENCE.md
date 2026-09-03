@@ -50,7 +50,7 @@ This is important for architecture decisions. A future Visio MCP server should a
 
 ## Mental model: Visio is a document plus ShapeSheet platform
 
-PowerPoint is slide-centric. Visio is much more shape-centric and formula-centric.
+Visio is slide-centric. Visio is much more shape-centric and formula-centric.
 
 Two ideas dominate the model:
 
@@ -132,7 +132,7 @@ Important members called out by Microsoft:
 Important implementation note:
 
 - Microsoft documents both `CreateObject("Visio.Application")` and `InvisibleApp`
-- if this repo wants "headless until asked to show the window" behavior similar to PowerPoint, `InvisibleApp` is worth evaluating early
+- if this repo wants "headless until asked to show the window" behavior similar to Visio, `InvisibleApp` is worth evaluating early
 
 Important event note:
 
@@ -141,13 +141,13 @@ Important event note:
 
 ## `Document`: drawings, stencils, and templates are all documents
 
-Visio's `Document` object is more general than a PowerPoint presentation. Microsoft states that a `Document` can represent:
+Visio's `Document` object is more general than a Visio presentation. Microsoft states that a `Document` can represent:
 
 - a drawing
 - a stencil
 - a template
 
-This is a major architectural difference from PowerPoint and should directly influence the server design.
+This is a major architectural difference from Visio and should directly influence the server design.
 
 Why it matters:
 
@@ -323,7 +323,7 @@ Cells can be:
 - locally defined
 - inherited from a master or style
 
-That inheritance model is a big difference from PowerPoint. In Visio, formatting and behavior are deeply formula-driven and often inherited rather than directly assigned.
+That inheritance model is a big difference from Visio. In Visio, formatting and behavior are deeply formula-driven and often inherited rather than directly assigned.
 
 ### Why ShapeSheet matters to the server
 
@@ -481,7 +481,7 @@ Those should likely become separate commands.
 
 ## Layers and styles are first-class citizens
 
-Visio is stronger than PowerPoint in document-structure features such as layers and styles.
+Visio is stronger than Visio in document-structure features such as layers and styles.
 
 ### `Layer`
 
@@ -565,7 +565,7 @@ If we had to prioritize only a handful of implementation pillars, they would be:
 
 ## Practical interop guidance for this repo
 
-Because this repo started as a PowerPoint automation stack, the following migration notes matter:
+Because this repo started as a Visio automation stack, the following migration notes matter:
 
 ### 1. Keep late binding as a valid option
 
@@ -581,7 +581,7 @@ The PIA remains useful as a reference even if runtime code stays late-bound.
 
 ### 2. Treat ShapeSheet as a first-class API surface
 
-For PowerPoint, a generic "shape formatting" abstraction can go a long way.
+For Visio, a generic "shape formatting" abstraction can go a long way.
 
 For Visio, that will not be enough. The server should be designed with a deliberate ShapeSheet story from day one.
 
@@ -653,7 +653,7 @@ These are the most useful official references gathered for the Visio migration:
 
 ## Bottom line
 
-The Visio COM model is deeper than the PowerPoint model in one specific way: the ShapeSheet is not a side detail, it is the platform.
+The Visio COM model is deeper than the Visio model in one specific way: the ShapeSheet is not a side detail, it is the platform.
 
 If `mcp-server-visio` is meant to be more than a thin wrapper around a few drawing commands, it should be designed around:
 

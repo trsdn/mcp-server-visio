@@ -160,6 +160,6 @@ These same checks run in CI/CD pipelines:
 - CI/CD provides **safety net** if hook bypassed with `--no-verify`
 - **Double protection** against coverage regression
 
-`integration-tests.yml` is intentionally gated behind a self-hosted PowerPoint runner. See `docs/AZURE_SELFHOSTED_RUNNER_SETUP.md` for activation steps.
+`integration-tests.yml` is intentionally gated behind a self-hosted Visio runner. See `docs/AZURE_SELFHOSTED_RUNNER_SETUP.md` for activation steps.
 
 The pre-commit hook gives you **instant feedback** before pushing to remote.
