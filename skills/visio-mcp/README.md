@@ -62,10 +62,10 @@ visio-mcp/
 
 ## MCP Server Setup
 
-The skill works with the Visio MCP Server. See [Installation Guide](https://VisioMcpserver.dev/installation/) for setup instructions.
+The skill works with the Visio MCP Server. See [Installation Guide](https://github.com/trsdn/mcp-server-visio#installation) for setup instructions.
 
 ## Related
 
 - [Visio CLI Skill](https://github.com/trsdn/mcp-server-visio/releases) - For coding agents preferring CLI tools
-- [Documentation](https://VisioMcpserver.dev/)
+- [Documentation](https://github.com/trsdn/mcp-server-visio/blob/main/FEATURES.md)
 - [GitHub Repository](https://github.com/trsdn/mcp-server-visio)

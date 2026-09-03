@@ -1,24 +1,28 @@
-# PowerPoint (Windows)
+# Visio (Windows)
 
-**Automate Microsoft PowerPoint with Claude** - Control PowerPoint through natural language conversations. Requires Windows and local Office install.
+**Automate Microsoft Visio with Claude** — build and edit diagrams through conversation. Requires
+Windows and a local Visio install.
 
 ## What It Does
 
-PowerPoint MCP Server lets you automate PowerPoint through conversation with Claude:
+Visio MCP Server drives Visio through COM, so Claude works with real diagrams rather than a file
+format:
 
-- **Create & Edit** - Build presentations, slides, and shapes
-- **Analyze Data** - Charts, tables, and SmartArt
-- **Transform Data** - Slide animations and transitions
-- **Format & Style** - Themes, layouts, transitions, animations
-- **Automate** - VBA macros, batch operations
-- **Agent Mode** - Say "show me PowerPoint" and watch AI work in real-time, side-by-side with Claude
+- **Build diagrams** — drop stencil masters, connect them, lay out pages
+- **Connect properly** — real Visio connectors that stay attached when shapes move
+- **Read and write the ShapeSheet** — cells and formulas on shapes, pages and the document
+- **Structure drawings** — multiple pages, layers, background pages, shape data
+- **Format consistently** — named styles, colour palettes, fills and lines
+- **Guided design** — a catalogue of diagram archetypes, each naming stencils and masters that are
+  installed on your machine
+- **Watch it work** — ask to see Visio and follow along side by side with Claude
 
-**25 tools with 225 operations** for comprehensive PowerPoint automation.
+**15 tools with 185 actions**.
 
 ## Requirements
 
-- **Windows** (required - uses PowerPoint COM automation)
-- **Microsoft PowerPoint 2016 or later**
+- **Windows** (required — uses Visio COM automation)
+- **Microsoft Visio 2016 or later**
 - **Claude Desktop** (Windows version)
 
 ## Installation
@@ -27,92 +31,104 @@ PowerPoint MCP Server lets you automate PowerPoint through conversation with Cla
 2. Double-click to install in Claude Desktop
 3. Restart Claude Desktop if prompted
 
-That's it! Start a new conversation and ask Claude to work with PowerPoint.
+Start a new conversation and ask Claude to work with Visio.
 
 ## Usage Examples
 
-These examples work with any PowerPoint file, including a new empty presentation.
+These work with any `.vsdx`, including a new empty drawing.
 
-### Example 1: Create a Sales Presentation
+### Example 1: A process flowchart
 
-**You say:** *"Create a new PowerPoint file called SalesPresentation.pptx with a title slide, a slide with bullet points summarizing Q1 results, and a slide with a bar chart comparing sales by region."*
-
-**What happens:**
-- Creates a new presentation
-- Adds a title slide with the presentation name
-- Creates a content slide with Q1 summary bullet points
-- Adds a chart slide with a bar chart comparing regional sales
-- Applies consistent formatting and theme
-- Confirms completion with file location
-
-### Example 2: Build a Dashboard Slide
-
-**You say:** *"Add a new slide with a table showing product sales data and a pie chart next to it visualizing the breakdown by category."*
+**You say:** *"Create OrderFlow.vsdx with a flowchart for order fulfilment: receipt, picking,
+packing, dispatch, and a decision on whether the item is in stock."*
 
 **What happens:**
-- Creates a new slide with a split layout
-- Adds a table with product sales data
-- Creates a pie chart showing category breakdown
-- Positions both elements side by side
-- Returns confirmation with slide number
+- Creates the drawing and names the page
+- Drops `Start/End`, `Process` and `Decision` masters from the basic flowchart stencil
+- Connects them in sequence, with both branches off the decision
+- Labels every shape
+- Confirms with the file location
 
-### Example 3: Create Professional Presentation
+The shapes are real flowchart masters, not drawn rectangles — so a diamond *is* a decision, and
+Visio's own tooling treats it as one.
 
-**You say:** *"Create a 10-slide investor pitch deck with a title slide, agenda, market overview with a chart, product features with SmartArt, team bios, and a closing slide. Use a professional blue theme with slide transitions."*
+### Example 2: A network diagram with shape data
+
+**You say:** *"Add a page showing our branch office network — firewall, switch, two servers and
+four workstations — and record the owner and asset tag on each device."*
 
 **What happens:**
-- Creates a new presentation with a professional blue theme
-- Builds all 10 slides with appropriate layouts
-- Adds charts and SmartArt graphics where specified
-- Applies consistent formatting and slide transitions
-- Confirms the presentation is ready for review
+- Adds and names a page
+- Drops network masters and connects them
+- Writes owner and asset tag into Shape Data on each device, where Visio can report on it
+
+### Example 3: A layered architecture diagram
+
+**You say:** *"Create a block diagram of a layered application — presentation, application, domain
+and data — apply one named style to every block, and put the annotations on their own layer so I
+can hide them."*
+
+**What happens:**
+- Builds the four layers and connects them
+- Creates a named style and applies it to each block, so later changes are one edit
+- Puts callouts on a separate layer you can toggle
 
 ---
 
 **More things you can ask:**
 
-- *"Show me PowerPoint side-by-side while you build this presentation"* - Agent Mode: watch every step happen live
-- *"Add a slide with a table showing Name, Role, and Department for the team"*
-- *"Add slide transitions and entrance animations to all slides"*
-- *"Apply the company brand colors and format the title slides consistently"*
-- *"Create a SmartArt diagram showing our organizational structure"*
-- *"Run the UpdateSlides macro"*
-- *"Show me PowerPoint while you work"* - watch changes in real-time
+- *"Show me Visio while you work"* — watch each step happen live
+- *"Which diagram archetypes do you know, and which stencils are installed?"*
+- *"Give this page a background page with the title and revision date"*
+- *"Continue this flowchart on a second page with an off-page reference"*
+- *"Set the page to A3 landscape and fit the drawing to it"*
+- *"List every connector on page 1 and tell me which shapes are unconnected"*
+
+That last one is worth knowing: Claude can read the drawing's structure, so it can tell you a shape
+is *unconnected* even when the picture looks fine.
 
 ## Tips for Best Results
 
-- **Be specific** - Include file paths, slide numbers, and shape references when you know them
-- **Start simple** - Build complex presentations step by step
-- **Ask to see PowerPoint** - Say *"Show me PowerPoint while you work"* to watch changes in real-time
-- **Close files first** - PowerPoint MCP needs exclusive access to presentations during automation
+- **Be specific** — include file paths, page numbers and shape names when you know them
+- **Start simple** — build a complex diagram in steps
+- **Ask for masters** — say "use flowchart shapes" rather than "draw boxes"; masters carry meaning,
+  drawn rectangles do not
+- **Ask to see Visio** — *"show me Visio while you work"* to watch changes in real time
+- **Close the file first** — the server needs exclusive access to the drawing it is editing
 
 ## Privacy & Security
 
-PowerPoint MCP Server runs **entirely on your computer**. Your PowerPoint data:
-- Never leaves your machine
-- Is not sent to any external servers
-- Is not used for training AI models
+Visio MCP Server runs **entirely on your computer**. Your Visio data:
 
-**Zero Logging:** This software does not collect any telemetry, usage statistics, or analytics data. No data is transmitted to external services.
+- never leaves your machine
+- is not sent to any external service
+- is not used for training AI models
+
+**Zero logging:** no telemetry, usage statistics or analytics are collected or transmitted.
+
+Details: [Security policy](https://github.com/trsdn/mcp-server-visio/blob/main/SECURITY.md)
 
 ## Troubleshooting
 
 **Claude says the tool isn't available:**
 - Restart Claude Desktop after installation
-- Check Settings → Integrations to verify PowerPoint MCP Server is enabled
+- Check Settings → Integrations to confirm Visio MCP Server is enabled
 
-**PowerPoint operations fail:**
-- Close the presentation in PowerPoint before asking Claude to modify it
-- Ensure PowerPoint is installed and working normally
+**Visio operations fail:**
+- Close the drawing in Visio before asking Claude to modify it
+- Confirm Visio is installed and starts normally
+
+**A shape or stencil is not found:**
+- Ask Claude which stencils are installed — the catalogue only lists masters present on your
+  machine, and stencil availability varies by Visio edition
 
 **Need help?**
 - [Report an issue](https://github.com/trsdn/mcp-server-visio/issues)
-- [Full documentation](https://VisioMcpserver.dev/)
 
 ## Links
 
-- [GitHub Repository](https://github.com/trsdn/mcp-server-visio)
-- [Feature Reference](https://VisioMcpserver.dev/features/)
-- [Agent Skills](https://github.com/trsdn/mcp-server-visio/blob/main/skills/README.md) - Cross-platform AI guidance
-- [Privacy Policy](https://VisioMcpserver.dev/privacy/)
+- [GitHub repository](https://github.com/trsdn/mcp-server-visio)
+- [Feature reference](https://github.com/trsdn/mcp-server-visio/blob/main/FEATURES.md)
+- [Agent skills](https://github.com/trsdn/mcp-server-visio/blob/main/skills/README.md) — cross-platform AI guidance
+- [Security policy](https://github.com/trsdn/mcp-server-visio/blob/main/SECURITY.md)
 - [License (MIT)](https://github.com/trsdn/mcp-server-visio/blob/main/LICENSE)

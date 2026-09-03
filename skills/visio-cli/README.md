@@ -87,5 +87,5 @@ visiocli --help
 ## Related
 
 - [Visio MCP Skill](https://github.com/trsdn/mcp-server-visio/releases) - For conversational AI (Claude Desktop, VS Code Chat)
-- [Documentation](https://VisioMcpserver.dev/)
+- [Documentation](https://github.com/trsdn/mcp-server-visio/blob/main/FEATURES.md)
 - [GitHub Repository](https://github.com/trsdn/mcp-server-visio)

@@ -325,7 +325,7 @@ internal sealed class CliServiceTray : IDisposable
         };
 
         const string githubUrl = "https://github.com/trsdn/mcp-server-visio";
-        const string docsUrl = "https://VisioMcpserver.dev/";
+        const string docsUrl = "https://github.com/trsdn/mcp-server-visio/blob/main/FEATURES.md";
 
         var githubLabel = new Label
         {
