@@ -1060,7 +1060,7 @@ public class ShapeCommands : IShapeCommands
         });
     }
 
-    public OperationResult CopyToSlide(IVisioBatch batch, int pageIndex, string shapeName, int targetSlideIndex)
+    public OperationResult CopyToPage(IVisioBatch batch, int pageIndex, string shapeName, int targetPageIndex)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
@@ -1072,7 +1072,7 @@ public class ShapeCommands : IShapeCommands
             dynamic? dropped = null;
             try
             {
-                targetPage = GetPage(ctx, targetSlideIndex);
+                targetPage = GetPage(ctx, targetPageIndex);
 
                 // Page.Drop copies the shape directly between pages. The clipboard round trip the
                 // PowerPoint version used (Copy + Shapes.Paste) is both slower and vulnerable to
@@ -1086,8 +1086,8 @@ public class ShapeCommands : IShapeCommands
                 return new OperationResult
                 {
                     Success = true,
-                    Action = "copy-to-slide",
-                    Message = $"Copied shape '{shapeName}' from page {pageIndex} to page {targetSlideIndex}" +
+                    Action = "copy-to-page",
+                    Message = $"Copied shape '{shapeName}' from page {pageIndex} to page {targetPageIndex}" +
                               (string.IsNullOrEmpty(newName) ? "" : $" as '{newName}'"),
                     FilePath = ctx.DocumentPath
                 };
@@ -3175,30 +3175,6 @@ public class ShapeCommands : IShapeCommands
                 ComUtilities.Release(ref page!);
             }
         });
-    }
-
-    public OperationResult SetActionSettings(IVisioBatch batch, int pageIndex, string shapeName, int actionType, string? hyperlinkAddress)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
-
-        // Visio has no ActionSettings. PowerPoint's model - a click action that navigates between
-        // slides - has no counterpart in a drawing, and the action types this method accepts
-        // (NextSlide, PreviousSlide, FirstSlide, LastSlide) describe a slideshow.
-        //
-        // The nearest Visio equivalents are the Actions ShapeSheet section (right-click menu
-        // commands) and hyperlinks, which are a different model rather than a rename. Failing with
-        // a clear message beats the RuntimeBinderException this used to produce, which told the
-        // caller nothing about why or what to use instead.
-        _ = batch;
-        _ = pageIndex;
-        _ = actionType;
-        _ = hyperlinkAddress;
-
-        throw new NotSupportedException(
-            "set-action-settings has no Visio equivalent. PowerPoint click actions navigate between " +
-            "slides, which a drawing has no concept of. For navigation between pages use a hyperlink " +
-            "with a SubAddress naming the target page (tracked in #35); for right-click commands use " +
-            "the Actions ShapeSheet section.");
     }
     public OperationResult Scale(IVisioBatch batch, int pageIndex, string shapeName, float scaleX, float scaleY)
     {

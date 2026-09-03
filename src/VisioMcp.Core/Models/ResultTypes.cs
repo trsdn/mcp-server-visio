@@ -208,13 +208,6 @@ public class ShapeListResult : ResultBase
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int PageIndex { get; set; }
 
-    [JsonIgnore]
-    public int SlideIndex
-    {
-        get => PageIndex;
-        set => PageIndex = value;
-    }
-
     public List<ShapeInfo> Shapes { get; set; } = [];
 }
 

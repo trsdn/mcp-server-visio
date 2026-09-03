@@ -686,19 +686,19 @@ public class ParameterValidationTests
     }
 
     [Fact]
-    public void ShapeCopyToSlide_NullShapeName_ThrowsArgumentNullException()
+    public void ShapeCopyToPage_NullShapeName_ThrowsArgumentNullException()
     {
         var commands = new ShapeCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.CopyToSlide(null!, 1, null!, 2));
+        Assert.Throws<ArgumentNullException>(() => commands.CopyToPage(null!, 1, null!, 2));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ShapeCopyToSlide_EmptyShapeName_ThrowsArgumentException(string shapeName)
+    public void ShapeCopyToPage_EmptyShapeName_ThrowsArgumentException(string shapeName)
     {
         var commands = new ShapeCommands();
-        Assert.Throws<ArgumentException>(() => commands.CopyToSlide(null!, 1, shapeName, 2));
+        Assert.Throws<ArgumentException>(() => commands.CopyToPage(null!, 1, shapeName, 2));
     }
 
     [Fact]
@@ -1030,22 +1030,6 @@ public class ParameterValidationTests
     {
         var commands = new ShapeCommands();
         Assert.Throws<ArgumentException>(() => commands.SetOpacity(null!, 1, shapeName, 0.5f));
-    }
-
-    [Fact]
-    public void ShapeSetActionSettings_NullShapeName_ThrowsArgumentNullException()
-    {
-        var commands = new ShapeCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetActionSettings(null!, 1, null!, 1, null));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ShapeSetActionSettings_EmptyShapeName_ThrowsArgumentException(string shapeName)
-    {
-        var commands = new ShapeCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetActionSettings(null!, 1, shapeName, 1, null));
     }
 
     [Fact]
@@ -1437,19 +1421,19 @@ public class ParameterValidationTests
     }
 
     [Fact]
-    public void TextInsertSlideNumber_NullShapeName_ThrowsArgumentNullException()
+    public void TextInsertPageNumber_NullShapeName_ThrowsArgumentNullException()
     {
         var commands = new TextCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.InsertSlideNumber(null!, 1, null!));
+        Assert.Throws<ArgumentNullException>(() => commands.InsertPageNumber(null!, 1, null!));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void TextInsertSlideNumber_EmptyShapeName_ThrowsArgumentException(string shapeName)
+    public void TextInsertPageNumber_EmptyShapeName_ThrowsArgumentException(string shapeName)
     {
         var commands = new TextCommands();
-        Assert.Throws<ArgumentException>(() => commands.InsertSlideNumber(null!, 1, shapeName));
+        Assert.Throws<ArgumentException>(() => commands.InsertPageNumber(null!, 1, shapeName));
     }
 
     // ── Background Commands ──────────────────────────────────

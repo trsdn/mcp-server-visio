@@ -6,7 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: public tools call a Visio page a page** (#71).
+
+  | Was | Now |
+  |---|---|
+  | `shape(copy-to-slide)`, `target_slide_index` | `shape(copy-to-page)`, `target_page_index` |
+  | `text(insert-slide-number)` | `text(insert-page-number)` |
+  | `shapealign(align\|distribute)`, `slide_index` | same actions, `page_index` |
+
+  A Visio drawing has pages. The parameter list is the model's map of the domain, and a tool
+  description cannot argue an agent out of what the signature says — an agent told it is working
+  with slides will reach for slide concepts that do not exist here.
+
+  The suppressed domains still use `slideIndex` and are untouched; they do not ship, so they cannot
+  mislead anyone, and they are renamed as each is ported (#62–#66, #77).
+
 ### Removed
+
+- **`shape(set-action-settings)`** (#71) — a shipped action that could never succeed. It threw
+  `NotSupportedException` on every call, and its parameters documented PowerPoint slideshow
+  navigation: `1=NextSlide, 2=PreviousSlide, 3=FirstSlide, 4=LastSlide`. Visio has no
+  `ActionSettings`; the nearest equivalents are the Actions ShapeSheet section and hyperlinks,
+  which are a different model rather than a rename.
+
+  With this the public surface is **178 actions across 15 tools**.
+
+- **`ShapeListResult.SlideIndex`** — a `[JsonIgnore]` alias for `PageIndex` that never reached the
+  wire.
 
 - **Six `window` actions that could not work, and permanently broke the session** (#109).
   `get-info`, `minimize`, `restore`, `maximize`, `set-view` and `get-view` targeted PowerPoint's
@@ -35,6 +63,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`PublicSurfaceNamingTests`** — asserts no public action or parameter names a page a slide,
+  scoped to the 15 public domains. Verified against an induced regression.
 - **`SharedApplicationLifetimeTests`** — asserts no command releases `ctx.Application`. Objects a
   command *fetches* must still be released; this is only about the application it was handed.
   Verified against an induced regression.

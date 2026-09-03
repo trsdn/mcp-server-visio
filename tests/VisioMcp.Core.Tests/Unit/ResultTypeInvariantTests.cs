@@ -40,7 +40,6 @@ public class ResultTypeInvariantTests
         var result = new ShapeListResult();
         Assert.False(result.Success);
         Assert.Equal(0, result.PageIndex);
-        Assert.Equal(0, result.SlideIndex);
         Assert.NotNull(result.Shapes);
         Assert.Empty(result.Shapes);
     }
@@ -260,7 +259,6 @@ public class ResultTypeInvariantTests
         Assert.False(result.Success);
         Assert.NotNull(result.Placeholders);
         Assert.Empty(result.Placeholders);
-        Assert.Equal(0, result.SlideIndex);
     }
 
     [Fact]
@@ -346,7 +344,6 @@ public class ResultTypeInvariantTests
     {
         var result = new ReadingOrderResult();
         Assert.False(result.Success);
-        Assert.Equal(0, result.SlideIndex);
         Assert.NotNull(result.Shapes);
         Assert.Empty(result.Shapes);
     }
