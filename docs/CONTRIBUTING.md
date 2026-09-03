@@ -4,7 +4,7 @@ Thank you for your interest in contributing to VisioMcp! This project is designe
 
 ## 🎯 Project Vision
 
-VisioMcp aims to be the go-to command-line tool for coding agents to interact with Microsoft PowerPoint files. We prioritize:
+VisioMcp aims to be the go-to command-line tool for coding agents to interact with Microsoft Visio files. We prioritize:
 
 - **Simplicity** - Clear, predictable commands
 - **Reliability** - Robust COM automation
@@ -16,10 +16,10 @@ VisioMcp aims to be the go-to command-line tool for coding agents to interact wi
 ### Development Environment
 
 1. **Prerequisites**:
-   - Windows OS (required for PowerPoint COM)
+   - Windows OS (required for Visio COM)
    - Visual Studio 2022 or VS Code
    - .NET 10 SDK
-   - Microsoft PowerPoint installed
+   - Microsoft Visio installed
 
 2. **Setup**:
    ```powershell
@@ -46,7 +46,7 @@ VisioMcp aims to be the go-to command-line tool for coding agents to interact wi
 
 3. **Test Your Setup**:
    ```powershell
-   dotnet run -- pq-list "path/to/test.pptx"
+   dotnet run -- pq-list "path/to/test.vsdx"
    ```
 
 ## 📋 Development Guidelines
@@ -80,7 +80,7 @@ public class MyCommands : IMyCommands
         if (!ValidateArgs(args, expectedCount, "usage string"))
             return 1;
             
-        // PowerPoint automation using batch API
+        // Visio automation using batch API
         var task = Task.Run(async () =>
         {
             await using var batch = await PptSession.BeginBatchAsync(filePath);
@@ -98,15 +98,15 @@ public class MyCommands : IMyCommands
 
 #### Critical Rules
 
-1. **Always use batch API** - Never manage PowerPoint lifecycle manually
-2. **PowerPoint uses 1-based indexing** - `collection.Item(1)` is the first element
+1. **Always use batch API** - Never manage Visio lifecycle manually
+2. **Visio uses 1-based indexing** - `collection.Item(1)` is the first element
 3. **Use `QueryTables.Add()` not `ListObjects.Add()`** - For loading Power Query data
 4. **Escape user input** - Always use `.EscapeMarkup()` with Spectre.Console
 5. **Return 0 for success, 1+ for errors** - Consistent exit codes
 
-### PowerPoint COM Best Practices
+### Visio COM Best Practices
 
-- **Late binding with dynamic types** - Use `Type.GetTypeFromProgID("PowerPoint.Application")`
+- **Late binding with dynamic types** - Use `Type.GetTypeFromProgID("Visio.InvisibleApp")`
 - **Proper error handling** - Catch `COMException` and provide helpful messages
 - **Resource cleanup** - Batch API handles COM object lifecycle automatically
 - **Input validation** - Check file existence and argument counts early
@@ -115,11 +115,11 @@ public class MyCommands : IMyCommands
 
 Before submitting:
 
-1. **Manual testing** with various PowerPoint files
-2. **Verify PowerPoint process cleanup** - No `powerpnt.exe` should remain after 5 seconds
+1. **Manual testing** with various Visio files
+2. **Verify Visio Process cleanup** - No `visio.exe` should remain after 5 seconds
 3. **Test error conditions** - Missing files, invalid arguments, etc.
 4. **VBA script testing** - For script-related commands, test with real VBA macros
-5. **Cross-version compatibility** - Test with different PowerPoint versions if possible
+5. **Cross-version compatibility** - Test with different Visio versions if possible
 
 ## 🔧 Adding New Commands
 
@@ -175,10 +175,10 @@ Add your command to the help output in `ShowHelp()`.
 
 - [ ] Code builds with zero warnings
 - [ ] All existing commands still work
-- [ ] PowerPoint processes clean up properly
+- [ ] Visio Processes clean up properly
 - [ ] Added appropriate error handling
 - [ ] Updated help text if needed
-- [ ] Tested with various PowerPoint files
+- [ ] Tested with various Visio files
 
 ### PR Description Template
 
@@ -193,8 +193,8 @@ Brief description of changes
 - [ ] Documentation update
 
 ## Testing
-- [ ] Tested manually with PowerPoint files
-- [ ] Verified PowerPoint process cleanup
+- [ ] Tested manually with Visio files
+- [ ] Verified Visio Process cleanup
 - [ ] Tested error conditions
 - [ ] VBA script execution tested (if applicable)
 - [ ] No build warnings
@@ -237,10 +237,10 @@ AnsiConsole.MarkupLine($"[cyan]{title}[/]");
 
 When reporting bugs, please include:
 
-- **PowerPoint version** and Windows version
+- **Visio version** and Windows version
 - **Command used** and arguments
 - **Expected behavior** vs actual behavior
-- **Sample PowerPoint file** (if possible)
+- **Sample Visio file** (if possible)
 - **Error messages** (full text)
 
 ## 💡 Feature Requests
@@ -249,12 +249,12 @@ Great feature requests include:
 
 - **Use case description** - Why is this needed?
 - **Proposed command syntax** - How should it work?
-- **PowerPoint operations involved** - What APIs would be used?
+- **Visio operations involved** - What APIs would be used?
 - **Target users** - Coding agents? Direct users?
 
 ## 📚 Learning Resources
 
-- [PowerPoint VBA Object Model Reference](https://docs.microsoft.com/en-us/office/vba/api/overview/powerpoint)
+- [Visio VBA Object Model Reference](https://learn.microsoft.com/office/vba/api/overview/visio)
 - [Power Query M Language Reference](https://docs.microsoft.com/en-us/powerquery-m/)
 - [Spectre.Console Documentation](https://spectreconsole.net/)
 - [.NET COM Interop Guide](https://docs.microsoft.com/en-us/dotnet/framework/interop/interoperating-with-unmanaged-code)
@@ -270,10 +270,10 @@ Great feature requests include:
 - `documentation` - Documentation improvements
 - `good first issue` - Good for newcomers
 - `help wanted` - Extra attention needed  
-- `ppt-com` - PowerPoint COM automation issues
+- `ppt-com` - Visio COM automation issues
 - `power-query` - Power Query specific
 - `coding-agent` - Coding agent related
 
 ---
 
-Thank you for contributing to VisioMcp! Together we're making PowerPoint automation more accessible to coding agents and developers worldwide. 🚀
+Thank you for contributing to VisioMcp! Together we're making Visio automation more accessible to coding agents and developers worldwide. 🚀

@@ -127,16 +127,16 @@ VisioMcp uses a **production-ready three-tier testing approach** with organized 
 ```
 tests/
 ├── VisioMcp.Core.Tests/
-│   ├── Unit/           # Fast tests, no PowerPoint required (~2-5 sec)
-│   ├── Integration/    # Medium speed, requires PowerPoint (~1-15 min)
+│   ├── Unit/           # Fast tests, no Visio required (~2-5 sec)
+│   ├── Integration/    # Medium speed, requires Visio (~1-15 min)
 │   └── RoundTrip/      # Slow, comprehensive workflows (~3-10 min each)
 ├── VisioMcp.McpServer.Tests/
 │   ├── Unit/           # Fast tests, no server required  
 │   ├── Integration/    # Medium speed, requires MCP server
 │   └── RoundTrip/      # Slow, end-to-end protocol testing
 └── VisioMcp.CLI.Tests/
-    ├── Unit/           # Fast tests, no PowerPoint required
-    └── Integration/    # Medium speed, requires PowerPoint & CLI
+    ├── Unit/           # Fast tests, no Visio required
+    └── Integration/    # Medium speed, requires Visio & CLI
 ```
 
 ### **Development Workflow Commands**
@@ -165,13 +165,13 @@ dotnet test --filter "RunType=OnDemand"
 **⚠️ Never mock COM** - Anything touching Visio COM must be an integration test; COM-free logic may be unit tested. See `docs/ADR-001-TESTING-STRATEGY.md` for the rationale
 
 **Integration Tests (`Category=Integration`)**
-- ✅ Test business logic with real PowerPoint COM interaction
+- ✅ Test business logic with real Visio COM interaction
 - ✅ Medium speed (10-20 minutes for full suite)
-- ✅ Requires PowerPoint installation
-- ✅ These ARE our unit tests (PowerPoint COM cannot be mocked)
+- ✅ requires Visio installation
+- ✅ These ARE our unit tests (Visio COM cannot be mocked)
 - ✅ Run specific features during development
 - ✅ Slow execution (3-10 minutes each)
-- ✅ Verifies actual PowerPoint state changes
+- ✅ Verifies actual Visio state changes
 - ✅ Comprehensive scenario coverage
 
 ### **Adding New Tests**
@@ -185,24 +185,24 @@ When creating tests, follow these placement guidelines:
 [Trait("Layer", "Core")]
 public class CommandLogicTests 
 {
-    // Tests business logic without PowerPoint
+    // Tests business logic without Visio
 }
 
 // Integration Test Example  
 [Trait("Category", "Integration")]
 [Trait("Speed", "Medium")]
 [Trait("Feature", "PowerQuery")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 public class PowerQueryCommandsTests
 {
-    // Tests single PowerPoint operations
+    // Tests single Visio operations
 }
 
 // Round Trip Test Example
 [Trait("Category", "RoundTrip")]
 [Trait("Speed", "Slow")]
 [Trait("Feature", "EndToEnd")]
-[Trait("RequiresPowerPoint", "true")]
+[Trait("RequiresVisio", "true")]
 public class VbaWorkflowTests
 {
     // Tests complete workflows: import → run → verify → export
@@ -224,7 +224,7 @@ dotnet build -c Release
 ```
 
 **For Complex Features:**
-- ✅ Add integration tests for all PowerPoint operations
+- ✅ Add integration tests for all Visio operations
 - ✅ Test round-trip persistence (create → save → reload → verify)
 - ✅ Update documentation
 - ✅ Integration test, not a mocked unit test (see ADR-001-TESTING-STRATEGY.md)
@@ -244,7 +244,7 @@ npm run check
 npm test
 ```
 
-If the change affects end-to-end orchestration behavior, also run a real smoke scenario with `node .\src\cli.mjs run --task ...` on a Windows desktop with PowerPoint installed.
+If the change affects end-to-end orchestration behavior, also run a real smoke scenario with `node .\src\cli.mjs run --task ...` on a Windows desktop with Visio installed.
 
 ## 🔧 **CLI Command Code Generation**
 
@@ -333,7 +333,7 @@ The categories are currently hard-coded in the CLI generator because:
 **Future improvement:** Could emit a manifest file from Core and parse it in CLI generator using source file inclusion.
 
 **For Complex Features:**
-- ✅ Add integration tests for all PowerPoint operations
+- ✅ Add integration tests for all Visio operations
 - ✅ Test round-trip persistence (create → save → reload → verify)
 - ✅ Update documentation
 - ✅ Integration test, not a mocked unit test (see ADR-001-TESTING-STRATEGY.md)
@@ -485,14 +485,14 @@ dotnet build -c Release
 
 ### **Why Trimming Is Not Supported**
 
-VisioMcp **cannot be trimmed** due to fundamental architectural constraints of PowerPoint COM automation. The IL trimmer removes unused code at publish time, but PowerPoint COM interop requires dynamic code paths that the trimmer cannot statically analyze.
+VisioMcp **cannot be trimmed** due to fundamental architectural constraints of Visio COM automation. The IL trimmer removes unused code at publish time, but Visio COM interop requires dynamic code paths that the trimmer cannot statically analyze.
 
 ### **Technical Constraints**
 
 **1. Runtime COM Activation**
 ```csharp
-// This code CANNOT be trimmed - PowerPoint type comes from Windows Registry at runtime
-Type? pptType = Type.GetTypeFromProgID("PowerPoint.Application");
+// This code CANNOT be trimmed - Visio type comes from Windows Registry at runtime
+Type? pptType = Type.GetTypeFromProgID("Visio.InvisibleApp");
 dynamic ppt = Activator.CreateInstance(pptType)!;
 ```
 
@@ -502,20 +502,20 @@ The trimmer cannot know:
 
 **2. Late-Bound COM Calls**
 ```csharp
-// All PowerPoint operations use dynamic dispatch - the trimmer can't trace these calls
+// All Visio operations use dynamic dispatch - the trimmer can't trace these calls
 dynamic presentation = ppt.Presentations.Open(filePath);
 dynamic slide = presentation.Slides.Item(1);
 slide.Shapes[1].TextFrame.TextRange.Text = "Hello";
 ```
 
-**3. PowerPoint is External**
-- PowerPoint is not a .NET assembly - it's an out-of-process COM server
-- The .NET runtime uses the Dynamic Language Runtime (DLR) for all PowerPoint calls
+**3. Visio is External**
+- Visio is not a .NET assembly - it's an out-of-process COM server
+- The .NET runtime uses the Dynamic Language Runtime (DLR) for all Visio calls
 - No static type information exists for the trimmer to analyze
 
 ### **What We DID Modernize**
 
-While the PowerPoint automation core cannot be trimmed, we modernized the OLE Message Filter to use .NET source-generated COM interop:
+While the Visio automation core cannot be trimmed, we modernized the OLE Message Filter to use .NET source-generated COM interop:
 
 | Component | Before | After |
 |-----------|--------|-------|
@@ -541,17 +541,17 @@ The following warnings are suppressed in `Directory.Build.props` because they ca
 ### **Can We Ever Support Trimming?**
 
 **No**, unless one of these happens:
-1. **PowerPoint exposes a .NET API** - Microsoft would need to create a managed PowerPoint SDK
+1. **Visio exposes a .NET API** - Microsoft would need to create a managed Visio SDK
 2. **We abandon COM** - Would require a completely different architecture (file-based only, no live automation)
-3. **PowerPoint is replaced** - Use a different presentation engine with .NET bindings
+3. **Visio is replaced** - Use a different diagramming engine with .NET bindings
 
-**The current architecture is the standard approach** for PowerPoint automation in .NET and is used by thousands of applications. Trimming is simply not compatible with COM automation.
+**The current architecture is the standard approach** for Visio automation in .NET and is used by thousands of applications. Trimming is simply not compatible with COM automation.
 
 ### **Alternatives for Smaller Binaries**
 
 If deployment size is a concern:
 - Use **framework-dependent** deployment (default) - smallest option (~15 MB)
-- The .NET runtime is typically already installed on Windows machines with PowerPoint
+- The .NET runtime is typically already installed on Windows machines with Visio
 - Self-contained deployment is only needed for isolated environments
 
 ## 📞 **Need Help?**

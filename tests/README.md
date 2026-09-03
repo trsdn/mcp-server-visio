@@ -104,7 +104,7 @@ The canonical gate runs three CLI scenarios plus the matching three MCP scenario
 ### Prerequisites
 
 - `AZURE_OPENAI_ENDPOINT` environment variable
-- Windows desktop with PowerPoint installed
+- Windows desktop with Visio installed
 - pytest-aitest dependency (local path via uv)
 
 **See [LLM Tests README](../llm-tests/README.md) for complete documentation.**
@@ -170,7 +170,7 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\PowerPoint\Security
 
 - ✅ **File Isolation** - Each test creates unique file (no sharing)
 - ✅ **Binary Assertions** - Pass OR fail, never "accept both"
-- ✅ **Verify PowerPoint State** - Always verify actual PowerPoint state after operations
+- ✅ **Verify Visio state** - Always verify actual Visio state after operations
 - ❌ **No SaveAsync** - Unless testing persistence (see [Rule 14](../.github/instructions/critical-rules.instructions.md#rule-14-no-saveasync-unless-testing-persistence))
 
 ## Getting Help
