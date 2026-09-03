@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **The `accessibility` domain** (#77). Classified *Remap*, but nothing was left to remap:
+
+  - **`audit` already shipped**, as `shape(set-alt-text)` and `text(alt-text-audit)`.
+  - **`get-reading-order` and `set-reading-order` have no Visio analogue.** `TabOrder`,
+    `ReadingOrder` and `AccessibilityOrder` are absent as properties *and* as ShapeSheet cells.
+
+  All three were still PowerPoint code — every one walked `ctx.Document.Slides`, a collection Visio
+  does not have, so they would have thrown `RuntimeBinderException` had they shipped. Deleting is
+  the same call made for `background` and `pagesetup` in #91: a Port row that can never be
+  satisfied is worse than no row, because it reads as work outstanding rather than a decision made.
+
+  Categories go from 22 to 21 (15 public, 6 suppressed); interface methods from 203 to 193. The
+  public surface is unchanged.
+
+  `LegacyDomainClassificationTests` caught the now-stale `FEATURES.md` row without being asked.
+
 ### Fixed
 
 - **MCP returned an opaque error for an invalid action; it now names the valid ones** (#55).
