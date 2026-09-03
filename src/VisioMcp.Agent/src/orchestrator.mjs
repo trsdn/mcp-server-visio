@@ -19,17 +19,18 @@ import {
 } from "./constants.mjs";
 import { parsePlanFromText } from "./planner.mjs";
 import { createRuntime, destroyRuntime, runPhase } from "./runtime.mjs";
-import { extractTextRunsFromSlideXml, findMissingRequiredTexts, findSlideQualityIssues } from "./validation.mjs";
+import { extractShapeTexts, findMissingConnectors, findMissingRequiredTexts, findPageQualityIssues } from "./validation.mjs";
+import { closeSessionsFor, readDrawing } from "./visioCli.mjs";
 
 const MAX_REPAIR_ATTEMPTS = 3;
 
 function buildBusinessQualityRules() {
   return [
-    "- Treat business-slide quality as a hard requirement, not a nice-to-have.",
+    "- Treat business-page quality as a hard requirement, not a nice-to-have.",
     "- Do NOT use novelty or decorative shapes like sun, star, heart, cloud, moon, or smiley shapes unless the plan explicitly asks for them.",
     "- For KPI cards, panels, and callouts, prefer rectangles or rounded rectangles with flat fills and simple lines.",
     "- Use a restrained business palette: neutral background, dark text, one main accent, and semantic red/green only where the content explicitly calls for risk or positive next steps.",
-    "- If the result looks like default PowerPoint theme art or contains gaudy styling, replace it before finishing.",
+    "- If the result looks like default Visio theme art or contains gaudy styling, replace it before finishing.",
   ];
 }
 
@@ -49,7 +50,7 @@ function defaultOutputPath() {
     String(now.getSeconds()).padStart(2, "0"),
   ].join("");
 
-  return resolve(process.cwd(), `visio-mcp-agent-${stamp}.pptx`);
+  return resolve(process.cwd(), `visio-mcp-agent-${stamp}.vsdx`);
 }
 
 function preparePaths(outputPath, overwrite) {
@@ -111,19 +112,19 @@ function loadPlanningGuidance() {
 
 function buildPlanningPrompt({ task, archetypeIds }) {
   return [
-    "You are the planning phase of a PowerPoint deck agent.",
-    "Do not create or modify any presentation in this phase.",
+    "You are the planning phase of a Visio diagram agent.",
+    "Do not create or modify any document in this phase.",
     "Do not rely on MCP batch execution or subagents.",
     "Return ONLY valid JSON and nothing else.",
     "",
     "Required schema:",
     "{",
-    '  "slides": [',
+    '  "pages": [',
     "    {",
     '      "index": 1,',
     '      "title": "Action title",',
     '      "archetypeId": "executive-summary",',
-    '      "intent": "What the slide must help the audience understand or decide",',
+    '      "intent": "What the page must help the audience understand or decide",',
     '      "content": "Detailed build instructions specific enough for an execution phase"',
     "    }",
     "  ]",
@@ -147,13 +148,13 @@ function loadPlanFromFile(filePath) {
   const content = readFileSync(resolvedPath, "utf-8");
   const plan = parsePlanFromText(content);
   if (!plan) {
-    throw new Error(`Plan file did not contain a valid deck plan: ${resolvedPath}`);
+    throw new Error(`Plan file did not contain a valid diagram plan: ${resolvedPath}`);
   }
 
   return plan;
 }
 
-function buildSlideExecutionRules(plan) {
+function buildPageExecutionRules(plan) {
   const blankFriendlyArchetypes = new Set([
     "appendix",
     "big-number",
@@ -171,88 +172,88 @@ function buildSlideExecutionRules(plan) {
     "waterfall-chart",
   ]);
 
-  return plan.slides.flatMap((slide) => {
-    const rules = [`- Slide ${slide.index}: archetype '${slide.archetypeId}'.`];
-    const content = slide.content || "";
+  return plan.pages.flatMap((page) => {
+    const rules = [`- Page ${page.index}: archetype '${page.archetypeId}'.`];
+    const content = page.content || "";
     const contentLower = content.toLowerCase();
     const minimumShapeMatch = content.match(/(\d+)\+\s*shapes/i);
 
-    rules.push(`- Slide ${slide.index}: render the exact slide title text "${slide.title}" as a visible heading and preserve it through later edits.`);
+    rules.push(`- Page ${page.index}: render the exact page title text "${page.title}" as a visible heading and preserve it through later edits.`);
 
-    if (slide.archetypeId === "title-slide") {
-      rules.push(`- Slide ${slide.index}: use slide(action='create', layout_name='Title Slide').`);
-      rules.push(`- Slide ${slide.index}: prefer placeholders for title and subtitle.`);
+    if (page.archetypeId === "title-page") {
+      rules.push(`- Page ${page.index}: use page(action='create', layout_name='Title Page').`);
+      rules.push(`- Page ${page.index}: prefer placeholders for title and subtitle.`);
       return rules;
     }
 
-    rules.push(`- Slide ${slide.index}: do NOT use slide(action='create', layout_name='Title Slide').`);
+    rules.push(`- Page ${page.index}: do NOT use page(action='create', layout_name='Title Page').`);
 
-    if (contentLower.includes("blank layout") || blankFriendlyArchetypes.has(slide.archetypeId)) {
-      rules.push(`- Slide ${slide.index}: create the slide with slide(action='create', layout_name='Blank').`);
+    if (contentLower.includes("blank layout") || blankFriendlyArchetypes.has(page.archetypeId)) {
+      rules.push(`- Page ${page.index}: create the page with page(action='create', layout_name='Blank').`);
     }
 
-    rules.push(`- Slide ${slide.index}: implement the detailed content literally; do not collapse it into only a title and subtitle.`);
-    rules.push(`- Slide ${slide.index}: use separate shapes/text boxes/containers for distinct panels, cards, and callouts.`);
+    rules.push(`- Page ${page.index}: implement the detailed content literally; do not collapse it into only a title and subtitle.`);
+    rules.push(`- Page ${page.index}: use separate shapes/text boxes/containers for distinct panels, cards, and callouts.`);
 
     if (minimumShapeMatch) {
-      rules.push(`- Slide ${slide.index}: do not finish below ${minimumShapeMatch[1]} shapes because the plan explicitly requires that density.`);
+      rules.push(`- Page ${page.index}: do not finish below ${minimumShapeMatch[1]} shapes because the plan explicitly requires that density.`);
     }
 
     if (contentLower.includes("kpi card") || contentLower.includes("kpi cards")) {
-      rules.push(`- Slide ${slide.index}: build distinct KPI cards, each with its own background shape and text elements.`);
+      rules.push(`- Page ${page.index}: build distinct KPI cards, each with its own background shape and text elements.`);
     }
 
     if (contentLower.includes("clustered column chart") || contentLower.includes("chart")) {
-      rules.push(`- Slide ${slide.index}: create a real chart object when chart data is specified, not a text placeholder describing a chart.`);
+      rules.push(`- Page ${page.index}: create a real chart object when chart data is specified, not a text placeholder describing a chart.`);
     }
 
     if (contentLower.includes("insight panel")) {
-      rules.push(`- Slide ${slide.index}: build the insight panel as its own container with separate bullet text elements.`);
+      rules.push(`- Page ${page.index}: build the insight panel as its own container with separate bullet text elements.`);
     }
 
     if (contentLower.includes("callout")) {
-      rules.push(`- Slide ${slide.index}: build each callout as a separate colored box with its own text.`);
+      rules.push(`- Page ${page.index}: build each callout as a separate colored box with its own text.`);
     }
 
     return rules;
   });
 }
 
-function buildExecutionPrompt({ task, plan, outputPath, showPowerPoint }) {
-  const slideExecutionRules = buildSlideExecutionRules(plan);
+function buildExecutionPrompt({ task, plan, outputPath, showVisio }) {
+  const pageExecutionRules = buildPageExecutionRules(plan);
   const businessQualityRules = buildBusinessQualityRules();
 
   return [
-    "You are the execution phase of a PowerPoint deck agent.",
+    "You are the execution phase of a Visio diagram agent.",
     "You are operating through mcp-server-visio only.",
     "Do not rely on MCP batch execution or subagents.",
-    "Treat the plan as fixed input. Build slide-by-slide with normal sequential MCP tool calls.",
+    "Treat the plan as fixed input. Build page-by-page with normal sequential MCP tool calls.",
     "",
     "Execution rules:",
-    `- Create a new presentation at this exact path: ${outputPath}`,
-    `- When creating the file, set show=${showPowerPoint ? "true" : "false"}`,
-    "- Keep one PowerPoint session open for the full build.",
+    `- Create a new document at this exact path: ${outputPath}`,
+    `- When creating the file, set show=${showVisio ? "true" : "false"}`,
+    "- Keep one Visio session open for the full build.",
     "- Use the skill guidance plus design tools as needed.",
-    "- Build slides in plan order.",
-    `- The final presentation MUST contain exactly ${plan.slides.length} slide(s).`,
+    "- Build pages in plan order.",
+    `- The final document MUST contain exactly ${plan.pages.length} page(s).`,
     "- Prefer targeted edits over delete/rebuild.",
-    "- Before finishing, verify slide count with slide list/read operations.",
+    "- Before finishing, verify page count with page list/read operations.",
     "- Finish only after file(action='close', save=true).",
     "",
     "Required MCP tool pattern:",
     "- Start with file(action='create', path=..., show=...)",
-    "- For each slide, create the slide first, then populate content",
-    "- Use slide(action='list') to confirm the deck structure before closing",
+    "- For each page, create the page first, then populate content",
+    "- Use page(action='list') to confirm the drawing structure before closing",
     "- Prefer placeholder(action='set-text') when a layout already provides title/subtitle placeholders",
     "",
     "Business design quality rules:",
     ...businessQualityRules,
     "",
-    "Slide-specific execution rules:",
-    ...slideExecutionRules,
+    "Page-specific execution rules:",
+    ...pageExecutionRules,
     "",
-    "Title-slide recipe:",
-    "- If the archetype is title-slide, create slide(action='create', layout_name='Title Slide')",
+    "Title-page recipe:",
+    "- If the archetype is title-page, create page(action='create', layout_name='Title Page')",
     "- Then use placeholder(action='list')",
     "- Set the title/subtitle with placeholder(action='set-text', placeholder_index=..., text=...)",
     "- Only fall back to freeform text boxes if the title layout does not expose placeholders",
@@ -269,41 +270,41 @@ function buildExecutionPrompt({ task, plan, outputPath, showPowerPoint }) {
   ].join("\n");
 }
 
-function buildRepairPrompt({ task, plan, outputPath, validationError, showPowerPoint }) {
-  const slideExecutionRules = buildSlideExecutionRules(plan);
+function buildRepairPrompt({ task, plan, outputPath, validationError, showVisio }) {
+  const pageExecutionRules = buildPageExecutionRules(plan);
   const businessQualityRules = buildBusinessQualityRules();
 
   return [
-    "You are the repair phase of a PowerPoint deck agent.",
-    "A previous execution produced an incomplete presentation.",
-    "Repair the presentation through mcp-server-visio only.",
+    "You are the repair phase of a Visio diagram agent.",
+    "A previous execution produced an incomplete document.",
+    "Repair the document through mcp-server-visio only.",
     "Do not rely on MCP batch execution or subagents.",
     "",
     "Repair goal:",
     `- Output file path: ${outputPath}`,
-    `- Required final slide count: ${plan.slides.length}`,
+    `- Required final page count: ${plan.pages.length}`,
     `- Validation failure to fix: ${validationError}`,
     "- If the validation failure names missing required text elements, add those text elements literally and preserve everything already built correctly.",
-    "- If the validation failure names quality issues such as novelty shapes or palette problems, restyle the slide until those issues are gone.",
+    "- If the validation failure names quality issues such as novelty shapes or palette problems, restyle the page until those issues are gone.",
     "- If the file exists, open and repair it. If it is missing, create it.",
-    `- When creating a new file, set show=${showPowerPoint ? "true" : "false"}`,
-    "- Build or repair slides so the final deck matches the plan.",
+    `- When creating a new file, set show=${showVisio ? "true" : "false"}`,
+    "- Build or repair pages so the final drawing matches the plan.",
     "- Do not stop while a planned callout or footer container exists without its required text.",
-    "- Use slide list/read operations before closing to confirm the final structure.",
+    "- Use page list/read operations before closing to confirm the final structure.",
     "- Finish only after file(action='close', save=true).",
     "",
     "Business design quality rules:",
     ...businessQualityRules,
     "",
-    "Slide-specific repair rules:",
-    ...slideExecutionRules,
+    "Page-specific repair rules:",
+    ...pageExecutionRules,
     "",
-    "Repair recipe for title-slide outputs:",
-    "- If the file is empty or missing slides, open or create it",
-    "- Use slide(action='create', layout_name='Title Slide') for title-slide plan items",
+    "Repair recipe for title-page outputs:",
+    "- If the file is empty or missing pages, open or create it",
+    "- Use page(action='create', layout_name='Title Page') for title-page plan items",
     "- Use placeholder(action='list') and placeholder(action='set-text') to write title and subtitle",
-    "- Confirm the final slide count with slide(action='list') before closing",
-    "- If a non-title slide is missing its planned heading, add the exact slide title from the plan as a visible top heading before closing",
+    "- Confirm the final page count with page(action='list') before closing",
+    "- If a non-title page is missing its planned heading, add the exact page title from the plan as a visible top heading before closing",
     "",
     "Original user task:",
     task,
@@ -319,35 +320,35 @@ function buildRepairPrompt({ task, plan, outputPath, validationError, showPowerP
 
 function buildVerificationPrompt({ task, outputPath, artifactsDir, plan }) {
   const businessQualityRules = buildBusinessQualityRules();
-  const slideExecutionRules = buildSlideExecutionRules(plan);
+  const pageExecutionRules = buildPageExecutionRules(plan);
 
   return [
-    "You are the verification phase of a PowerPoint deck agent.",
-    "Re-open the generated presentation and review it with normal sequential MCP tool calls.",
+    "You are the verification phase of a Visio diagram agent.",
+    "Re-open the generated document and review it with normal sequential MCP tool calls.",
     "Do not rely on MCP batch execution or subagents.",
     "Apply only targeted fixes for obvious structural issues.",
     "Preserve all content that already matches the plan, especially planned headings, callouts, and footer text.",
     "",
     "Verification rules:",
-    `- Open this presentation: ${outputPath}`,
-    "- Inspect slides with slide list/read plus shape/text inspection as needed.",
-    `- Export slide images for human review into this directory: ${artifactsDir}`,
+    `- Open this document: ${outputPath}`,
+    "- Inspect pages with page list/read plus shape/text inspection as needed.",
+    `- Export page images for human review into this directory: ${artifactsDir}`,
     "- Focus on both structure and visual business quality.",
-    "- Specifically look for novelty shapes, default PowerPoint theme art, weak palette choices, poor alignment, unreadable density, and obviously unprofessional styling.",
+    "- Specifically look for novelty shapes, default Visio theme art, weak palette choices, poor alignment, unreadable density, and obviously unprofessional styling.",
     "- If you find a visual quality issue, fix it instead of merely reporting it.",
-    "- Before finishing, confirm that each slide still contains the exact planned title text and any other required literal text from the plan.",
+    "- Before finishing, confirm that each page still contains the exact planned title text and any other required literal text from the plan.",
     "",
     "Business design quality rules:",
     ...businessQualityRules,
     "",
-    "Slide-specific verification rules:",
-    ...slideExecutionRules,
+    "Page-specific verification rules:",
+    ...pageExecutionRules,
     "",
     "Structured plan:",
     "```json",
     JSON.stringify(plan, null, 2),
     "```",
-    "- Save and close the presentation when done.",
+    "- Save and close the document when done.",
     "",
     "Original user task:",
     task,
@@ -367,73 +368,34 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function escapePowerShellSingleQuoted(text) {
-  return String(text).replace(/'/g, "''");
-}
-
-function runPowerShellScript(script) {
-  return execFileSync(
-    "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-Command", script],
-    {
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    }
-  ).trim();
-}
-
-function closePresentationIfOpen(filePath) {
-  const target = escapePowerShellSingleQuoted(filePath);
-  const script = [
-    "Add-Type -AssemblyName Microsoft.VisualBasic",
-    `$target = '${target}'`,
-    "$targetItem = Get-Item $target -ErrorAction SilentlyContinue",
-    "if ($null -eq $targetItem) { exit 0 }",
-    "$targetPath = $targetItem.FullName",
-    "try { $app = [Microsoft.VisualBasic.Interaction]::GetObject('', 'PowerPoint.Application') } catch { exit 0 }",
-    "try {",
-    "  for ($i = $app.Presentations.Count; $i -ge 1; $i--) {",
-    "    $presentation = $app.Presentations.Item($i)",
-    "    try {",
-    "      $presentationPath = $null",
-    "      try {",
-    "        if ($presentation.FullName) {",
-    "          $presentationPath = (Get-Item $presentation.FullName -ErrorAction SilentlyContinue).FullName",
-    "        }",
-    "      } catch {}",
-    "      if ($presentationPath -eq $targetPath) {",
-    "        try { $presentation.Save() } catch {}",
-    "        $presentation.Close()",
-    "      }",
-    "    } finally {",
-    "      [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($presentation)",
-    "    }",
-    "  }",
-    "} finally {",
-    "  [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($app)",
-    "}",
-  ].join("; ");
-
+/**
+ * Closes any session still holding the artefact, so it can be inspected.
+ *
+ * The PowerPoint original attached to a running PowerPoint over COM with
+ * GetObject("", "PowerPoint.Application") — which starts PowerPoint when none is running — and
+ * closed the document from there. The service already owns every Visio session this agent
+ * creates, so asking it to close is both correct and does not touch another application.
+ */
+function closeDrawingIfOpen(filePath) {
   try {
-    runPowerShellScript(script);
+    closeSessionsFor(filePath);
   } catch {
-    // Best-effort cleanup only.
+    // Best-effort cleanup only: the caller waits for the file lock either way.
   }
 }
 
-async function waitForExpectedSlideCount(filePath, expectedSlideCount, timeoutMs = 15000) {
+async function waitForExpectedPageCount(filePath, expectedPageCount, timeoutMs = 15000) {
   const startedAt = Date.now();
   let lastCount = 0;
 
   while ((Date.now() - startedAt) < timeoutMs) {
     try {
-      lastCount = getPptxSlideCount(filePath);
-      if (lastCount >= expectedSlideCount) {
+      lastCount = readDrawing(filePath).length;
+      if (lastCount >= expectedPageCount) {
         return lastCount;
       }
     } catch {
-      // Keep retrying until PowerPoint has flushed the file.
+      // Keep retrying until Visio has flushed the file.
     }
 
     await delay(500);
@@ -457,94 +419,53 @@ async function waitForFileUnlock(filePath, timeoutMs = 15000) {
 
   return false;
 }
-
-function getPptxSlideCount(filePath) {
-  const target = escapePowerShellSingleQuoted(filePath);
-  const script = [
-    "Add-Type -AssemblyName System.IO.Compression.FileSystem",
-    `$target = '${target}'`,
-    "$zip = [System.IO.Compression.ZipFile]::OpenRead($target)",
-    "try {",
-    "  ($zip.Entries | Where-Object { $_.FullName -match '^ppt/slides/slide\\d+\\.xml$' }).Count",
-    "} finally {",
-    "  $zip.Dispose()",
-    "}",
-  ].join("; ");
-
-  const output = runPowerShellScript(script);
-  const count = Number.parseInt(output, 10);
-  if (!Number.isFinite(count)) {
-    throw new Error(`Could not determine slide count for ${filePath}.`);
-  }
-
-  return count;
-}
-
-function getSlideXmlFromPptx(filePath, slideIndex) {
-  const target = escapePowerShellSingleQuoted(filePath);
-  const entryName = escapePowerShellSingleQuoted(`ppt/slides/slide${slideIndex}.xml`);
-  const script = [
-    "Add-Type -AssemblyName System.IO.Compression.FileSystem",
-    `$target = '${target}'`,
-    `$entryName = '${entryName}'`,
-    "$zip = [System.IO.Compression.ZipFile]::OpenRead($target)",
-    "try {",
-    "  $entry = $zip.GetEntry($entryName)",
-    "  if ($null -eq $entry) { throw \"Missing slide entry: $entryName\" }",
-    "  $reader = New-Object System.IO.StreamReader($entry.Open())",
-    "  try {",
-    "    $content = $reader.ReadToEnd()",
-    "    [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content))",
-    "  } finally {",
-    "    $reader.Dispose()",
-    "  }",
-    "} finally {",
-    "  $zip.Dispose()",
-    "}",
-  ].join("; ");
-
-  const base64 = runPowerShellScript(script);
-  return Buffer.from(base64, "base64").toString("utf-8");
-}
-
-async function validateDeckArtifact(outputPath, expectedSlideCount) {
+async function validateDrawingArtifact(outputPath, expectedPageCount) {
   if (!existsSync(outputPath)) {
     throw new Error(`Output file was not created: ${outputPath}`);
   }
 
-  closePresentationIfOpen(outputPath);
+  closeDrawingIfOpen(outputPath);
 
   const unlocked = await waitForFileUnlock(outputPath);
   if (!unlocked) {
     throw new Error(`Output file is still locked after execution: ${outputPath}`);
   }
 
-  const slideCount = await waitForExpectedSlideCount(outputPath, expectedSlideCount);
-  if (slideCount < expectedSlideCount) {
+  const pageCount = await waitForExpectedPageCount(outputPath, expectedPageCount);
+  if (pageCount < expectedPageCount) {
     throw new Error(
-      `Output file contains ${slideCount} slide(s), but ${expectedSlideCount} were expected.`
+      `Output file contains ${pageCount} page(s), but ${expectedPageCount} were expected.`
     );
   }
 
-  return { slideCount };
+  return { pageCount };
 }
 
-async function validateDeckContent(outputPath, plan) {
+async function validateDrawingContent(outputPath, plan) {
   const problems = [];
 
-  for (const slide of plan.slides) {
-    const slideXml = getSlideXmlFromPptx(outputPath, slide.index);
-    const actualTexts = extractTextRunsFromSlideXml(slideXml);
-    const missingTexts = findMissingRequiredTexts(slide, actualTexts);
-    const qualityIssues = findSlideQualityIssues(slide, slideXml);
+  // One read of the whole drawing, rather than one per page: opening a Visio session is the
+  // expensive part, and the planned pages are all in the same file.
+  const drawing = readDrawing(outputPath);
+  const byIndex = new Map(drawing.map((page) => [page.index, page]));
 
+  for (const page of plan.pages) {
+    const actual = byIndex.get(page.index);
+
+    if (!actual) {
+      problems.push(`Page ${page.index} ("${page.title}") is missing from the drawing.`);
+      continue;
+    }
+
+    const missingTexts = findMissingRequiredTexts(page, extractShapeTexts(actual.shapes));
     if (missingTexts.length > 0) {
       problems.push(
-        `Slide ${slide.index} is missing required text elements: ${missingTexts.map((text) => `"${text}"`).join(", ")}`
+        `Page ${page.index} is missing required text elements: ${missingTexts.map((text) => `"${text}"`).join(", ")}`
       );
     }
 
-    problems.push(...qualityIssues);
+    problems.push(...findPageQualityIssues(page, actual.shapes));
+    problems.push(...findMissingConnectors(page, actual.shapes, actual.connectorCount));
   }
 
   if (problems.length > 0) {
@@ -552,16 +473,15 @@ async function validateDeckContent(outputPath, plan) {
   }
 }
 
-async function validateDeckOutput(outputPath, plan) {
-  await validateDeckArtifact(outputPath, plan.slides.length);
-  await validateDeckContent(outputPath, plan);
+async function validateDrawingOutput(outputPath, plan) {
+  await validateDrawingArtifact(outputPath, plan.pages.length);
+  await validateDrawingContent(outputPath, plan);
 }
-
-export async function runDeckAgent(options) {
+export async function runDiagramAgent(options) {
   const model = options.model || DEFAULT_MODEL;
   const paths = preparePaths(options.outputPath, Boolean(options.overwrite));
   const archetypeIds = loadArchetypeIds();
-  const task = options.task || "Execute the supplied deck plan exactly.";
+  const task = options.task || "Execute the supplied diagram plan exactly.";
   let plan;
 
   if (options.planFilePath) {
@@ -596,7 +516,7 @@ export async function runDeckAgent(options) {
 
     plan = parsePlanFromText(planResult.content);
     if (!plan) {
-      throw new Error("Planning phase did not return a valid deck plan.");
+      throw new Error("Planning phase did not return a valid diagram plan.");
     }
   }
 
@@ -622,7 +542,7 @@ export async function runDeckAgent(options) {
         task,
         plan,
         outputPath: paths.outputPath,
-        showPowerPoint: Boolean(options.showPowerPoint),
+        showVisio: Boolean(options.showVisio),
       }),
     });
   } finally {
@@ -635,14 +555,14 @@ export async function runDeckAgent(options) {
     }
   }
 
-  let deckValidationError = null;
+  let drawingValidationError = null;
   try {
-    await validateDeckOutput(paths.outputPath, plan);
+    await validateDrawingOutput(paths.outputPath, plan);
   } catch (validationError) {
-    deckValidationError = validationError;
+    drawingValidationError = validationError;
   }
 
-  if (deckValidationError) {
+  if (drawingValidationError) {
     const repairSummaries = [];
 
     for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
@@ -664,8 +584,8 @@ export async function runDeckAgent(options) {
             task,
             plan,
             outputPath: paths.outputPath,
-            validationError: deckValidationError instanceof Error ? deckValidationError.message : String(deckValidationError),
-            showPowerPoint: Boolean(options.showPowerPoint),
+            validationError: drawingValidationError instanceof Error ? drawingValidationError.message : String(drawingValidationError),
+            showVisio: Boolean(options.showVisio),
           }),
         });
 
@@ -681,17 +601,17 @@ export async function runDeckAgent(options) {
       }
 
       try {
-        await validateDeckOutput(paths.outputPath, plan);
+        await validateDrawingOutput(paths.outputPath, plan);
         repairSummary = repairSummaries.join("\n\n");
-        deckValidationError = null;
+        drawingValidationError = null;
         break;
       } catch (validationError) {
-        deckValidationError = validationError;
+        drawingValidationError = validationError;
       }
     }
 
-    if (deckValidationError) {
-      throw deckValidationError;
+    if (drawingValidationError) {
+      throw drawingValidationError;
     }
   }
 
@@ -732,7 +652,7 @@ export async function runDeckAgent(options) {
       throw new Error(`Verification completed but output file is missing: ${paths.outputPath}`);
     }
 
-    await validateDeckOutput(paths.outputPath, plan);
+    await validateDrawingOutput(paths.outputPath, plan);
   }
 
   const summary = {

@@ -5,7 +5,7 @@ import { parsePlanFromText } from "../src/planner.mjs";
 
 test("parsePlanFromText parses a direct JSON plan", () => {
   const plan = parsePlanFromText(`{
-    "slides": [
+    "pages": [
       {
         "index": 1,
         "title": "Executive summary",
@@ -17,7 +17,7 @@ test("parsePlanFromText parses a direct JSON plan", () => {
   }`);
 
   assert.deepEqual(plan, {
-    slides: [
+    pages: [
       {
         index: 1,
         title: "Executive summary",
@@ -29,10 +29,10 @@ test("parsePlanFromText parses a direct JSON plan", () => {
   });
 });
 
-test("parsePlanFromText unwraps a nested plan object and renumbers slides", () => {
+test("parsePlanFromText unwraps a nested plan object and renumbers pages", () => {
   const plan = parsePlanFromText(`{
     "plan": {
-      "slides": [
+      "pages": [
         {
           "index": 3,
           "title": "Next actions",
@@ -42,8 +42,8 @@ test("parsePlanFromText unwraps a nested plan object and renumbers slides", () =
         },
         {
           "index": 1,
-          "title": "Title slide",
-          "archetypeId": "title-slide",
+          "title": "Title page",
+          "archetypeId": "title-page",
           "intent": "Introduce the story",
           "content": "Title plus subtitle"
         }
@@ -51,8 +51,8 @@ test("parsePlanFromText unwraps a nested plan object and renumbers slides", () =
     }
   }`);
 
-  assert.deepEqual(plan?.slides.map((slide) => ({ index: slide.index, title: slide.title })), [
-    { index: 1, title: "Title slide" },
+  assert.deepEqual(plan?.pages.map((page) => ({ index: page.index, title: page.title })), [
+    { index: 1, title: "Title page" },
     { index: 2, title: "Next actions" },
   ]);
 });
@@ -73,20 +73,20 @@ Here is the plan:
 \`\`\`
 `);
 
-  assert.equal(plan?.slides[0].archetypeId, "comparison");
-  assert.equal(plan?.slides[0].content, "Two-column comparison of before and after conditions");
+  assert.equal(plan?.pages[0].archetypeId, "comparison");
+  assert.equal(plan?.pages[0].content, "Two-column comparison of before and after conditions");
 });
 
-test("parsePlanFromText falls back to markdown slide blocks", () => {
+test("parsePlanFromText falls back to markdown page blocks", () => {
   const plan = parsePlanFromText(`
-### Slide 1: Recommendation
+### Page 1: Recommendation
 - Archetype: recommendations
 - Intent: Get approval for the next phase
 - Content: Three action tiles with owner and timeline
 `);
 
   assert.deepEqual(plan, {
-    slides: [
+    pages: [
       {
         index: 1,
         title: "Recommendation",
@@ -99,6 +99,6 @@ test("parsePlanFromText falls back to markdown slide blocks", () => {
 });
 
 test("parsePlanFromText returns null for incomplete plans", () => {
-  const plan = parsePlanFromText(`{"slides":[{"title":"Only title"}]}`);
+  const plan = parsePlanFromText(`{"pages":[{"title":"Only title"}]}`);
   assert.equal(plan, null);
 });

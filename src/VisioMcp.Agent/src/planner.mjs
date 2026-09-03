@@ -1,4 +1,4 @@
-function normalizeSlidePlan(value, index) {
+function normalizePagePlan(value, index) {
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -19,28 +19,28 @@ function normalizeSlidePlan(value, index) {
   return normalized;
 }
 
-function normalizePlan(slides) {
-  const normalizedSlides = slides
-    .map((slide, index) => normalizeSlidePlan(slide, index))
+function normalizePlan(pages) {
+  const normalizedPages = pages
+    .map((page, index) => normalizePagePlan(page, index))
     .filter(Boolean)
     .sort((left, right) => left.index - right.index)
-    .map((slide, index) => ({ ...slide, index: index + 1 }));
+    .map((page, index) => ({ ...page, index: index + 1 }));
 
-  if (normalizedSlides.length === 0) {
+  if (normalizedPages.length === 0) {
     return null;
   }
 
-  return { slides: normalizedSlides };
+  return { pages: normalizedPages };
 }
 
 function coerceToPlan(value) {
   if (value && typeof value === "object") {
-    if (Array.isArray(value.slides)) {
-      return normalizePlan(value.slides);
+    if (Array.isArray(value.pages)) {
+      return normalizePlan(value.pages);
     }
 
-    if (value.plan && typeof value.plan === "object" && Array.isArray(value.plan.slides)) {
-      return normalizePlan(value.plan.slides);
+    if (value.plan && typeof value.plan === "object" && Array.isArray(value.plan.pages)) {
+      return normalizePlan(value.plan.pages);
     }
   }
 
@@ -102,14 +102,14 @@ function extractOutermostJson(text) {
 }
 
 function parseMarkdownPlan(text) {
-  const slides = [];
+  const pages = [];
 
   const blockPattern =
-    /###\s*Slide\s+(\d+)[:\s]*([^\n]+)\n(?:[\s\S]*?-\s*\*{0,2}Archetype\*{0,2}[:\s]+([^\n]+)\n)?(?:[\s\S]*?-\s*\*{0,2}Intent\*{0,2}[:\s]+([^\n]+)\n)?(?:[\s\S]*?-\s*\*{0,2}Content\*{0,2}[:\s]+([^\n]+))?/gi;
+    /###\s*Page\s+(\d+)[:\s]*([^\n]+)\n(?:[\s\S]*?-\s*\*{0,2}Archetype\*{0,2}[:\s]+([^\n]+)\n)?(?:[\s\S]*?-\s*\*{0,2}Intent\*{0,2}[:\s]+([^\n]+)\n)?(?:[\s\S]*?-\s*\*{0,2}Content\*{0,2}[:\s]+([^\n]+))?/gi;
 
   let match;
   while ((match = blockPattern.exec(text)) !== null) {
-    slides.push({
+    pages.push({
       index: Number(match[1]),
       title: match[2].trim().replace(/\*{1,2}/g, ""),
       archetypeId: (match[3] || "").trim().replace(/\*{1,2}/g, ""),
@@ -118,8 +118,8 @@ function parseMarkdownPlan(text) {
     });
   }
 
-  if (slides.length > 0) {
-    return normalizePlan(slides);
+  if (pages.length > 0) {
+    return normalizePlan(pages);
   }
 
   return null;

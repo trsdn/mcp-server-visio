@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`VisioMcp.Agent` is a Visio diagram agent, not a PowerPoint deck agent** (#93). It survived the
+  migration intact and was the last thing in `src/` that actually **ran PowerPoint**:
+
+  ```powershell
+  $app = [Microsoft.VisualBasic.Interaction]::GetObject('', 'PowerPoint.Application')
+  for ($i = $app.Presentations.Count; $i -ge 1; $i--) { ... }
+  ```
+
+  `GetObject('', 'PowerPoint.Application')` starts PowerPoint when none is running, so simply
+  verifying a build could launch a second Office application.
+
+  It now verifies its own output through **visiocli**, which is both correct and cheaper:
+
+  | Was | Now |
+  |---|---|
+  | unzip the `.pptx`, read `ppt/slides/slideN.xml` | `page(list)` + `shape(list)` |
+  | scrape `<a:t>` for text | `shape.text` |
+  | scrape `<a:prstGeom>` for novelty shapes | the shape's stencil master |
+  | scrape `<a:solidFill>` for palette sprawl | `cell(read-formula, FillForegnd)` |
+  | attach to PowerPoint over COM to close | `session(close)` through the service |
+
+  The vocabulary follows: pages rather than slides, drawings rather than decks, and the archetype
+  and quality rules describe diagrams — flowcharts, org charts, swimlanes — rather than deck
+  layouts.
+
+  One check is new, because it is the way a generated Visio drawing is most often wrong while
+  looking plausible: **shapes present but never joined**. A business diagram with two or more
+  labelled shapes and no connectors is now reported, naming `shape(connect-shapes)`.
+
+  A themed fill (`THEMEVAL()`) is deliberately excluded from the palette check — the theme is the
+  document's choice, not the agent's.
+
 ### Fixed
 
 - **The COM session test suite tested PowerPoint, and 40 of its 62 tests were failing** (#56).

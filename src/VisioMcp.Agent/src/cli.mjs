@@ -8,15 +8,15 @@ function printHelp() {
 Official source-side Copilot SDK client for orchestrating mcp-server-visio.
 
 Usage:
-  visio-mcp-agent run --task "Build a 5-slide deck on ..." [options]
+  visio-mcp-agent run --task "Build a 5-page drawing on ..." [options]
 
 Options:
-  --task <text>                 Natural-language deck request
+  --task <text>                 Natural-language drawing request
   --plan-file <path>            Reuse a precomputed plan file and skip planning
-  --output <path>               Output PPTX path (default: timestamped file in cwd)
+  --output <path>               Output VSDX path (default: timestamped file in cwd)
   --model <name>                Copilot model to use (default: ${DEFAULT_MODEL})
   --mcp-server <path>           Override MCP server executable path
-  --show                        Show PowerPoint while executing
+  --show                        Show Visio while executing
   --overwrite                   Replace existing output/artifact files
   --skip-verify                 Skip the verification phase
   --verbose                     Print tool-call event traces
@@ -53,7 +53,7 @@ function parseArgs(argv) {
     outputPath: null,
     model: DEFAULT_MODEL,
     mcpServerPath: null,
-    showPowerPoint: false,
+    showVisio: false,
     overwrite: false,
     skipVerify: false,
     verbose: false,
@@ -92,7 +92,7 @@ function parseArgs(argv) {
         index++;
         break;
       case "--show":
-        args.showPowerPoint = true;
+        args.showVisio = true;
         break;
       case "--overwrite":
         args.overwrite = true;
@@ -143,9 +143,9 @@ async function main() {
     throw new Error("Either --task or --plan-file is required for the run command.");
   }
 
-  let runDeckAgent;
+  let runDiagramAgent;
   try {
-    ({ runDeckAgent } = await import("./orchestrator.mjs"));
+    ({ runDiagramAgent } = await import("./orchestrator.mjs"));
   } catch (error) {
     if (error && error.code === "ERR_MODULE_NOT_FOUND") {
       throw new Error(
@@ -156,13 +156,13 @@ async function main() {
     throw error;
   }
 
-  const summary = await runDeckAgent(args);
+  const summary = await runDiagramAgent(args);
 
   console.log("\n=== Agent Summary ===");
   console.log(`Output: ${summary.outputPath}`);
   console.log(`Plan: ${summary.planPath}`);
   console.log(`Artifacts: ${summary.artifactsDir}`);
-  console.log(`Slides planned: ${summary.plan.slides.length}`);
+  console.log(`Pages planned: ${summary.plan.pages.length}`);
 }
 
 main().catch((error) => {
