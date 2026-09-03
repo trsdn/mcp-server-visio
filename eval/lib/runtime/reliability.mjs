@@ -19,7 +19,7 @@ function sleep(ms) {
 
 function getDefaultMinBytes(kind) {
   switch (kind) {
-    case "pptx":
+    case "vsdx":
       return 512;
     case "png":
     default:
@@ -59,7 +59,7 @@ function detectInstructionsTransport(instructionsText = "", instructionsFile = "
   if (normalizedText.includes("use the cli")) cliSignals.push("CLI directive");
   if (normalizedText.includes("session create")) cliSignals.push("CLI session workflow");
 
-  if (normalizedText.includes("powerpoint mcp")) mcpSignals.push("MCP mention");
+  if (normalizedText.includes("visio mcp")) mcpSignals.push("MCP mention");
   if (normalizedText.includes("mcp server")) mcpSignals.push("MCP server mention");
   if (normalizedText.includes("file(action:")) mcpSignals.push("MCP tool recipe");
 
@@ -215,7 +215,7 @@ export function verifyArtifactFile(filePath, { kind = "png", minBytes } = {}) {
     }
 
     const header = readHeaderBytes(filePath);
-    const signatureOk = kind === "pptx"
+    const signatureOk = kind === "vsdx"
       ? ZIP_SIGNATURES.some((signature) => matchesSignature(header, signature))
       : matchesSignature(header, PNG_SIGNATURE);
 
@@ -298,14 +298,14 @@ export async function waitForArtifactFile(filePath, {
 
 export async function verifyBuildArtifacts({
   pngPath,
-  pptxPath,
-  requirePptx = true,
+  drawingPath,
+  requireDrawing = true,
   timeoutMs = 2500,
 } = {}) {
   const png = await waitForArtifactFile(pngPath, { kind: "png", timeoutMs });
   if (!png.ok) return png;
 
-  if (!requirePptx) {
+  if (!requireDrawing) {
     return {
       ok: true,
       artifacts: {
@@ -314,14 +314,14 @@ export async function verifyBuildArtifacts({
     };
   }
 
-  const pptx = await waitForArtifactFile(pptxPath, { kind: "pptx", timeoutMs });
-  if (!pptx.ok) return pptx;
+  const drawing = await waitForArtifactFile(drawingPath, { kind: "vsdx", timeoutMs });
+  if (!drawing.ok) return drawing;
 
   return {
     ok: true,
     artifacts: {
       png,
-      pptx,
+      drawing,
     },
   };
 }

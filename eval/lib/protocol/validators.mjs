@@ -124,7 +124,7 @@ function normalizeBuilderPayload(payload, promptText) {
     palette: compactText(payload.palette || "unknown", 120) || "unknown",
     shapeCount: Number.isInteger(payload.shapeCount) ? payload.shapeCount : null,
     preservedFacts: normalizeStringArray(payload.preservedFacts, 5, 180),
-    rationale: compactText(payload.rationale || `Built slide for: ${promptText}`, 240),
+    rationale: compactText(payload.rationale || `Built diagram for: ${promptText}`, 240),
   };
 }
 
@@ -248,7 +248,7 @@ function parseLegacyBuilderObject(value, promptText, failure) {
         palette: "unknown",
         shapeCount: null,
         preservedFacts: [],
-        rationale: compactText(value?.rationale || value?.summary || `Built slide for: ${promptText}`, 240),
+        rationale: compactText(value?.rationale || value?.summary || `Built diagram for: ${promptText}`, 240),
       },
       validation: {
         status: "fallback",
@@ -388,7 +388,7 @@ export function parseBuilderSummaryResponse(raw, { promptText = "", allowLegacyF
         palette: "unknown",
         shapeCount: null,
         preservedFacts: [],
-        rationale: compactText(raw || `Built slide for: ${promptText}`, 240),
+        rationale: compactText(raw || `Built diagram for: ${promptText}`, 240),
       },
       validation: {
         status: "fallback",

@@ -6,7 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The evaluation runtime drives Visio, and reads the drawing rather than only looking at it**
+  (#74, PR 2 of 4).
+
+  The runtime polled for a `POWERPNT` process while the toolchain starts `VISIO`, so its cleanup
+  path counted zero of the wrong thing and killed nothing. The artifact contract threaded a
+  `pptxPath` through every record and the fallback export called
+  `export slide-to-image --slide-index 1 --width 1920 --height 1080`, an action this CLI does not
+  have — the real one is `export page-export --page-index`, with no dimensions. It also closed
+  with a bare `--save`; the flag takes an explicit value.
+
+  More consequential than the renaming: **the judge could not have scored a diagram from the PNG
+  it was given.** Connectivity and completeness — whether the shapes are joined, whether a path
+  terminates — are the two things that most often go wrong, and a drawing whose boxes are placed
+  but unconnected renders as an entirely plausible picture. Scoring the image alone reliably
+  praises the wrong output.
+
+  So every success path now also returns a structural read: pages, shapes, and the connectors
+  between them, taken through `page list`, `shape list` and `shape list-connectors`. It runs after
+  the runtime is destroyed, because until then the agent's own Visio session holds the drawing
+  open, and it returns `null` rather than throwing so a valid build is never failed by a failed
+  read.
+
+  Every field name in the first draft of that read was wrong — `fromShapeId`/`toShapeId` instead
+  of `startShapeName`/`endShapeName`, `id` instead of `shapeId`, and a `master` field that does
+  not exist. None of it would have raised an error; the judge would simply have been told that
+  every diagram was disconnected. The names now match what the CLI actually returns, verified by
+  building a two-shape flowchart and reading it back.
+
+- **`PPTMCP_EVAL_ASSET_REPO_ROOT` is now `VISIOMCP_EVAL_ASSET_REPO_ROOT`.**
+
 ### Removed
+
+- **Four unreferenced probe scripts** (`debug-sdk.mjs`, `probe-claude-title.mjs`,
+  `probe-gpt54-title.mjs`, `test-sdk.mjs`). One-off title-slide experiments, invoked by nothing.
 
 - **Dead evaluation scaffolding** (#74, PR 1 of 4). Four artefacts that no code path reached:
 
@@ -39,6 +74,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   six different scenarios, and reports land under `llm-tests/`, not `tests/VisioMcp.LLM.Tests/`.
 
 ### Added
+
+- **`EvalRuntimeTerminologyTests`** — asserts `eval/lib/` does not name PowerPoint. Scope is that
+  directory only; the agent instructions, configs and prompts are still deck-shaped and widen this
+  list as the remaining PRs of #74 land. Verified against an induced regression.
+
+  It immediately earned its place by catching `PPTMCP_EVAL_ASSET_REPO_ROOT`, which the manual
+  sweep had walked straight past.
 
 - **`DocumentedEnvironmentVariableTests`** — asserts that every `PPTMCP_*` / `VISIO_*` variable
   named in documentation is read by some code file. `CHANGELOG.md` and `.github/ISSUE_TEMPLATE` are

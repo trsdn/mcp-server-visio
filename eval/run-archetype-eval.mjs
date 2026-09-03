@@ -95,7 +95,7 @@ ${formatProtocolExample(getBuilderSummaryResponseSchemaExample())}`;
 
 async function buildSlide(config, promptObj, pngPath, builderRuntime = null, context = {}) {
   const { builder } = config;
-  const pptxPath = pngPath.replace(".png", ".pptx");
+  const drawingPath = pngPath.replace(".png", ".vsdx");
   const transport = normalizeTransport(builder.transport || "cli");
   const skillPaths = (builder.skillFiles || []).map((file) => join(SKILLS_DIR, file)).join("\n- ");
 
@@ -122,21 +122,21 @@ async function buildSlide(config, promptObj, pngPath, builderRuntime = null, con
       errorCategory: failure.category,
       failure,
       requestEnvelope: null,
-      pptxPath,
+      drawingPath,
     };
   }
 
   const instructions = instructionsFile.text.replace("{CLI_PATH}", CLI_PATH);
 
   const transportPrompt = transport === "mcp"
-    ? `OUTPUT: PPTX=${pptxPath} PNG=${pngPath}
+    ? `OUTPUT: PPTX=${drawingPath} PNG=${pngPath}
 
 Use PowerPoint MCP tools only. Preferred flow: file create/open → slide create Blank → shape/text operations → export slide-to-image → file close save:true.`
     : `CLI: ${CLI_PATH}
 RULES: --color not --font-color. --alignment not --horizontal-alignment. No \\n in --text. Service is running.
-OUTPUT: PPTX=${pptxPath} PNG=${pngPath}
+OUTPUT: PPTX=${drawingPath} PNG=${pngPath}
 
-Steps: read skills → session create ${pptxPath} → slide create --layout-name Blank → build shapes → export slide-to-image → session close --save.`;
+Steps: read skills → session create ${drawingPath} → slide create --layout-name Blank → build shapes → export slide-to-image → session close --save.`;
 
   // Build variant context for the prompt
   const variantHint = promptObj.expectedVariant
@@ -151,7 +151,7 @@ Steps: read skills → session create ${pptxPath} → slide create --layout-name
     expectedVariant: promptObj.expectedVariant || null,
     transport,
     pngPath,
-    pptxPath,
+    drawingPath,
     builderCarryover: context.builderCarryover || [],
     reviewerCarryover: context.reviewerCarryover || [],
   });
@@ -186,7 +186,7 @@ ${transportPrompt}`;
       type: "build",
       prompt,
       pngPath,
-      pptxPath,
+      drawingPath,
       timeoutMs,
       workerTimeoutMs: timeoutMs + 45000,
       summaryPrompt: buildBuilderSummaryPrompt(promptObj, context.reviewerCarryover || []),
@@ -196,7 +196,7 @@ ${transportPrompt}`;
       type: "build",
       prompt,
       pngPath,
-      pptxPath,
+      drawingPath,
       timeoutMs,
       workerTimeoutMs: timeoutMs + 45000,
       summaryPrompt: buildBuilderSummaryPrompt(promptObj, context.reviewerCarryover || []),
@@ -213,7 +213,7 @@ ${transportPrompt}`;
       errorCategory: failure.category,
       failure,
       requestEnvelope,
-      pptxPath,
+      drawingPath,
     };
   }
 
@@ -225,7 +225,7 @@ ${transportPrompt}`;
   return {
     ok: true,
     requestEnvelope,
-    pptxPath,
+    drawingPath,
     completion: response.completion || "completed",
     builderSummary: builderSummaryResult.ok ? builderSummaryResult.value : null,
     builderValidation: builderSummaryResult.ok
@@ -565,7 +565,7 @@ async function persistArchetypeLoopRecord({
         : { attempted: false },
     artifacts: [
       { role: "png", kind: "image", path: loopState.artifacts.pngPath },
-      { role: "pptx", kind: "presentation", path: loopState.artifacts.pptxPath },
+      { role: "drawing", kind: "drawing", path: loopState.artifacts.drawingPath },
     ],
     skills: {
       beforeLoop: loopState.metadata.persistence?.skillSnapshotBefore || null,
@@ -720,7 +720,7 @@ async function runConfig(configPath) {
           loopNumber: item.loopNumber,
           prompt: item.prompt,
           pngPath,
-          pptxPath: pngPath.replace(".png", ".pptx"),
+          drawingPath: pngPath.replace(".png", ".vsdx"),
           sequence: createStepSequence({
             includeJudge: true,
             includeImprove: Boolean(config.improver),
@@ -817,8 +817,8 @@ async function runConfig(configPath) {
         [ORCHESTRATOR_STEPS.verifyArtifact]: async (loopState) => {
           const artifactStatus = await verifyBuildArtifacts({
             pngPath: loopState.artifacts.pngPath,
-            pptxPath: loopState.artifacts.pptxPath,
-            requirePptx: true,
+            drawingPath: loopState.artifacts.drawingPath,
+            requireDrawing: true,
             timeoutMs: 3500,
           });
 

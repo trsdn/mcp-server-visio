@@ -178,7 +178,7 @@ export function createEvaluationRequestEnvelope({
   expectedVariant = null,
   transport = "cli",
   pngPath = "",
-  pptxPath = "",
+  drawingPath = "",
   builderCarryover = [],
   reviewerCarryover = [],
 } = {}) {
@@ -192,7 +192,7 @@ export function createEvaluationRequestEnvelope({
       expectedVariant: expectedVariant || null,
       transport,
       pngPath,
-      pptxPath,
+      drawingPath,
       builderCarryover,
       reviewerCarryover,
     },

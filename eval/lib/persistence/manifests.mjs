@@ -19,9 +19,10 @@ function detectArtifactKind(pathValue, fallbackKind = "file") {
     case ".jpeg":
     case ".webp":
       return "image";
-    case ".pptx":
-    case ".pptm":
-      return "presentation";
+    case ".vsdx":
+    case ".vsdm":
+    case ".vssx":
+      return "drawing";
     case ".json":
     case ".jsonl":
       return "record";
