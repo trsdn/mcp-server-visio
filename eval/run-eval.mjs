@@ -1,13 +1,13 @@
 /**
- * Automated Slide Design Evaluation Loop
+ * Automated Diagram Design Evaluation Loop
  *
  * Architecture:
- *   Builder Agent (Sonnet) + VisioMcp MCP Server + Design Skills → builds slide → exports PNG
+ *   Builder Agent (Sonnet) + VisioMcp MCP Server + Design Skills → builds drawing → exports PNG
  *   Judge Agent (GPT) + Structure Instructions → evaluates PNG → scores + gaps
  *   Harness → records results, applies gaps to skills, repeats
  *
  * Usage:
- *   node run-eval.mjs                    # Run all 110 prompts
+ *   node run-eval.mjs                    # Run all prompts
  *   node run-eval.mjs --start 0 --count 5  # Run first 5
  *   node run-eval.mjs --category dashboard  # Run only dashboard prompts
  */
@@ -22,6 +22,7 @@ import {
   executeWithRetry,
   loadInstructionsFile,
   executeRuntimeRequest,
+  readDrawingStructure,
   verifyBuildArtifacts,
 } from "./lib/runtime/index.mjs";
 import { CLI_PATH, EVAL_OUTPUT_ROOT, EVAL_RESULTS_ROOT, SKILLS_DIR } from "./lib/runtime/environment.mjs";
@@ -164,20 +165,27 @@ async function runBuilder(prompt, outputPath, opts, builderRuntime = null) {
   const skillPaths = SKILL_FILES.map((file) => join(SKILLS_DIR, file)).join("\n- ");
   const buildPrompt = `${builderInstructions}
 
-You build PowerPoint slides using the visiocli CLI.
+You build Visio drawings using the visiocli CLI.
 
 CLI: ${CLI_PATH}
-RULES: --color not --font-color. --alignment not --horizontal-alignment. No \\n in --text. Service running. Close existing sessions first.
+RULES: session close takes --save true or --save false, not --no-save. export page-export has no
+width or height. Only one session may be open at a time — close any existing session first. An
+option the action does not take is ignored silently, so label shapes with text set rather than
+passing --text to shape add-shape.
 
 FIRST: Read these design skill files for guidance:
 - ${skillPaths}
 
-THEN: Build ONE slide for this request:
+THEN: Build ONE drawing for this request:
 "${prompt.prompt}" (category: ${prompt.category})
 
-OUTPUT: ${drawingPath} (PPTX) and ${outputPath} (PNG export)
+OUTPUT: ${drawingPath} (VSDX) and ${outputPath} (PNG export)
 
-Steps: read skills → pick archetype → create session → build slide → export PNG → close --save.
+Steps: read skills → pick archetype → session create → drop stencil masters → connect shapes →
+label them → export page-export → session close --save true.
+
+The drawing is scored on its structure, not only its picture. Shapes that are placed but not
+connected score zero on the dimension that matters most.
 `;
 
   const response = builderRuntime
@@ -235,6 +243,9 @@ async function runJudge(prompt, pngPath, opts, judgeRuntime = null) {
   }
 
   const judgeInstructions = judgeInstructionsFile.text;
+  // The judge scores connectivity and completeness from this, not from the PNG: an unconnected
+  // diagram renders as a perfectly plausible picture.
+  const drawingStructure = readDrawingStructure(pngPath.replace(".png", ".vsdx"));
   const requestEnvelope = createJudgmentRequestEnvelope({
     promptId: prompt.id,
     prompt: prompt.prompt,
@@ -244,14 +255,18 @@ async function runJudge(prompt, pngPath, opts, judgeRuntime = null) {
   const judgePrompt = `
 ${judgeInstructions}
 
-Evaluate this slide image for structural correctness.
+Evaluate this Visio drawing.
 
 ORIGINAL PROMPT: "${prompt.prompt}"
 CATEGORY: ${prompt.category}
 IMAGE PATH: ${pngPath}
 
-View the image file and score it using the 7 dimensions from your instructions.
-Return JSON matching this contract:
+STRUCTURE:
+${drawingStructure ? JSON.stringify(drawingStructure, null, 2) : "unavailable — score dimensions 1-4 as 0 and say so"}
+
+View the image file, read the structure, and score all ten dimensions from your instructions.
+Score connectivity, completeness, notation correctness and labelling from STRUCTURE, never from
+the image. Return JSON matching this contract:
 ${formatProtocolExample(getJudgeResponseSchemaExample())}
 
 Request envelope:
@@ -399,7 +414,7 @@ async function main() {
   }
   selected = selected.slice(opts.start, opts.start + opts.count);
 
-  console.log(`\n🔄 Slide Design Eval Loop`);
+  console.log(`\n🔄 Diagram Design Eval Loop`);
   console.log(`   Mode:    ${opts.mode}`);
   console.log(`   Prompts: ${selected.length} (of ${prompts.length})`);
   console.log(`   Builder: ${opts.builderModel}${opts.builderReasoningEffort ? ` (${opts.builderReasoningEffort})` : ""}${opts.builderIsolatedProcess ? " [isolated]" : opts.builderReuseSessionContext ? " [reuse]" : ""}`);

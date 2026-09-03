@@ -1,0 +1,43 @@
+{
+  "name": "fault-tree",
+  "mode": "tuning",
+  "description": "Evaluate and improve Fault Tree drawings — how component failures combine into a top-level failure",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a FAULT_M.VSSX master",
+  "archetype": "fault-tree",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "fault-outage",
+      "text": "Build a fault tree for a website outage, with the top event decomposed into hosting, network and application causes"
+    },
+    {
+      "id": "fault-data-loss",
+      "text": "Build a fault tree for data loss, decomposing into backup failure and storage failure branches"
+    },
+    {
+      "id": "fault-payment-failure",
+      "text": "Build a fault tree for a failed payment, separating customer-side, gateway and bank causes"
+    }
+  ],
+  "outputDir": "output/fault-tree",
+  "resultsDir": "results/fault-tree"
+}

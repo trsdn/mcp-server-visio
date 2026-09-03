@@ -280,7 +280,7 @@ function tryExportFirstPage(drawingPath, pngPath) {
  * Returns null rather than throwing: this augments the artifact, and a build that produced a
  * valid PNG should not be failed because the structural read did not come back.
  */
-function readDrawingStructure(drawingPath) {
+export function readDrawingStructure(drawingPath) {
   if (!existsSync(drawingPath)) return null;
 
   let sessionId = null;

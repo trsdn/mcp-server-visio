@@ -3,7 +3,7 @@ using Xunit;
 namespace VisioMcp.Core.Tests.Unit;
 
 /// <summary>
-/// Asserts that the evaluation harness's shared library layer does not name PowerPoint.
+/// Asserts that the evaluation harness does not name PowerPoint.
 ///
 /// <c>eval/lib/</c> is the part of the harness that is domain-neutral by design — the
 /// orchestrator, ledger, metrics and protocol contracts. It carried PowerPoint anyway, in the
@@ -15,10 +15,9 @@ namespace VisioMcp.Core.Tests.Unit;
 /// one side without the other produces <c>undefined</c> rather than an error, and the harness
 /// carries on scoring an artifact it never located.
 ///
-/// Scope is deliberately <c>eval/lib/</c> only. The agent instructions, configs, prompts and
-/// entry-point prose are still deck-shaped and are rewritten in the remaining PRs of #74; widen
-/// this list as each lands, so the parts already ported cannot regress while the rest is in
-/// flight.
+/// Scope was <c>eval/lib/</c> while the agent instructions, configs and prompts were still
+/// deck-shaped. All four PRs of #74 have landed, so it now covers the whole directory, including
+/// the prose that tells the model what to build.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Speed", "Fast")]
@@ -29,20 +28,40 @@ public class EvalRuntimeTerminologyTests
 {
     private static readonly string[] ScannedDirectories =
     [
-        Path.Combine("eval", "lib")
+        "eval"
     ];
+
+    /// <summary>
+    /// Generated run artifacts are not source, and a private asset root may hold anything.
+    /// </summary>
+    private static readonly string[] ExcludedSegments =
+    [
+        $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}output{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}results{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}input{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}data{Path.DirectorySeparatorChar}"
+    ];
+
+    private static readonly string[] ScannedExtensions = ["*.mjs", "*.md", "*.json"];
 
     /// <summary>
     /// <c>POWERPNT</c> is the process name, and its absence is what proves the cleanup path
     /// actually targets the application the harness starts.
+    ///
+    /// <c>presentation</c> was on this list until the scope widened to include prompt text, where
+    /// it matched "a layered application: presentation, application, domain and data layers" — the
+    /// standard name for an architecture layer, in a prompt that is entirely correct. A guard that
+    /// forces correct domain language to be reworded trains people to weaken the guard. The terms
+    /// kept here all name the wrong product unambiguously.
     /// </summary>
     private static readonly string[] ForbiddenTerms =
     [
-        "PowerPoint", "POWERPNT", "pptx", "pptm", "presentation"
+        "PowerPoint", "POWERPNT", "pptx", "pptm", "slide"
     ];
 
     [Fact]
-    public void EvalLibrary_DoesNotNameTheWrongProduct()
+    public void EvalHarness_DoesNotNameTheWrongProduct()
     {
         var root = FindRepositoryRoot();
         var offenders = new List<string>();
@@ -56,22 +75,31 @@ public class EvalRuntimeTerminologyTests
                 continue;
             }
 
-            foreach (var file in Directory.GetFiles(directory, "*.mjs", SearchOption.AllDirectories))
+            foreach (var extension in ScannedExtensions)
             {
-                var lines = File.ReadAllLines(file);
-
-                for (var index = 0; index < lines.Length; index++)
+                foreach (var file in Directory.GetFiles(directory, extension, SearchOption.AllDirectories))
                 {
-                    foreach (var term in ForbiddenTerms)
+                    if (ExcludedSegments.Any(segment =>
+                            file.Contains(segment, StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (!lines[index].Contains(term, StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
+                        continue;
+                    }
 
-                        var relative = Path.GetRelativePath(root, file);
-                        offenders.Add($"{relative}:{index + 1}: {lines[index].Trim()}");
-                        break;
+                    var lines = File.ReadAllLines(file);
+
+                    for (var index = 0; index < lines.Length; index++)
+                    {
+                        foreach (var term in ForbiddenTerms)
+                        {
+                            if (!lines[index].Contains(term, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            var relative = Path.GetRelativePath(root, file);
+                            offenders.Add($"{relative}:{index + 1}: {lines[index].Trim()}");
+                            break;
+                        }
                     }
                 }
             }
@@ -79,7 +107,7 @@ public class EvalRuntimeTerminologyTests
 
         Assert.True(
             offenders.Count == 0,
-            "The evaluation library still names PowerPoint. This layer drives Visio:"
+            "The evaluation harness still names PowerPoint. This harness drives Visio:"
             + Environment.NewLine
             + string.Join(Environment.NewLine, offenders));
     }

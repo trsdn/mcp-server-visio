@@ -1,0 +1,43 @@
+{
+  "name": "annotated-diagram",
+  "mode": "tuning",
+  "description": "Evaluate and improve Annotated Diagram drawings — an existing diagram that needs callouts explaining what the reader should notice",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a CALOUT_M.VSSX master",
+  "archetype": "annotated-diagram",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "anno-review-markup",
+      "text": "Build a small process diagram and annotate two steps with review comments explaining a concern"
+    },
+    {
+      "id": "anno-risk-highlight",
+      "text": "Build a network diagram and use callouts to highlight two single points of failure"
+    },
+    {
+      "id": "anno-explanatory",
+      "text": "Build a block diagram of a service and add explanatory callouts describing what each block owns"
+    }
+  ],
+  "outputDir": "output/annotated-diagram",
+  "resultsDir": "results/annotated-diagram"
+}

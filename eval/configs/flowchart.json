@@ -1,0 +1,51 @@
+{
+  "name": "flowchart",
+  "mode": "tuning",
+  "description": "Evaluate and improve Flowchart drawings — a process with steps, decisions and branches",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a BASFLO_M.VSSX master",
+  "archetype": "flowchart",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "flow-order-fulfilment",
+      "text": "Build a flowchart for order fulfilment from receipt through picking, packing, dispatch and delivery confirmation"
+    },
+    {
+      "id": "flow-incident-response",
+      "text": "Build a flowchart for incident response from detection through triage, containment, remediation and review"
+    },
+    {
+      "id": "flow-expense-approval",
+      "text": "Build a flowchart for expense approval with a decision on amount, routing under 500 to the line manager and above to finance"
+    },
+    {
+      "id": "flow-onboarding",
+      "text": "Build a flowchart for employee onboarding from offer acceptance through contract, equipment, accounts and first-day induction"
+    },
+    {
+      "id": "flow-returns",
+      "text": "Build a flowchart for product returns with a decision on warranty status, branching to repair, replace or reject"
+    }
+  ],
+  "outputDir": "output/flowchart",
+  "resultsDir": "results/flowchart"
+}

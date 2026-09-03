@@ -113,3 +113,5 @@ export {
 };
 
 export { ARCHETYPES_DIR, resolveArchetypeFamily } from "./environment.mjs";
+
+export { readDrawingStructure } from "./copilot-sdk-runtime.mjs";
