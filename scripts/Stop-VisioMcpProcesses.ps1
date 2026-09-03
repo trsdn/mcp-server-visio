@@ -29,13 +29,16 @@ function Write-Status($message) {
 # 1. Gracefully stop VisioMcp Service via CLI
 # ----------------------------------------------
 function Stop-VisioMcpService {
-    # Look for visiocli in build output directories (Debug/Release)
+    # Look for visiocli in build output. Globbed rather than naming the target framework: this
+    # listed only net10.0-windows while the project targets net9.0-windows, so it never found the
+    # CLI and silently skipped the graceful service stop (#57).
     $scriptDir = Split-Path -Parent $PSScriptRoot  # repo root
-    $cliPaths = @(
-        "$scriptDir\src\VisioMcp.CLI\bin\Debug\net10.0-windows\visiocli.exe",
-        "$scriptDir\src\VisioMcp.CLI\bin\Release\net10.0-windows\visiocli.exe"
-    )
-    $visiocli = $cliPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    $cliBin = "$scriptDir\src\VisioMcp.CLI\bin"
+    $visiocli = @("Release", "Debug") |
+        ForEach-Object { Join-Path $cliBin $_ } |
+        Where-Object { Test-Path $_ } |
+        ForEach-Object { Get-ChildItem -Path $_ -Filter "visiocli.exe" -Recurse -ErrorAction SilentlyContinue } |
+        Select-Object -First 1 -ExpandProperty FullName
 
     if ($visiocli) {
         Write-Status "Using CLI: $visiocli"

@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The shipped CLI skill documented 5 of 15 commands** (#57). `skills/visio-cli/SKILL.md` is what
+  an agent is handed when it installs the skill, and its command reference omitted `design`,
+  `docproperty`, `export`, `file`, `hyperlink`, `layer`, `master`, `shapealign`, `style` and
+  `window` — a third of the surface, invisible to the audience the skill exists for.
+
+  The cause was not neglect. `Build-AgentSkills.ps1` regenerates that reference from
+  `visiocli --help`, but looked for the binary under **`net10.0-windows`** while the project targets
+  `net9.0-windows`. It never found it, warned, and returned — so the reference stopped tracking the
+  surface at that moment and nothing failed. `Stop-VisioMcpProcesses.ps1` carried the same wrong
+  path, so its graceful service stop was silently skipped too.
+
+  Both now resolve the binary by globbing the target-framework folder rather than naming it, so the
+  next framework bump cannot repeat this.
+
+  This is the third instance of the same shape in this repository: a tool that looks for something
+  under a path or name that changed, finds nothing, and carries on quietly. The others were
+  `llm-tests/conftest.py` looking for `net10.0-windows`, and `Test-LlmRegressionGate.ps1` setting
+  `VISIO_CLI_COMMAND` while the harness read `CLI_COMMAND`.
+
 - **Developer and operator documentation described PowerPoint** (#87, part 2). The existing
   terminology guard only scanned `.github/`, so everything a contributor reads first went
   unchecked. Four of these were not cosmetic:
@@ -52,6 +71,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `FEATURES.md` for documentation and `SECURITY.md` for the privacy statement.
 
 ### Added
+
+- **`CliSkillCoverageTests`** — asserts the CLI skill documents every public command, resolved from
+  `[ServiceCategory]` with suppressed domains excluded. A guard on the *output* is the durable fix:
+  whatever breaks the generator next, this fails. Verified against an induced regression.
 
 - **`ProseDocumentationTerminologyTests`** — extends the terminology rule from `.github/` to
   `docs/`, `examples/`, `mcpb/`, `skills/`, `tests/` and the root policy documents, and asserts no

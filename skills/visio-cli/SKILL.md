@@ -314,6 +314,167 @@ Text operations within shapes: get, set, format, find, replace.
 
 
 
+
+### design
+
+Diagram design guidance: which diagram to draw, which stencil and masters to drop, and the Visio techniques that separate a usable drawing from a plausible-looking one
+
+**Actions:** `list-archetypes`, `get-archetype`, `get-stencil-catalog`, `get-diagram-patterns`, `list-palettes`, `get-palette`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--archetype-id` | Archetype id, exactly as reported by list-archetypes (required for: get-archetype) |
+| `--palette-id` | Palette id, exactly as reported by list-palettes (required for: get-palette) |
+
+
+### docproperty
+
+Document property management: read and write Visio document metadata like title, creator, subject, and keywords
+
+**Actions:** `get`, `set`, `get-custom`, `set-custom`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--title` | Document title (required for: set) |
+| `--subject` | Subject or topic (required for: set) |
+| `--author` | Creator/author name (required for: set) |
+| `--keywords` | Keywords for search (comma-separated) (required for: set) |
+| `--comments` | Description or comments (required for: set) |
+| `--company` | Company or organization name (required for: set) |
+| `--category` | Category (required for: set) |
+| `--property-name` | Custom property name. Stored as document Shape Data when written through this API. (required for: get-custom, set-custom) |
+| `--property-value` | Property value (string) (required for: set-custom) |
+
+
+### export
+
+Export Visio documents and pages to portable output formats
+
+**Actions:** `to-pdf`, `to-xps`, `page-export`, `print`, `save-copy`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--destination-path` | Output PDF path (required for: to-pdf, to-xps, page-export, save-copy) |
+| `--from-page` | Optional 1-based start page for ranged export |
+| `--to-page` | Optional 1-based end page for ranged export |
+| `--page-index` | 1-based page index (required for: page-export) |
+| `--copies` | Number of copies (default 1) (required for: print) |
+
+
+### file
+
+File management commands for Visio documents. Handles file validation and metadata retrieval
+
+**Actions:** `test`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--file-path` | Path to the .vsdx, .vsdm or .vssx file (required) |
+
+
+### hyperlink
+
+Hyperlinks attached to shapes
+
+**Actions:** `list`, `list-for-shape`, `read`, `add`, `update`, `delete`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index (required for: list-for-shape, read, add, update, delete) |
+| `--shape-name` | Shape name, exactly as reported by shape(list) (required for: list-for-shape, read, add, update, delete) |
+| `--hyperlink-name` | Hyperlink row name, exactly as reported by list (required for: read, update, delete) |
+| `--address` | External target such as 'https://example.com', 'mailto:a@b.com' or a file path. Leave empty for a link that only navigates inside the document |
+| `--sub-address` | Target inside the document: a page name such as 'Page-2', or 'Page-2/Rectangle' for a shape |
+| `--description` | Text Visio displays for the link, shown on hover |
+| `--new-window` | Open the target in a new window |
+
+
+### layer
+
+Visio layer management for page-level organization, visibility, and shape membership
+
+**Actions:** `list`, `read`, `create`, `delete`, `add-shape`, `remove-shape`, `set-visibility`, `set-print`, `set-lock`, `set-color`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index (required) |
+| `--layer-name` | Layer name, as reported by list (required for: read, create, delete, add-shape, remove-shape, set-visibility, set-print, set-lock, set-color) |
+| `--color-index` | Visio layer palette index. 255 is the default, meaning shapes keep their own colours rather than taking the layer colour (required for: set-color) |
+| `--visible` | True to show the layer in the drawing window (required for: set-visibility) |
+| `--printable` | True to include the layer when the page is printed or exported (required for: set-print) |
+| `--locked` | True to prevent shapes on the layer from being selected or edited (required for: set-lock) |
+| `--shape-name` | Shape to add, as reported by shape(list) (required for: add-shape, remove-shape) |
+| `--preserve-membership` | True keeps the shape's existing layer memberships; false makes this its only layer. A Visio shape may belong to several layers at once |
+
+
+### master
+
+Masters held inside the working document
+
+**Actions:** `list`, `read`, `create-from-shape`, `rename`, `delete`, `list-instances`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--master-name` | Master name, exactly as reported by list (required for: read, rename, delete, list-instances) |
+| `--page-index` | 1-based page index holding the shape to promote (required for: create-from-shape) |
+| `--shape-name` | Shape to copy into the document's masters. The shape itself is left where it is (required for: create-from-shape) |
+| `--new-name` | New name for the master (required for: rename) |
+
+
+### shapealign
+
+Shape alignment and distribution operations
+
+**Actions:** `align`, `distribute`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--slide-index` | 1-based page index (required) |
+| `--shape-names` | Comma-separated shape names (required) |
+| `--align-type` | Alignment type (0-5) (required for: align) |
+| `--distribute-type` | 0=Horizontally, 1=Vertically (required for: distribute) |
+
+
+### style
+
+Named formatting held by the document
+
+**Actions:** `list`, `read`, `create`, `rename`, `delete`, `read-formula`, `set-formula`, `apply`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--style-name` | Style name, exactly as reported by list (required for: read, create, rename, delete, read-formula, set-formula, apply) |
+| `--based-on` | Style to inherit from, such as 'Normal'. Omit for a style that inherits nothing |
+| `--includes-fill` | Whether the style carries fill formatting |
+| `--includes-line` | Whether the style carries line formatting |
+| `--includes-text` | Whether the style carries text formatting |
+| `--new-name` | New name for the style (required for: rename) |
+| `--cell-name` | ShapeSheet cell name, for example FillForegnd, LineWeight or Char.Size (required for: read-formula, set-formula) |
+| `--formula` | ShapeSheet expression, for example 'RGB(200,30,30)' or '3 pt' (required for: set-formula) |
+| `--page-index` | 1-based page index (required for: apply) |
+| `--shape-name` | Shape name, exactly as reported by shape(list) (required for: apply) |
+| `--aspect` | Which part to apply: 'all' (default), or 'fill', 'line' or 'text' to apply only that one |
+
+
+### window
+
+Visio window management for drawing windows: state, zoom, viewport, navigation, visual aids, and snap settings
+
+**Actions:** `get-info`, `minimize`, `restore`, `maximize`, `set-zoom`, `get-zoom`, `get-viewport`, `fit-page`, `fit-selection`, `pan-to-shape`, `pan-by-offset`, `get-visual-aids`, `set-grid-visible`, `set-guides-visible`, `set-rulers-visible`, `set-drawing-aids`, `get-snap-settings`, `set-grid-snap-strength`, `set-guides-snap-strength`, `set-points-snap-strength`, `set-ruler-snap-strength`, `set-geometry-snap-strength`, `set-extensions-snap-strength`, `set-view`, `get-view`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--zoom-percent` | Zoom percentage (e.g. 100 for 100%) (required for: set-zoom) |
+| `--page-index` | 1-based page index (required for: get-zoom, get-viewport, fit-page, fit-selection, pan-to-shape, pan-by-offset, get-visual-aids, set-grid-visible, set-guides-visible, set-rulers-visible) |
+| `--shape-name` | Shape to centre in the drawing window, as reported by shape(list) (required for: pan-to-shape) |
+| `--offset-x` | Horizontal pan distance in points. Positive moves the view right (required for: pan-by-offset) |
+| `--offset-y` | Vertical pan distance in points. Positive moves the view up (required for: pan-by-offset) |
+| `--visible` | True to show the grid (required for: set-grid-visible, set-guides-visible, set-rulers-visible) |
+| `--enabled` | True to enable snap and glue (required for: set-drawing-aids) |
+| `--strength` | Snap strength from 1 to 999. Higher values pull shapes to the grid from further away (required for: set-grid-snap-strength, set-guides-snap-strength, set-points-snap-strength, set-ruler-snap-strength, set-geometry-snap-strength, set-extensions-snap-strength) |
+| `--view-type` | 1=Normal, 2=Outline, 3=SlideSorter, 4=NotesPage, 5=SlideMaster (required for: set-view) |
+
+
 ## Common Pitfalls
 
 ### Page Indices Are 1-Based
