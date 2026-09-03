@@ -23,7 +23,7 @@
     "shapesheet",
     "stencil"
   ],
-  "homepage": "https://VisioMcpserver.dev",
+  "homepage": "https://github.com/trsdn/mcp-server-visio",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trsdn/mcp-server-visio.git",

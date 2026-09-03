@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The README shipped inside the Claude Desktop bundle advertised PowerPoint** (#87, part 1).
+  `mcpb/README.md` — the first thing anyone reads after installing — opened with
+  *"# PowerPoint (Windows)"*, described building presentations, slides and SmartArt, and claimed
+  **"25 tools with 225 operations"**. The real surface is **15 tools with 185 actions**, and the
+  product is Visio. The manifest beside it was already correct, so nothing flagged the mismatch.
+
+  Rewritten around what the server actually does, including the capability that has no PowerPoint
+  equivalent: Claude can read a drawing's structure and tell you a shape is unconnected even when
+  the picture looks right.
+
+- **Every shipped link pointed at a domain that does not resolve.** `VisioMcpserver.dev` is what a
+  mechanical rename made of the PowerPoint ancestor's `pptmcpserver.dev`. It was the `homepage`,
+  `documentation` and `privacy_policies` in the bundle manifest, the "Docs" link in the CLI system
+  tray, the homepage in the agent's `package.json`, and four links across the two skill READMEs.
+
+  There is no GitHub Pages site for this repository either — the Pages API returns 404 and
+  `trsdn.github.io/mcp-server-visio` does not resolve — so links now point into the repository:
+  `FEATURES.md` for documentation and `SECURITY.md` for the privacy statement.
+
+### Added
+
+- **`BundleReadmeAccuracyTests`** — asserts the bundle README's stated surface size matches the
+  real count, and that no shipped file links to a host we do not publish. The count is computed
+  from `[ServiceAction]` attributes on the public interfaces, with the hand-written `file` tool
+  contributing its action enum rather than `IFileCommands`, which exposes only `test`. Both
+  assertions verified by re-inducing the original defects.
+
 ### Changed
 
 - **The evaluation configs, prompts and entry points describe diagrams** (#74, PR 4 of 4).
