@@ -9,20 +9,19 @@ import shlex
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pytest
 
-from pytest_aitest import Agent, CLIServer, MCPServer, Provider, Skill, Wait
+from pytest_aitest import CLIServer, MCPServer, Skill, Wait
 
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
-FIXTURES_DIR = TESTS_DIR / "Fixtures"
 TEST_RESULTS_DIR = TESTS_DIR / "TestResults"
 TEST_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Skill references are now copied at build time by MSBuild targets in CLI/MCP csproj files.
-# Run 'dotnet build -c Release' to update skill references.
+# Skill references are copied at build time by MSBuild targets in the CLI and MCP csproj files.
+# Run 'dotnet build -c Release' to update them.
 
 # Pydantic AI uses AZURE_API_BASE for Azure OpenAI endpoint discovery.
 if os.environ.get("AZURE_OPENAI_ENDPOINT") and not os.environ.get("AZURE_API_BASE"):
@@ -32,8 +31,12 @@ DEFAULT_MODEL = "gpt-4.1"
 DEFAULT_RPM = 10
 DEFAULT_TPM = 10000
 DEFAULT_MAX_TURNS = 20
-DEFAULT_RETRIES = 3  # PowerPoint COM operations need more retries than default (1)
-DEFAULT_TIMEOUT_MS = 600000  # 10 min - Azure GlobalStandard can be slow under load
+DEFAULT_RETRIES = 3  # Visio COM operations need more retries than the default of 1
+DEFAULT_TIMEOUT_MS = 600000  # 10 min — Azure GlobalStandard can be slow under load
+
+# The framework the repository actually targets. This previously read net10.0-windows, so the
+# built executable was never found and every run silently fell back to `dotnet run`.
+TARGET_FRAMEWORK = "net9.0-windows"
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -42,13 +45,13 @@ def pytest_configure(config: pytest.Config) -> None:
         config.option.llm_model = "azure/gpt-4.1"
 
 
-def unique_path(prefix: str, suffix: str = ".pptx") -> str:
+def unique_path(prefix: str, suffix: str = ".vsdx") -> str:
     temp_dir = Path(os.environ.get("TEMP", tempfile.gettempdir()))
     path = temp_dir / f"{prefix}-{uuid.uuid4()}{suffix}"
     return path.as_posix()
 
 
-def unique_results_path(prefix: str, suffix: str = ".pptx") -> str:
+def unique_results_path(prefix: str, suffix: str = ".vsdx") -> str:
     path = TEST_RESULTS_DIR / f"{prefix}-{uuid.uuid4()}{suffix}"
     return path.as_posix()
 
@@ -59,7 +62,7 @@ def assert_regex(text: str, pattern: str) -> None:
 
 
 def _parse_cli_results(result: Any) -> list[dict[str, Any]]:
-    calls = result.tool_calls_for("ppt_execute")
+    calls = result.tool_calls_for("visio_execute")
     outputs: list[dict[str, Any]] = []
     for call in calls:
         if call.result:
@@ -73,11 +76,8 @@ def _parse_cli_results(result: Any) -> list[dict[str, Any]]:
 def assert_cli_exit_codes(result: Any, *, strict: bool = False) -> None:
     """Assert CLI executions succeeded.
 
-    By default (strict=False), allows intermediate errors as long as the
-    last CLI call succeeded. LLMs naturally retry after errors — punishing
-    recovery discourages good behavior.
-
-    With strict=True, ALL calls must succeed (original behavior).
+    By default the last call must have succeeded. LLMs retry after an error, and punishing
+    recovery discourages it. With strict=True every call must succeed.
     """
     outputs = _parse_cli_results(result)
     if not outputs:
@@ -87,23 +87,19 @@ def assert_cli_exit_codes(result: Any, *, strict: bool = False) -> None:
             if output.get("exit_code") != 0:
                 raise AssertionError(f"CLI exit code not zero: {output}")
     else:
-        # Check last call succeeded (LLM may retry after intermediate errors)
         last = outputs[-1]
         if last.get("exit_code") != 0:
             raise AssertionError(
                 f"Final CLI call failed (exit_code={last.get('exit_code')}): "
                 f"{last.get('stdout', '')[:200]}"
             )
-        # Warn if error rate is very high (>80% of calls failed)
         failed = sum(1 for o in outputs if o.get("exit_code") != 0)
         if failed > len(outputs) * 0.8:
-            raise AssertionError(
-                f"Too many CLI failures: {failed}/{len(outputs)} calls failed"
-            )
+            raise AssertionError(f"Too many CLI failures: {failed}/{len(outputs)} calls failed")
 
 
 def assert_cli_args_contain(result: Any, token: str) -> None:
-    calls = result.tool_calls_for("ppt_execute")
+    calls = result.tool_calls_for("visio_execute")
     for call in calls:
         args = call.arguments.get("args", "")
         if token in args:
@@ -111,26 +107,28 @@ def assert_cli_args_contain(result: Any, token: str) -> None:
     raise AssertionError(f"Expected CLI args to include '{token}', but none did.")
 
 
+def assert_used_tool(result: Any, tool_name: str) -> None:
+    """Assert the agent actually reached for a given MCP tool.
+
+    A prompt can be satisfied by the wrong means — drawing a rectangle where a stencil master was
+    required, for instance — and the drawing still looks plausible. Asserting the tool asserts the
+    method, not just the outcome.
+    """
+    if not result.tool_calls_for(tool_name):
+        raise AssertionError(f"Expected the agent to call '{tool_name}', but it never did.")
+
+
 def _resolve_mcp_command() -> list[str]:
     env_command = os.environ.get("MCP_SERVER_COMMAND")
     if env_command:
         return shlex.split(env_command)
 
-    # Windows-specific build with COM interop support
-    exe_path = REPO_ROOT / "src/VisioMcp.McpServer/bin/Release/net10.0-windows/VisioMcp.McpServer.exe"
+    exe_path = REPO_ROOT / f"src/VisioMcp.McpServer/bin/Release/{TARGET_FRAMEWORK}/VisioMcp.McpServer.exe"
     if exe_path.exists():
         return [str(exe_path)]
 
     project_path = REPO_ROOT / "src/VisioMcp.McpServer/VisioMcp.McpServer.csproj"
-    return [
-        "dotnet",
-        "run",
-        "--project",
-        str(project_path),
-        "-c",
-        "Release",
-        "--no-build",
-    ]
+    return ["dotnet", "run", "--project", str(project_path), "-c", "Release", "--no-build"]
 
 
 def _resolve_cli_command() -> str:
@@ -138,12 +136,10 @@ def _resolve_cli_command() -> str:
     if env_command:
         return env_command
 
-    # Windows-specific build with COM interop support
-    exe_path = REPO_ROOT / "src/VisioMcp.CLI/bin/Release/net10.0-windows/visiocli.exe"
+    exe_path = REPO_ROOT / f"src/VisioMcp.CLI/bin/Release/{TARGET_FRAMEWORK}/visiocli.exe"
     if exe_path.exists():
         return str(exe_path)
 
-    # Fallback to visiocli in PATH
     return "visiocli"
 
 
@@ -156,18 +152,18 @@ def visio_mcp_server() -> MCPServer:
 
 
 @pytest.fixture(scope="session")
-def ppt_cli_server() -> CLIServer:
+def visio_cli_server() -> CLIServer:
     command = _resolve_cli_command()
     temp_dir = Path(os.environ.get("TEMP", tempfile.gettempdir()))
     return CLIServer(
         name="visio-cli",
         command=command,
-        tool_prefix="ppt",
+        tool_prefix="visio",
         shell="none",
         cwd=str(temp_dir),
-        discover_help=False,  # Skill Rule 0 requires LLM to run --help first
-        description="PowerPoint CLI automation. Run 'visiocli --help' to discover available commands before use.",
-        timeout=120.0,  # PowerPoint COM operations (especially session close) can take >30s
+        discover_help=False,  # Skill Rule 0 requires the LLM to run --help first
+        description="Visio CLI automation. Run 'visiocli --help' to discover available commands before use.",
+        timeout=120.0,  # Visio COM operations, especially session close, can take >30s
     )
 
 
@@ -177,13 +173,8 @@ def visio_mcp_skill() -> Skill:
 
 
 @pytest.fixture(scope="session")
-def ppt_cli_skill() -> Skill:
+def visio_cli_skill() -> Skill:
     return Skill.from_path(REPO_ROOT / "skills/visio-cli")
-
-
-@pytest.fixture(scope="session")
-def fixtures_dir() -> Path:
-    return FIXTURES_DIR
 
 
 @pytest.fixture(scope="session")

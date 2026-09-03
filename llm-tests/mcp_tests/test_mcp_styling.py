@@ -1,4 +1,4 @@
-"""MCP styling workflows — validates correct style system usage per object type."""
+"""MCP: formatting through ShapeSheet cells and named styles."""
 
 from __future__ import annotations
 
@@ -6,102 +6,103 @@ import pytest
 
 from pytest_aitest import Agent, Provider
 
-from conftest import assert_regex, unique_path, DEFAULT_RETRIES, DEFAULT_TIMEOUT_MS
+from conftest import (
+    DEFAULT_RETRIES,
+    DEFAULT_TIMEOUT_MS,
+    assert_used_tool,
+    unique_path,
+)
 
 pytestmark = [pytest.mark.aitest, pytest.mark.mcp]
 
 
-@pytest.mark.asyncio
-async def test_mcp_styling_table_style(aitest_run, visio_mcp_server, visio_mcp_skill):
-    """LLM should use table(set-style) for table visual styling, not range_format on header."""
-    agent = Agent(
-        name="mcp-styling-table",
+def _agent(name: str, server, skill, max_turns: int = 28) -> Agent:
+    return Agent(
+        name=name,
         provider=Provider(model="azure/gpt-4.1", rpm=10, tpm=10000),
-        mcp_servers=[visio_mcp_server],
-        skill=visio_mcp_skill,
-        max_turns=20,
+        mcp_servers=[server],
+        skill=skill,
+        max_turns=max_turns,
         retries=DEFAULT_RETRIES,
     )
 
+
+@pytest.mark.asyncio
+async def test_mcp_fills_and_outlines_shapes(aitest_run, visio_mcp_server, visio_mcp_skill):
+    agent = _agent("mcp-fill", visio_mcp_server, visio_mcp_skill)
+
     prompt = f"""
-Create a new PowerPoint presentation at {unique_path('llm-test-styling-table')}
+Create a new Visio drawing at {unique_path('styling')}
 
-Add a slide with this quarterly sales data as a table:
-Region, Q1, Q2, Q3, Q4
-North, 120000, 135000, 118000, 142000
-South, 98000, 102000, 115000, 128000
-West, 85000, 91000, 99000, 108000
+Add three shapes to page 1 labelled "Green", "Amber" and "Red", and fill each one
+with a colour matching its label. Give every shape a 2pt outline.
 
-Name the table "QuarterlySales" and apply a visually appealing style.
-
-Close the presentation without saving.
+Then read back the fill colour of the shape labelled "Red" and tell me the value.
 """
     result = await aitest_run(agent, prompt, timeout_ms=DEFAULT_TIMEOUT_MS)
+
     assert result.success
-    assert result.tool_was_called("table")
-    assert_regex(result.final_response, r"(?i)(QuarterlySales|table|style)")
+    assert_used_tool(result, "shape")
 
 
 @pytest.mark.asyncio
-async def test_mcp_styling_semantic_status(aitest_run, visio_mcp_server, visio_mcp_skill):
-    """LLM should use range_format(set-style) with Good/Bad/Neutral for status cells."""
-    agent = Agent(
-        name="mcp-styling-status",
-        provider=Provider(model="azure/gpt-4.1", rpm=10, tpm=10000),
-        mcp_servers=[visio_mcp_server],
-        skill=visio_mcp_skill,
-        max_turns=20,
-        retries=DEFAULT_RETRIES,
-    )
+async def test_mcp_uses_a_named_style_for_repeated_formatting(aitest_run, visio_mcp_server, visio_mcp_skill):
+    """Changing a style restyles every shape using it — the reason to use one."""
+    agent = _agent("mcp-style", visio_mcp_server, visio_mcp_skill)
 
     prompt = f"""
-Create a new PowerPoint presentation at {unique_path('llm-test-styling-status')}
+Create a new Visio drawing at {unique_path('styles')}
 
-Add a slide with this project status data as a table:
-Task, Owner, Status
-Design, Alice, Complete
-Development, Bob, In Progress
-Testing, Carol, Overdue
-Deployment, Dave, Complete
+Add four shapes to page 1 labelled "API", "Worker", "Cache" and "Queue".
 
-Format the Status column shapes with distinct colours to make the status
-visually clear at a glance — green for Complete, red for Overdue,
-yellow or neutral for In Progress.
+Create a named style called "Deprecated" that gives shapes a dashed outline,
+and apply it to the "Cache" and "Queue" shapes only.
 
-Close the presentation without saving.
+Save the drawing.
 """
     result = await aitest_run(agent, prompt, timeout_ms=DEFAULT_TIMEOUT_MS)
+
     assert result.success
-    assert_regex(result.final_response, r"(?i)(format|style|colour|color|green|red|conditional)")
+    assert_used_tool(result, "style")
 
 
 @pytest.mark.asyncio
-async def test_mcp_styling_header_fill(aitest_run, visio_mcp_server, visio_mcp_skill):
-    """LLM should use format-range (not set-style) for a header row with a fill colour."""
-    agent = Agent(
-        name="mcp-styling-header",
-        provider=Provider(model="azure/gpt-4.1", rpm=10, tpm=10000),
-        mcp_servers=[visio_mcp_server],
-        skill=visio_mcp_skill,
-        max_turns=20,
-        retries=DEFAULT_RETRIES,
-    )
+async def test_mcp_puts_annotations_on_their_own_layer(aitest_run, visio_mcp_server, visio_mcp_skill):
+    """A layer is what makes commentary removable without rebuilding the drawing."""
+    agent = _agent("mcp-layers", visio_mcp_server, visio_mcp_skill)
 
     prompt = f"""
-Create a new PowerPoint presentation at {unique_path('llm-test-styling-header')}
+Create a new Visio drawing at {unique_path('annotated')}
 
-Add a slide with this data as a table:
-Product, Units, Revenue
-Widget, 450, 13500
-Gadget, 280, 19600
-Doohickey, 175, 8750
+Add two shapes to page 1 labelled "Ingest" and "Store", and connect them.
 
-Give the header row a dark blue background with white bold text,
-centred horizontally.
+Add a note shape labelled "Bottleneck here" and put it on a layer called "Annotations",
+so the note can be hidden without touching the rest of the drawing.
 
-Close the presentation without saving.
+Then hide that layer and save the drawing.
 """
     result = await aitest_run(agent, prompt, timeout_ms=DEFAULT_TIMEOUT_MS)
+
     assert result.success
-    assert result.tool_was_called("range_format")
-    assert_regex(result.final_response, r"(?i)(header|format|blue|white|bold)")
+    assert_used_tool(result, "layer")
+
+
+@pytest.mark.asyncio
+async def test_mcp_stores_metadata_as_shape_data_not_labels(aitest_run, visio_mcp_server, visio_mcp_skill):
+    """Data the drawing must hold but need not show belongs in shape data."""
+    agent = _agent("mcp-shapedata", visio_mcp_server, visio_mcp_skill)
+
+    prompt = f"""
+Create a new Visio drawing at {unique_path('network')}
+
+Add two shapes to page 1 labelled "web-01" and "web-02".
+
+Record each one's IP address as shape data rather than in its label:
+web-01 is 10.0.1.15 and web-02 is 10.0.1.16.
+
+Then read back the shape data for web-01 and tell me what you find.
+"""
+    result = await aitest_run(agent, prompt, timeout_ms=DEFAULT_TIMEOUT_MS)
+
+    assert result.success
+    assert "10.0.1.15" in result.output, "The agent did not report the shape data it stored."

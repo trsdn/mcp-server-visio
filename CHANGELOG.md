@@ -8,6 +8,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The LLM integration tests exercise Visio, not PowerPoint** (#98 follow-up). `llm-tests/` gave a
+  model a task in plain language and checked which tools it reached for — but every scenario was
+  charts, tables, ranges and slides, all **features deleted in #22**. The suite tested a product
+  that no longer exists.
+
+  Fourteen scenarios replace them, across both entry points: pages and shapes, page size through
+  PageSheet cells, flowcharts built from stencil masters, the design catalog, background pages,
+  named styles, layers and shape data.
+
+  They assert the **method**, not only the outcome, because a prompt can be satisfied the wrong way
+  and still produce a plausible drawing:
+
+  - the agent dropped a stencil master rather than drawing a rectangle — a drawn diamond is not a
+    `Decision`, and nothing downstream treats it as one
+  - the shapes were actually **connected** — placed but unjoined is the most common way generated
+    output looks right and is useless
+  - page size went through `cell(sheet_target='page')`, which is where it lives
+  - a created value is read back into the answer, so a test cannot pass on a drawing that was never
+    written
+
+  The 4.7 MB `amazon.csv` and the Power Query fixtures went with the tests that used them.
+
+### Fixed
+
+- **Three silent misconfigurations in the LLM test harness** (#98 follow-up), each of which made
+  something quietly not work rather than fail:
+  - `conftest.py` looked for `net10.0-windows`; the repository targets **net9.0-windows**, so the
+    built executables were never found and every run fell back to a slow `dotnet run`. Same in
+    `llm-tests/cli/conftest.py`, which instead raised "not found" outright.
+  - `Test-LlmRegressionGate.ps1` set `VISIO_CLI_COMMAND` and `visio_mcp_SERVER_COMMAND`, but
+    `conftest.py` reads `CLI_COMMAND` and `MCP_SERVER_COMMAND`. The gate built both binaries in
+    Release and then ignored them.
+  - The gate's canonical scenarios named tests for charts and tables, which had been deleted.
+
+### Changed
+
 - **The design catalog describes Visio diagrams, not PowerPoint slides** (#98). `design` is back on
   the public surface — **15 tools**.
 
