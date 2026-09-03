@@ -234,8 +234,6 @@ Set `PPTMCP_EVAL_ASSET_REPO_ROOT` to the **root of that private repo**. When set
 
 When the variable is not set, the current repo root remains the default asset root.
 
-`PPTMCP_REFERENCE_DATA_ROOT` still works as a direct override for the reference catalog itself, but the preferred repo-local path is now `eval\data\archetype-references` instead of `local-data\archetype-references`.
-
 To move assets between this repo and a private repo clone, use:
 
 ```powershell
