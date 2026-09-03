@@ -287,6 +287,34 @@ public static class VisioToolsBase
             isError = true
         }, JsonOptions);
     }
+
+    /// <summary>
+    /// Reports that a tool call carried no action it could use — either none was supplied, or the
+    /// supplied value is not one this tool defines.
+    /// </summary>
+    /// <remarks>
+    /// The two cases arrive together because <see cref="Core.Json.LenientActionEnumConverter{TEnum}"/>
+    /// yields <c>null</c> for an unrecognised value rather than throwing. Throwing is what produced
+    /// the opaque <c>"An error occurred invoking 'text'"</c> from the SDK, with no JSON and no hint
+    /// of what to send instead (#55).
+    ///
+    /// Naming every valid action is the part that matters: a model that guessed wrong can correct
+    /// itself from this response, which is what the CLI has always done and the MCP surface did not.
+    /// </remarks>
+    /// <param name="toolName">Tool name, for example "text".</param>
+    /// <param name="validActions">Comma-separated action names the tool accepts.</param>
+    public static string UnusableActionError(string toolName, string validActions)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            success = false,
+            errorMessage =
+                $"No usable 'action' for the '{toolName}' tool: it was missing, or not one this "
+                + $"tool defines. Valid actions: {validActions}",
+            validActions = validActions.Split(", ", StringSplitOptions.RemoveEmptyEntries),
+            isError = true
+        }, JsonOptions);
+    }
 }
 
 

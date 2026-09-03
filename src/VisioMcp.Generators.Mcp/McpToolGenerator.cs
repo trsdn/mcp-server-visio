@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -231,12 +232,13 @@ public class McpToolGenerator : IIncrementalGenerator
     private static void GenerateMethodBody(StringBuilder sb, ServiceInfo info, List<McpParameter> mcpParams, string enumTypeName, bool hasProgress)
     {
         var registryName = info.CategoryPascal;
+        var actionNames = string.Join(", ", info.Methods.Select(m => m.ActionName));
         var toolName = info.McpToolName;
 
         // Null check: action is nullable to prevent SDK-level exception when param is missing.
         // Return a helpful error so the LLM can retry with the correct action.
-        sb.AppendLine($"        if (action == null)");
-        sb.AppendLine($"            return VisioToolsBase.MissingActionError(\"{toolName}\");");
+        sb.AppendLine($"        if (action == null || !System.Enum.IsDefined(action.Value))");
+        sb.AppendLine($"            return VisioToolsBase.UnusableActionError(\"{toolName}\", \"{actionNames}\");");
         sb.AppendLine();
         var hasPreProcessing = false;
         foreach (var p in mcpParams)
