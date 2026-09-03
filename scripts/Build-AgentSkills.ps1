@@ -52,9 +52,17 @@ function Generate-CliReference {
         [string]$visiocliPath = $null
     )
 
-    # Find visiocli binary
+    # Find visiocli binary. Resolved by globbing the target-framework folder rather than naming it:
+    # this script previously hard-coded net10.0-windows while the project targets net9.0-windows, so
+    # it never found the binary, warned, and returned — leaving the generated CLI reference stale at
+    # 5 of 15 commands with nothing failing (#57).
     if (-not $visiocliPath) {
-        $visiocliPath = Join-Path $RepoRoot "src/VisioMcp.CLI/bin/Release/net10.0-windows/visiocli.exe"
+        $cliBin = Join-Path $RepoRoot "src/VisioMcp.CLI/bin"
+        $visiocliPath = @("Release", "Debug") |
+            ForEach-Object { Join-Path $cliBin $_ } |
+            Where-Object { Test-Path $_ } |
+            ForEach-Object { Get-ChildItem -Path $_ -Filter "visiocli.exe" -Recurse -ErrorAction SilentlyContinue } |
+            Select-Object -First 1 -ExpandProperty FullName
     }
 
     if (-not (Test-Path $visiocliPath)) {
