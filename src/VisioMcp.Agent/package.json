@@ -9,7 +9,7 @@
   "scripts": {
     "postinstall": "node patch-deps.cjs",
     "run": "node ./src/cli.mjs",
-    "check": "node --check ./src/cli.mjs && node --check ./src/constants.mjs && node --check ./src/orchestrator.mjs && node --check ./src/planner.mjs && node --check ./src/runtime.mjs && node --check ./src/validation.mjs",
+    "check": "node --check ./src/cli.mjs && node --check ./src/constants.mjs && node --check ./src/orchestrator.mjs && node --check ./src/planner.mjs && node --check ./src/runtime.mjs && node --check ./src/validation.mjs && node --check ./src/visioCli.mjs",
     "test": "node --test ./tests/planner.test.mjs ./tests/validation.test.mjs"
   },
   "keywords": [

@@ -1,42 +1,43 @@
+/**
+ * Quality checks on a generated Visio drawing.
+ *
+ * These read the drawing through visiocli rather than by parsing the file format. The PowerPoint
+ * original scraped DrawingML out of the .pptx zip; Visio's schema is different, and there is no
+ * reason to parse a file the tool under test can describe directly.
+ */
+
+/** Archetypes whose output is a business diagram, and so is held to a restrained visual style. */
 const BUSINESS_STYLE_ARCHETYPES = new Set([
-  "appendix",
-  "big-number",
-  "chart-insight-callout",
-  "column-bar-chart",
-  "comparison",
-  "executive-summary",
-  "framework",
-  "kpi-card-dashboard",
-  "operational-kpi",
-  "recommendations",
-  "simple-table",
-  "timeline-roadmap",
-  "waterfall-chart",
+  "block-diagram",
+  "cross-functional-flowchart",
+  "data-flow-diagram",
+  "decision-tree",
+  "entity-relationship",
+  "flowchart",
+  "network-diagram",
+  "org-chart",
+  "process-map",
+  "state-diagram",
+  "swimlane",
+  "system-context",
+  "value-stream-map",
 ]);
 
-const NOVELTY_PRESET_SHAPES = new Set([
-  "arc",
-  "bevel",
-  "chevron",
+/**
+ * Stencil masters that read as decoration rather than notation. A business diagram built from
+ * these is telling the reader something the content does not support.
+ */
+const NOVELTY_MASTERS = new Set([
   "cloud",
-  "decagon",
-  "donut",
-  "gear6",
-  "gear9",
+  "explosion",
   "heart",
-  "hexagon",
+  "lightning bolt",
   "moon",
-  "smileyFace",
-  "star10",
-  "star12",
-  "star16",
-  "star24",
-  "star32",
-  "star4",
-  "star5",
-  "star6",
-  "star7",
-  "star8",
+  "smiley face",
+  "star 4",
+  "star 5",
+  "star 6",
+  "star 7",
   "sun",
 ]);
 
@@ -49,15 +50,6 @@ function normalizeText(text) {
     .toLowerCase();
 }
 
-function decodeXmlEntities(text) {
-  return text
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
-}
-
 function collectQuotedTexts(text) {
   const values = [];
 
@@ -68,21 +60,25 @@ function collectQuotedTexts(text) {
   return values;
 }
 
-export function collectRequiredSlideTexts(slide) {
+/**
+ * Text the plan explicitly demands on a page — its title, plus anything quoted after a labelling
+ * phrase. Everything else in a plan is guidance rather than a literal requirement.
+ */
+export function collectRequiredPageTexts(page) {
   const requiredTexts = new Set();
 
-  if (slide?.title) {
-    requiredTexts.add(slide.title);
+  if (page?.title) {
+    requiredTexts.add(page.title);
   }
 
-  const content = slide?.content || "";
-  const bulletAnchorIndex = content.indexOf("Use these bullets:");
-  if (bulletAnchorIndex >= 0) {
-    for (const value of collectQuotedTexts(content.slice(bulletAnchorIndex))) {
+  const content = page?.content || "";
+  const labelAnchorIndex = content.indexOf("Use these labels:");
+  if (labelAnchorIndex >= 0) {
+    for (const value of collectQuotedTexts(content.slice(labelAnchorIndex))) {
       requiredTexts.add(value);
     }
   } else {
-    for (const match of content.matchAll(/(?:sentence|with|footer[^:]*):\s*"([^"]+)"/gi)) {
+    for (const match of content.matchAll(/(?:label|sentence|with|caption[^:]*):\s*"([^"]+)"/gi)) {
       requiredTexts.add(match[1]);
     }
   }
@@ -90,44 +86,45 @@ export function collectRequiredSlideTexts(slide) {
   return [...requiredTexts];
 }
 
-export function extractTextRunsFromSlideXml(xml) {
-  const values = [];
-
-  for (const match of xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)) {
-    const value = decodeXmlEntities(match[1]).trim();
-    if (value) {
-      values.push(value);
-    }
-  }
-
-  return values;
+/** Every non-empty shape text on a page, as reported by shape(list). */
+export function extractShapeTexts(pageShapes) {
+  return (pageShapes || [])
+    .map((shape) => String(shape?.text || "").trim())
+    .filter((text) => text.length > 0);
 }
 
-export function extractPresetGeometryNamesFromSlideXml(xml) {
-  const geometries = [];
-
-  for (const match of xml.matchAll(/<a:prstGeom[^>]*prst="([^"]+)"/g)) {
-    geometries.push(match[1]);
-  }
-
-  return geometries;
+/** Master names behind the shapes on a page. Drawn shapes have none and are reported as "". */
+export function extractMasterNames(pageShapes) {
+  return (pageShapes || [])
+    .map((shape) => String(shape?.master || "").trim().toLowerCase())
+    .filter((name) => name.length > 0);
 }
 
-export function extractSolidFillColorsFromSlideXml(xml) {
+/**
+ * Fill colours as RRGGBB, from the FillForegnd formula. Visio writes RGB(r,g,b); a themed fill
+ * reads THEMEVAL() and is deliberately ignored, since the theme is not the agent's choice.
+ */
+export function extractFillColors(pageShapes) {
   const colors = [];
 
-  for (const match of xml.matchAll(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/g)) {
-    const srgbMatch = match[1].match(/<a:srgbClr[^>]*val="([0-9A-Fa-f]{6})"/);
-    if (srgbMatch) {
-      colors.push(srgbMatch[1].toUpperCase());
+  for (const shape of pageShapes || []) {
+    const formula = String(shape?.fillForeground || "");
+    const match = formula.match(/RGB\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/i);
+
+    if (match) {
+      const hex = [match[1], match[2], match[3]]
+        .map((value) => Number(value).toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+      colors.push(hex);
     }
   }
 
   return colors;
 }
 
-function isBusinessStyleSlide(slide) {
-  return BUSINESS_STYLE_ARCHETYPES.has(slide?.archetypeId || "");
+function isBusinessStylePage(page) {
+  return BUSINESS_STYLE_ARCHETYPES.has(page?.archetypeId || "");
 }
 
 function isVividHexColor(hex) {
@@ -186,40 +183,58 @@ function getHueFamily(hex) {
   return "purple";
 }
 
-export function findSlideQualityIssues(slide, slideXml) {
-  if (!isBusinessStyleSlide(slide)) {
+export function findPageQualityIssues(page, pageShapes) {
+  if (!isBusinessStylePage(page)) {
     return [];
   }
 
   const issues = [];
-  const noveltyShapes = [...new Set(
-    extractPresetGeometryNamesFromSlideXml(slideXml).filter((shape) => NOVELTY_PRESET_SHAPES.has(shape))
+  const noveltyMasters = [...new Set(
+    extractMasterNames(pageShapes).filter((name) => NOVELTY_MASTERS.has(name))
   )];
 
-  if (noveltyShapes.length > 0) {
+  if (noveltyMasters.length > 0) {
     issues.push(
-      `Slide ${slide.index} uses novelty preset shapes that are not acceptable for a business slide: ${noveltyShapes.join(", ")}. Replace them with simple rectangles or rounded rectangles.`
+      `Page ${page.index} uses novelty stencil masters that are not acceptable for a business diagram: ${noveltyMasters.join(", ")}. Replace them with rectangles, rounded rectangles or the appropriate flowchart master.`
     );
   }
 
-  const vividFillColors = [...new Set(
-    extractSolidFillColorsFromSlideXml(slideXml).filter(isVividHexColor)
-  )];
+  const vividFillColors = [...new Set(extractFillColors(pageShapes).filter(isVividHexColor))];
   const vividColorFamilies = [...new Set(vividFillColors.map(getHueFamily).filter((family) => family !== "neutral"))];
 
   if (vividColorFamilies.length > MAX_VIVID_FILL_COLORS) {
     issues.push(
-      `Slide ${slide.index} uses too many distinct vivid color families for a business slide: ${vividFillColors.join(", ")}. Use a restrained palette with neutrals plus one main accent and semantic red/green only where justified.`
+      `Page ${page.index} uses too many distinct vivid color families for a business diagram: ${vividFillColors.join(", ")}. Use a restrained palette with neutrals plus one main accent and semantic red/green only where justified.`
     );
   }
 
   return issues;
 }
 
-export function findMissingRequiredTexts(slide, actualTexts) {
+/**
+ * A page with shapes but no connectors is usually a diagram that was drawn but never wired up,
+ * which is the most common way a generated Visio drawing is wrong while looking plausible.
+ */
+export function findMissingConnectors(page, pageShapes, connectorCount) {
+  if (!isBusinessStylePage(page)) {
+    return [];
+  }
+
+  const nonConnectorShapes = (pageShapes || []).filter((shape) => String(shape?.text || "").trim().length > 0);
+
+  if (nonConnectorShapes.length >= 2 && connectorCount === 0) {
+    return [
+      `Page ${page.index} has ${nonConnectorShapes.length} labelled shapes but no connectors. A ${page.archetypeId} needs its shapes joined with shape(connect-shapes).`,
+    ];
+  }
+
+  return [];
+}
+
+export function findMissingRequiredTexts(page, actualTexts) {
   const combinedActualText = normalizeText(actualTexts.join(" "));
 
-  return collectRequiredSlideTexts(slide).filter((requiredText) => {
+  return collectRequiredPageTexts(page).filter((requiredText) => {
     return !combinedActualText.includes(normalizeText(requiredText));
   });
 }
