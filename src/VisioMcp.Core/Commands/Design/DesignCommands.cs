@@ -1,226 +1,129 @@
-using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
+using VisioMcp.Core.Data;
 using VisioMcp.Core.Models;
 
 namespace VisioMcp.Core.Commands.Design;
 
-public partial class DesignCommands : IDesignCommands
+/// <summary>
+/// Diagram design guidance, served from the embedded catalog (#98).
+/// </summary>
+/// <remarks>
+/// Every action is a catalog lookup, so none touches Visio COM. The <c>batch</c> parameter is part
+/// of the command contract rather than a dependency, which is what lets an agent ask which diagram
+/// to draw before it has opened anything.
+/// </remarks>
+public class DesignCommands : IDesignCommands
 {
-    public DesignListResult List(IVisioBatch batch)
+    public ArchetypeListResult ListArchetypes(IVisioBatch batch)
     {
-        return batch.Execute((ctx, ct) =>
+        var result = new ArchetypeListResult { Success = true };
+
+        foreach (var archetype in DesignCatalogProvider.GetArchetypes())
         {
-            dynamic designs = ((dynamic)ctx.Document).Designs;
-            try
+            result.Archetypes.Add(new ArchetypeListItem
             {
-                int count = (int)designs.Count;
+                Id = archetype.Id,
+                Name = archetype.Name,
+                When = archetype.When,
+                Stencil = archetype.Stencil,
+                Masters = archetype.Masters,
+                Variants = archetype.Variants,
+                ExampleTitle = archetype.ExampleTitle,
+                HasDetail = DesignCatalogProvider.GetArchetypeDetail(archetype.Id) is not null
+            });
+        }
 
-                var result = new DesignListResult
-                {
-                    Success = true,
-                    FilePath = ctx.DocumentPath
-                };
-
-                for (int i = 1; i <= count; i++)
-                {
-                    dynamic design = designs.Item(i);
-                    try
-                    {
-                        int layoutCount = 0;
-                        try
-                        {
-                            layoutCount = (int)design.SlideMaster.CustomLayouts.Count;
-                        }
-                        catch { }
-
-                        result.Designs.Add(new DesignInfo
-                        {
-                            Index = i,
-                            Name = design.Name?.ToString() ?? "",
-                            LayoutCount = layoutCount
-                        });
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref design!);
-                    }
-                }
-
-                return result;
-            }
-            finally
-            {
-                ComUtilities.Release(ref designs!);
-            }
-        });
+        return result;
     }
 
-    public OperationResult ApplyTheme(IVisioBatch batch, string themePath)
+    public ArchetypeDetailResult GetArchetype(IVisioBatch batch, string archetypeId)
     {
-        return batch.Execute((ctx, ct) =>
+        ArgumentException.ThrowIfNullOrWhiteSpace(archetypeId);
+
+        var archetype = DesignCatalogProvider.GetArchetype(archetypeId);
+        if (archetype is null)
         {
-            if (!System.IO.File.Exists(themePath))
-                throw new System.IO.FileNotFoundException($"Theme file not found: {themePath}");
+            var available = DesignCatalogProvider.GetArchetypes().Select(a => a.Id);
+            throw new ArgumentException(
+                $"Archetype '{archetypeId}' not found. Available: {string.Join(", ", available)}.",
+                nameof(archetypeId));
+        }
 
-            ((dynamic)ctx.Document).ApplyTheme(themePath);
+        // The registry is the fallback rather than an empty string: an archetype without its own
+        // detail file still has the cross-cutting rules, and returning nothing would read as
+        // "no guidance exists".
+        var detail = DesignCatalogProvider.GetArchetypeDetail(archetype.Id)
+            ?? DesignCatalogProvider.GetArchetypeRegistry();
 
-            return new OperationResult
-            {
-                Success = true,
-                Action = "apply-theme",
-                Message = $"Applied theme from '{System.IO.Path.GetFileName(themePath)}'",
-                FilePath = ctx.DocumentPath
-            };
-        });
+        return new ArchetypeDetailResult
+        {
+            Success = true,
+            Id = archetype.Id,
+            Name = archetype.Name,
+            When = archetype.When,
+            Stencil = archetype.Stencil,
+            Masters = archetype.Masters,
+            Variants = archetype.Variants,
+            ExampleTitle = archetype.ExampleTitle,
+            Detail = detail
+        };
     }
 
-    public ThemeColorResult GetColors(IVisioBatch batch, int designIndex)
+    public DesignReferenceResult GetStencilCatalog(IVisioBatch batch)
     {
-        return batch.Execute((ctx, ct) =>
+        return new DesignReferenceResult
         {
-            dynamic designs = ((dynamic)ctx.Document).Designs;
-            int idx = designIndex <= 0 ? 1 : designIndex;
-            dynamic design = designs.Item(idx);
-            dynamic? slideMaster = null;
-            dynamic? theme = null;
-            dynamic? colorScheme = null;
-            try
-            {
-                slideMaster = design.SlideMaster;
-                theme = slideMaster.Theme;
-                colorScheme = theme.ThemeColorScheme;
-
-                var colors = new Dictionary<string, string>();
-                // MsoThemeColorSchemeIndex: 1-12
-                string[] colorNames = [
-                    "Dark1", "Light1", "Dark2", "Light2",
-                    "Accent1", "Accent2", "Accent3", "Accent4",
-                    "Accent5", "Accent6", "Hyperlink", "FollowedHyperlink"
-                ];
-
-                for (int i = 1; i <= Math.Min(12, colorNames.Length); i++)
-                {
-                    try
-                    {
-                        dynamic colorItem = colorScheme.Colors(i);
-                        int rgb = (int)colorItem.RGB;
-                        // COM returns BGR, convert to #RRGGBB
-                        int r = rgb & 0xFF;
-                        int g = (rgb >> 8) & 0xFF;
-                        int b = (rgb >> 16) & 0xFF;
-                        colors[colorNames[i - 1]] = $"#{r:X2}{g:X2}{b:X2}";
-                        ComUtilities.Release(ref colorItem!);
-                    }
-                    catch { }
-                }
-
-                return new ThemeColorResult
-                {
-                    Success = true,
-                    FilePath = ctx.DocumentPath,
-                    DesignName = design.Name?.ToString() ?? "",
-                    Colors = colors
-                };
-            }
-            finally
-            {
-                if (colorScheme != null) ComUtilities.Release(ref colorScheme!);
-                if (theme != null) ComUtilities.Release(ref theme!);
-                if (slideMaster != null) ComUtilities.Release(ref slideMaster!);
-                ComUtilities.Release(ref design!);
-                ComUtilities.Release(ref designs!);
-            }
-        });
+            Success = true,
+            Content = DesignCatalogProvider.GetStencilCatalog()
+        };
     }
 
-    public ColorSchemeListResult ListColorSchemes(IVisioBatch batch)
+    public DesignReferenceResult GetDiagramPatterns(IVisioBatch batch)
     {
-        return batch.Execute((ctx, ct) =>
+        return new DesignReferenceResult
         {
-            dynamic colorSchemes = ((dynamic)ctx.Document).ColorSchemes;
-            try
-            {
-                var result = new ColorSchemeListResult { Success = true, FilePath = ctx.DocumentPath };
-                int count = (int)colorSchemes.Count;
-                for (int i = 1; i <= count; i++)
-                {
-                    dynamic cs = colorSchemes.Item(i);
-                    try
-                    {
-                        var info = new ColorSchemeInfo { Index = i };
-                        // RGBColor indices: 1-8 map to standard PowerPoint color roles
-                        string[] roleNames = ["Background", "Text", "Shadow", "Title", "Fill", "Accent1", "Accent2", "Accent3"];
-                        for (int c = 1; c <= Math.Min(8, roleNames.Length); c++)
-                        {
-                            try
-                            {
-                                int rgb = (int)cs.Colors(c).RGB;
-                                int r = rgb & 0xFF;
-                                int g = (rgb >> 8) & 0xFF;
-                                int b = (rgb >> 16) & 0xFF;
-                                info.Colors[roleNames[c - 1]] = $"#{r:X2}{g:X2}{b:X2}";
-                            }
-                            catch { }
-                        }
-                        result.ColorSchemes.Add(info);
-                    }
-                    finally
-                    {
-                        ComUtilities.Release(ref cs!);
-                    }
-                }
-                return result;
-            }
-            finally
-            {
-                ComUtilities.Release(ref colorSchemes!);
-            }
-        });
+            Success = true,
+            Content = DesignCatalogProvider.GetDiagramPatterns()
+        };
     }
 
-    public ThemeFontResult GetThemeFonts(IVisioBatch batch, int designIndex)
+    public PaletteListResult ListPalettes(IVisioBatch batch)
     {
-        return batch.Execute((ctx, ct) =>
+        var result = new PaletteListResult { Success = true };
+
+        foreach (var palette in DesignCatalogProvider.GetPalettes())
         {
-            dynamic designs = ((dynamic)ctx.Document).Designs;
-            int idx = designIndex <= 0 ? 1 : designIndex;
-            dynamic design = designs.Item(idx);
-            dynamic? slideMaster = null;
-            dynamic? theme = null;
-            dynamic? fontScheme = null;
-            dynamic? majorFont = null;
-            dynamic? minorFont = null;
-            try
+            result.Palettes.Add(new PaletteListItem
             {
-                slideMaster = design.SlideMaster;
-                theme = slideMaster.Theme;
-                fontScheme = theme.ThemeFontScheme;
-                majorFont = fontScheme.MajorFont;
-                minorFont = fontScheme.MinorFont;
+                Id = palette.Id,
+                Name = palette.Name,
+                BestFor = palette.BestFor
+            });
+        }
 
-                // Item(1) = Latin font
-                string headingFont = majorFont.Item(1).Name?.ToString() ?? "";
-                string bodyFont = minorFont.Item(1).Name?.ToString() ?? "";
+        return result;
+    }
 
-                return new ThemeFontResult
-                {
-                    Success = true,
-                    FilePath = ctx.DocumentPath,
-                    DesignName = design.Name?.ToString() ?? "",
-                    HeadingFont = headingFont,
-                    BodyFont = bodyFont
-                };
-            }
-            finally
-            {
-                if (minorFont != null) ComUtilities.Release(ref minorFont!);
-                if (majorFont != null) ComUtilities.Release(ref majorFont!);
-                if (fontScheme != null) ComUtilities.Release(ref fontScheme!);
-                if (theme != null) ComUtilities.Release(ref theme!);
-                if (slideMaster != null) ComUtilities.Release(ref slideMaster!);
-                ComUtilities.Release(ref design!);
-                ComUtilities.Release(ref designs!);
-            }
-        });
+    public PaletteDetailResult GetPalette(IVisioBatch batch, string paletteId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(paletteId);
+
+        var palette = DesignCatalogProvider.GetPalette(paletteId);
+        if (palette is null)
+        {
+            var available = DesignCatalogProvider.GetPalettes().Select(p => p.Id);
+            throw new ArgumentException(
+                $"Palette '{paletteId}' not found. Available: {string.Join(", ", available)}.",
+                nameof(paletteId));
+        }
+
+        return new PaletteDetailResult
+        {
+            Success = true,
+            Id = palette.Id,
+            Name = palette.Name,
+            BestFor = palette.BestFor,
+            Colors = palette.Colors
+        };
     }
 }

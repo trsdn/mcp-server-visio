@@ -227,53 +227,28 @@ public class ResultTypeSerializationTests
     }
 
     [Fact]
-    public void ArchetypeDetailResult_ObservedExamples_RemainSanitized()
+    public void ArchetypeDetailResult_CarriesTheStencilAndMastersToDrop()
     {
         var result = new ArchetypeDetailResult
         {
             Success = true,
-            Id = "framework",
-            Name = "Framework",
-            ObservedExampleSlides = ["ref-sample123"],
-            ObservedExamples =
-            [
-                new ReferenceSlideInfo
-                {
-                    Id = "ref-sample123",
-                    ArchetypeId = "framework",
-                    SubArchetypeId = "matrix-grid",
-                    Rationale = "Sample rationale."
-                }
-            ],
-            ObservedSubtypes =
-            [
-                new ReferenceSubtypeInfo
-                {
-                    SubArchetypeId = "matrix-grid",
-                    Count = 1,
-                    ExampleSlides = ["ref-sample123"],
-                    ExampleDetails =
-                    [
-                        new ReferenceSlideInfo
-                        {
-                            Id = "ref-sample123",
-                            ArchetypeId = "framework",
-                            SubArchetypeId = "matrix-grid",
-                            Rationale = "Sample rationale."
-                        }
-                    ]
-                }
-            ]
+            Id = "flowchart",
+            Name = "Flowchart",
+            Stencil = "BASFLO_M.VSSX",
+            Masters = ["Start/End", "Process", "Decision"],
+            Detail = "# Flowchart"
         };
 
         var json = JsonSerializer.Serialize(result, JsonOptions);
 
-        Assert.Contains("\"observedExampleSlides\":[\"ref-sample123\"]", json);
-        Assert.Contains("\"observedExamples\":[", json);
-        Assert.Contains("\"exampleDetails\":[", json);
-        Assert.DoesNotContain("\"sourceName\":", json);
-        Assert.DoesNotContain("\"sourceImage\":", json);
-        Assert.DoesNotContain("\"batchId\":", json);
-        Assert.DoesNotContain("\"deckKey\":", json);
+        // The point of the catalog is telling an agent what to drop, so both must survive
+        // serialisation: an archetype without them is advice it cannot act on.
+        Assert.Contains("\"stencil\":\"BASFLO_M.VSSX\"", json);
+        Assert.Contains("\"masters\":[\"Start/End\",\"Process\",\"Decision\"]", json);
+
+        // The slide-corpus fields are gone with the PowerPoint catalog they described.
+        Assert.DoesNotContain("\"observedExampleSlides\":", json);
+        Assert.DoesNotContain("\"observedSubtypes\":", json);
+        Assert.DoesNotContain("\"bestDensity\":", json);
     }
 }

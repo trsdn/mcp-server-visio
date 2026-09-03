@@ -93,7 +93,6 @@ public class McpServerIntegrationTests(ITestOutputHelper output) : IAsyncLifetim
     [
         "accessibility",
         "comment",
-        "design",
         "headerfooter",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public.

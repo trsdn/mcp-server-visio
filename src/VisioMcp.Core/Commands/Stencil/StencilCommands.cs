@@ -117,14 +117,38 @@ public class StencilCommands : IStencilCommands
         });
     }
 
+    /// <summary>
+    /// Opens a stencil by path or by name.
+    /// </summary>
+    /// <remarks>
+    /// A bare file name such as <c>BASFLO_M.VSSX</c> is what every piece of guidance naturally
+    /// writes, and Visio resolves it against its own stencil folders. This previously rejected it
+    /// with <c>File.Exists</c> before Visio was ever asked — reporting "not found" for a stencil
+    /// that is installed. Try the literal path first, since an explicit path should win, then let
+    /// Visio resolve the name.
+    /// </remarks>
     private static dynamic OpenStencilDocument(VisioContext ctx, string stencilPath)
     {
-        if (!System.IO.File.Exists(stencilPath))
+        dynamic documents = ((dynamic)ctx.Application).Documents;
+
+        if (System.IO.File.Exists(stencilPath))
         {
-            throw new FileNotFoundException($"Stencil file was not found: {stencilPath}", stencilPath);
+            return documents.OpenEx(stencilPath, StencilOpenFlags);
         }
 
-        return ((dynamic)ctx.Application).Documents.OpenEx(stencilPath, StencilOpenFlags);
+        try
+        {
+            return documents.OpenEx(stencilPath, StencilOpenFlags);
+        }
+        catch (Exception ex)
+        {
+            throw new FileNotFoundException(
+                $"Stencil '{stencilPath}' was not found. Pass a full path, or an installed stencil "
+                + "name such as 'BASFLO_M.VSSX' (Basic Flowchart) or 'BASIC_U.VSSX' (Basic Shapes). "
+                + "Not every stencil ships with every Visio edition.",
+                stencilPath,
+                ex);
+        }
     }
 
     private static void CloseStencilDocument(ref dynamic? stencilDocument)
