@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP returned an opaque error for an invalid action; it now names the valid ones** (#55).
+
+  Sending an action a tool's enum does not define produced:
+
+  ```
+  An error occurred invoking 'text'.
+  ```
+
+  No JSON, no valid-action list, nothing a model could recover from — while the CLI answered the
+  identical input with *"Invalid action 'list'. Valid actions: …"*. It now answers:
+
+  ```json
+  {"success": false,
+   "errorMessage": "No usable 'action' for the 'text' tool: it was missing, or not one this tool
+                    defines. Valid actions: get, set, find, replace, …",
+   "validActions": ["get", "set", "find", "replace", "…"],
+   "isError": true}
+  ```
+
+  Three things had to be discovered by running it, and each defeated the obvious fix:
+
+  1. **The failure is in argument binding**, before any tool code runs — so neither
+     `ExecuteToolAction`'s catch nor the generated `action == null` branch ever saw it.
+  2. **A `[JsonConverter]` on the enum is ignored.** System.Text.Json prefers a converter
+     registered in `options.Converters` over an attribute on the type, and the SDK registers one.
+     The converter has to be inserted into the options passed to `WithToolsFromAssembly`.
+  3. **A converter returning `null` never runs.** System.Text.Json unwraps `Nullable<T>` before
+     consulting a converter registered for `T`. An unrecognised action therefore maps to an
+     *undeclared* enum value (`-1`), which survives that unwrapping; generated tools detect it with
+     `Enum.IsDefined`.
+
+  Because the sentinel is not a declared member it **does not appear in the published schema** — a
+  client that reads the schema still sees exactly the valid actions. This only changes what happens
+  to one that gets it wrong anyway.
+
+### Added
+
+- **`LenientActionEnumConverterTests`** — covers known, unknown and missing actions, asserts the
+  sentinel cannot collide with a real action, and asserts the factory claims only the non-nullable
+  form. That last one is not pedantry: claiming `Nullable<T>` while returning a converter for `T`
+  makes System.Text.Json throw at **startup**, which is how the first attempt failed.
+
 ### Changed
 
 - **BREAKING: public tools call a Visio page a page** (#71).

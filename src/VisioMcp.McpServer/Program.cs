@@ -1,4 +1,8 @@
 using System.IO.Pipelines;
+
+using System.Text.Json;
+using ModelContextProtocol;
+using VisioMcp.Core.Json;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +33,26 @@ public class Program
     {
         _testInputPipe = inputPipe;
         _testOutputPipe = outputPipe;
+    }
+
+    /// <summary>
+    /// Serializer options for tool argument binding, with lenient action-enum handling inserted
+    /// ahead of the SDK's own converter.
+    /// </summary>
+    /// <remarks>
+    /// Without this, an action the enum does not define fails during argument binding — before any
+    /// tool code runs — and the SDK reports <c>"An error occurred invoking 'text'"</c> with no JSON
+    /// and no hint of what to send instead (#55).
+    ///
+    /// It has to go in <c>Converters</c> rather than on the enums: System.Text.Json prefers a
+    /// converter registered in the options over a <c>[JsonConverter]</c> attribute on the type, and
+    /// the SDK registers one, so the attribute never runs.
+    /// </remarks>
+    private static JsonSerializerOptions CreateToolSerializerOptions()
+    {
+        var options = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions);
+        options.Converters.Insert(0, new LenientActionEnumConverterFactory());
+        return options;
     }
 
     /// <summary>
@@ -115,7 +139,7 @@ public class Program
                     3. file(action:'close', save:true/false) → ONLY when completely done
                     """;
             })
-            .WithToolsFromAssembly()
+            .WithToolsFromAssembly(typeof(Program).Assembly, CreateToolSerializerOptions())
             .WithPromptsFromAssembly(); // Auto-discover prompts marked with [McpServerPromptType]
 
         if (_testInputPipe != null && _testOutputPipe != null)
