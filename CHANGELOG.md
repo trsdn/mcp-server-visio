@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Dead evaluation scaffolding** (#74, PR 1 of 4). Four artefacts that no code path reached:
+
+  - `eval/generate_batch.py` and `eval/evaluate.py` — a second, older batch harness alongside the
+    `.mjs` one ("generates all 100 prompts", 2-slide decks). Nothing invoked either.
+  - `ReferenceCatalogFixture.cs` and `tests/VisioMcp.Core.Tests/TestAssets/ReferenceCatalog/` — the
+    fixture's only mention anywhere was its own declaration. It was still `Compile Include`-linked
+    into `VisioMcp.CLI.Tests` and `VisioMcp.McpServer.Tests`, which compiled it and used nothing
+    from it.
+
+  Its `manifest.json` described six PNGs under `eval/output/slide-triage/good/` — **a directory
+  that has never existed in this repository** — and gated them behind
+  `PPTMCP_REFERENCE_DATA_ROOT`, which no production code reads. 926 lines describing an asset
+  catalog that was never populated.
+
+### Fixed
+
+- **Documentation named three environment variables that nothing reads.** Setting one of these
+  produces no error; it is simply ignored, and the harness quietly uses a different binary than the
+  contributor intended. This is not hypothetical — `Test-LlmRegressionGate.ps1` once set
+  `VISIO_CLI_COMMAND` while `conftest.py` read `CLI_COMMAND`, so the gate built binaries and then
+  evaluated something else, passing all the while.
+
+  - `PPTMCP_REFERENCE_DATA_ROOT` in `docs/ARCHETYPE-PIPELINE.md` and `eval/README.md`
+  - `VISIO_CLI_COMMAND` and `visio_mcp_SERVER_COMMAND` in `testing-strategy.instructions.md`; the
+    real names are `CLI_COMMAND` and `MCP_SERVER_COMMAND`
+
+- **The testing instructions listed six regression scenarios, none of which exist.** They named
+  table, chart and styling tests carried over from the PowerPoint ancestor. The gate actually runs
+  six different scenarios, and reports land under `llm-tests/`, not `tests/VisioMcp.LLM.Tests/`.
+
+### Added
+
+- **`DocumentedEnvironmentVariableTests`** — asserts that every `PPTMCP_*` / `VISIO_*` variable
+  named in documentation is read by some code file. `CHANGELOG.md` and `.github/ISSUE_TEMPLATE` are
+  excluded, the former because recording removed variables is its job.
+
+  The guard excludes **itself**, which it earned: its first run passed `VISIO_CLI_COMMAND` purely
+  because the explanatory comment above the test spelled the name out. A guard that scans its own
+  prose vouches for every variable it mentions.
+
 ### Changed
 
 - **The LLM integration tests exercise Visio, not PowerPoint** (#98 follow-up). `llm-tests/` gave a

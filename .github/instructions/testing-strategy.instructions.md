@@ -179,21 +179,26 @@ The standard manual gate is `.\scripts\Test-LlmRegressionGate.ps1`.
 
 It runs these six scenarios:
 
-- `cli/test_cli_table.py::test_cli_table_create_query`
-- `cli/test_cli_chart.py::test_cli_chart_workflows`
-- `cli/test_cli_styling.py::test_cli_styling_header_fill`
-- `mcp_tests/test_mcp_table.py::test_mcp_table_create_query`
-- `mcp_tests/test_mcp_chart.py::test_mcp_chart_workflows`
-- `mcp_tests/test_mcp_styling.py::test_mcp_styling_header_fill`
+- `cli/test_cli_page_shape.py::test_cli_creates_a_drawing_with_named_pages`
+- `cli/test_cli_diagram.py::test_cli_builds_a_connected_flowchart`
+- `cli/test_cli_diagram.py::test_cli_consults_the_design_catalog_first`
+- `mcp_tests/test_mcp_page_shape.py::test_mcp_creates_a_drawing_with_named_pages`
+- `mcp_tests/test_mcp_diagram.py::test_mcp_builds_a_connected_flowchart`
+- `mcp_tests/test_mcp_styling.py::test_mcp_uses_a_named_style_for_repeated_formatting`
 
 ### Configuration Overrides
 
-- `visio_mcp_SERVER_COMMAND` to override MCP server command
-- `VISIO_CLI_COMMAND` to override CLI command
+`conftest.py` reads these, and the gate sets them to the binaries it just built:
+
+- `MCP_SERVER_COMMAND` to override the MCP server command
+- `CLI_COMMAND` to override the CLI command
+
+Use exactly these names. An unrecognised name is ignored silently, so the harness falls back to
+`dotnet run` and evaluates something other than the binary you meant to test.
 
 ### Test Results
 
-Reports are generated in `tests/VisioMcp.LLM.Tests/TestResults/`:
+Reports are generated under `llm-tests/`:
 - `report.html` - Visual HTML report
 - `report.json` - Machine-readable JSON
 

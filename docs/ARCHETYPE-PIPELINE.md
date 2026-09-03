@@ -116,10 +116,6 @@ If you keep eval assets in a separate private repo clone, set:
 
 - `PPTMCP_EVAL_ASSET_REPO_ROOT`
 
-For a direct reference-catalog override, the runtime also supports:
-
-- `PPTMCP_REFERENCE_DATA_ROOT`
-
 ## Runtime Surface
 
 The runtime design surface is intentionally unified.
