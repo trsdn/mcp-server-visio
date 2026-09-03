@@ -16,7 +16,7 @@ namespace VisioMcp.Core.Commands.Text;
     + "bullet_type: 0=None, 1=Unnumbered (bullets), 2=Numbered. indent_level: 0-4. "
     + "change_case case_type: 1=Sentence, 2=Lower, 3=Upper, 4=Title, 5=Toggle. "
     + "color_hex: '#RRGGBB'. Combine multiple properties in one format call for efficiency. "
-    + "insert-slide-number and insert-datetime append literal text, not a live field, so they do not update when pages are reordered. "
+    + "insert-page-number and insert-datetime append literal text, not a live field, so they do not update when pages are reordered. "
     + "empty-placeholder-audit and insert-link are not supported: Visio pages have no layout placeholders, and Visio links whole shapes rather than text runs.")]
 public interface ITextCommands
 {
@@ -204,6 +204,6 @@ public interface ITextCommands
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeName">Shape name</param>
-    [ServiceAction("insert-slide-number")]
-    OperationResult InsertSlideNumber(IVisioBatch batch, int pageIndex, string shapeName);
+    [ServiceAction("insert-page-number")]
+    OperationResult InsertPageNumber(IVisioBatch batch, int pageIndex, string shapeName);
 }

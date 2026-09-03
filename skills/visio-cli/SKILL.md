@@ -193,12 +193,12 @@ Visio page lifecycle, guides, and routing commands.
 
 Shape management: list, read, create, move, resize, delete, z-order.
 
-**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `list-connections`, `list-connection-points`, `add-connection-point`, `set-connection-point`, `delete-connection-point`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-slide`, `set-shadow`, `add-connector`, `connect-shapes`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `set-action-settings`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
+**Actions:** `list`, `read`, `list-groups`, `read-group`, `list-selection`, `select-shapes`, `add-to-selection`, `remove-from-selection`, `clear-selection`, `list-properties`, `get-property`, `set-property`, `delete-property`, `list-connectors`, `read-connector`, `list-connections`, `list-connection-points`, `add-connection-point`, `set-connection-point`, `delete-connection-point`, `disconnect-connector`, `reconnect-connector`, `add-textbox`, `add-shape`, `move-resize`, `delete`, `z-order`, `set-fill`, `set-line`, `set-rotation`, `group`, `ungroup`, `set-alt-text`, `copy-to-page`, `set-shadow`, `add-connector`, `connect-shapes`, `merge`, `duplicate`, `flip`, `set-text-frame`, `set-gradient-fill`, `set-glow`, `set-reflection`, `set-opacity`, `read-fill`, `read-line`, `find-by-type`, `copy-formatting`, `scale`, `lock-aspect-ratio`, `set-soft-edge`, `read-shadow`, `add-text-effect`, `set-3d`
 
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | (required) |
-| `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, list-connections, list-connection-points, add-connection-point, set-connection-point, delete-connection-point, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-slide, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, set-action-settings, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
+| `--shape-name` | (required for: read, read-group, list-properties, get-property, set-property, delete-property, read-connector, list-connections, list-connection-points, add-connection-point, set-connection-point, delete-connection-point, disconnect-connector, reconnect-connector, move-resize, delete, z-order, set-fill, set-line, set-rotation, ungroup, set-alt-text, copy-to-page, set-shadow, duplicate, flip, set-text-frame, set-gradient-fill, set-glow, set-reflection, set-opacity, read-fill, read-line, scale, lock-aspect-ratio, set-soft-edge, read-shadow, set-3d) |
 | `--shape-names` | (required for: select-shapes, add-to-selection, remove-from-selection, group, connect-shapes, merge) |
 | `--property-name` | Shape Data property name, matched against the row label or the underlying Prop.<row> name, case-insensitively (required for: get-property, set-property, delete-property) |
 | `--property-value` | Property value, stored as a string. Omit to store an empty value |
@@ -219,7 +219,7 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--line-width` | Line width in points (default 0.75) (required for: set-line) |
 | `--degrees` | Rotation in degrees, clockwise. Visio's underlying Angle cell measures anticlockwise in radians; this parameter is converted for you (required for: set-rotation) |
 | `--alt-text` | Alternative text describing the shape for assistive technology. Stored in the shape's Comment ShapeSheet cell, which is where Visio keeps alt text (required for: set-alt-text) |
-| `--target-slide-index` | 1-based target page index (required for: copy-to-slide) |
+| `--target-page-index` | 1-based target page index (required for: copy-to-page) |
 | `--visible` | Show or hide shadow (required for: set-shadow) |
 | `--offset-x` | Shadow offset X in points (required for: set-shadow) |
 | `--offset-y` | Shadow offset Y in points (required for: set-shadow) |
@@ -242,8 +242,6 @@ Shape management: list, read, create, move, resize, delete, z-order.
 | `--opacity` | Opacity value from 0.0 (fully transparent) to 1.0 (fully opaque) (required for: set-opacity) |
 | `--shape-type` | Visio VisShapeTypes integer: 1=Page, 2=Group, 3=Shape, 4=ForeignObject (images and OLE), 5=Guide, 6=Document. An ordinary drawn or dropped shape is 3. (required for: find-by-type) |
 | `--source-shape-name` | Name of the shape to copy formatting from (required for: copy-formatting) |
-| `--action-type` | 0=None, 1=NextSlide, 2=PreviousSlide, 3=FirstSlide, 4=LastSlide, 7=Hyperlink (required for: set-action-settings) |
-| `--hyperlink-address` | URL for actionType=7 (Hyperlink), ignored for other types |
 | `--scale-x` | Width scale factor (e.g. 1.5 = 150%) (required for: scale) |
 | `--scale-y` | Height scale factor (e.g. 1.5 = 150%) (required for: scale) |
 | `--locked` | True to lock aspect ratio, false to unlock (required for: lock-aspect-ratio) |
@@ -278,12 +276,12 @@ Visio stencil operations for listing masters and dropping them onto pages.
 
 Text operations within shapes: get, set, format, find, replace.
 
-**Actions:** `get`, `set`, `find`, `replace`, `format`, `format-advanced`, `word-count`, `alt-text-audit`, `empty-placeholder-audit`, `set-spacing`, `set-bullets`, `insert-link`, `change-case`, `read-spacing`, `read-bullets`, `insert-symbol`, `insert-datetime`, `insert-slide-number`
+**Actions:** `get`, `set`, `find`, `replace`, `format`, `format-advanced`, `word-count`, `alt-text-audit`, `empty-placeholder-audit`, `set-spacing`, `set-bullets`, `insert-link`, `change-case`, `read-spacing`, `read-bullets`, `insert-symbol`, `insert-datetime`, `insert-page-number`
 
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | (required) |
-| `--shape-name` | (required for: get, set, format, format-advanced, set-spacing, set-bullets, insert-link, change-case, read-spacing, read-bullets, insert-symbol, insert-datetime, insert-slide-number) |
+| `--shape-name` | (required for: get, set, format, format-advanced, set-spacing, set-bullets, insert-link, change-case, read-spacing, read-bullets, insert-symbol, insert-datetime, insert-page-number) |
 | `--text` | Replacement text for the whole shape. Existing text and its run formatting are discarded (required for: set) |
 | `--search-text` | Text to find (required for: find, replace) |
 | `--replace-text` | Replacement text (required for: replace) |
@@ -429,7 +427,7 @@ Shape alignment and distribution operations
 
 | Parameter | Description |
 |-----------|-------------|
-| `--slide-index` | 1-based page index (required) |
+| `--page-index` | 1-based page index (required) |
 | `--shape-names` | Comma-separated shape names (required) |
 | `--align-type` | Alignment type (0-5) (required for: align) |
 | `--distribute-type` | 0=Horizontally, 1=Vertically (required for: distribute) |

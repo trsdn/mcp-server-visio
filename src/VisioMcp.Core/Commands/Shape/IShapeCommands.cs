@@ -317,9 +317,9 @@ public interface IShapeCommands
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based source page index</param>
     /// <param name="shapeName">Name of the shape to copy</param>
-    /// <param name="targetSlideIndex">1-based target page index</param>
-    [ServiceAction("copy-to-slide")]
-    OperationResult CopyToSlide(IVisioBatch batch, int pageIndex, string shapeName, int targetSlideIndex);
+    /// <param name="targetPageIndex">1-based target page index</param>
+    [ServiceAction("copy-to-page")]
+    OperationResult CopyToPage(IVisioBatch batch, int pageIndex, string shapeName, int targetPageIndex);
 
     /// <summary>
     /// Set shadow effect on a shape. Use visible=false to remove shadow.
@@ -478,17 +478,6 @@ public interface IShapeCommands
     /// <param name="targetShapeName">Name of the shape to apply formatting to</param>
     [ServiceAction("copy-formatting")]
     OperationResult CopyFormatting(IVisioBatch batch, int pageIndex, string sourceShapeName, string targetShapeName);
-
-    /// <summary>
-    /// Set action settings (click behavior) on a shape.
-    /// </summary>
-    /// <param name="batch">Batch context</param>
-    /// <param name="pageIndex">1-based page index</param>
-    /// <param name="shapeName">Name of the shape</param>
-    /// <param name="actionType">0=None, 1=NextSlide, 2=PreviousSlide, 3=FirstSlide, 4=LastSlide, 7=Hyperlink</param>
-    /// <param name="hyperlinkAddress">URL for actionType=7 (Hyperlink), ignored for other types</param>
-    [ServiceAction("set-action-settings")]
-    OperationResult SetActionSettings(IVisioBatch batch, int pageIndex, string shapeName, int actionType, string? hyperlinkAddress);
 
     /// <summary>
     /// Scale a shape by width and height factors relative to its current size.

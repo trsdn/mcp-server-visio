@@ -270,7 +270,7 @@ public sealed class ShapeFormattingTests(ITestOutputHelper output) : IDisposable
     }
 
     [Fact]
-    public void CopyToSlide_CopiesShapeToAnotherPage()
+    public void CopyToPage_CopiesShapeToAnotherPage()
     {
         using var batch = CreateDocument();
         var shapeName = AddRectangle(batch);
@@ -282,7 +282,7 @@ public sealed class ShapeFormattingTests(ITestOutputHelper output) : IDisposable
         Assert.True(before.Success, before.ErrorMessage);
         int beforeCount = before.Shapes.Count;
 
-        var copied = _shapes.CopyToSlide(batch, 1, shapeName, 2);
+        var copied = _shapes.CopyToPage(batch, 1, shapeName, 2);
         Assert.True(copied.Success, copied.ErrorMessage);
         output.WriteLine(copied.Message);
 
@@ -442,22 +442,6 @@ public sealed class ShapeFormattingTests(ITestOutputHelper output) : IDisposable
 
         // Formatting must not move or resize the target.
         Assert.Equal(targetWidthBefore, ReadCellNumber(batch, target, "Width"), precision: 4);
-    }
-
-    [Fact]
-    public void SetActionSettings_ReportsNoVisioEquivalent()
-    {
-        using var batch = CreateDocument();
-        var shapeName = AddRectangle(batch);
-
-        // Previously threw RuntimeBinderException, which told the caller nothing. It must now
-        // explain why and name the alternative.
-        var ex = Assert.Throws<NotSupportedException>(
-            () => _shapes.SetActionSettings(batch, 1, shapeName, 7, "https://example.com"));
-
-        output.WriteLine(ex.Message);
-        Assert.Contains("no Visio equivalent", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("hyperlink", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

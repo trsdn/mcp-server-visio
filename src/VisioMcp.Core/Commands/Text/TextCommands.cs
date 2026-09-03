@@ -964,7 +964,7 @@ public class TextCommands : ITextCommands
             try
             {
                 // Formatted with InvariantCulture so the result does not vary with the machine
-                // locale. As with insert-slide-number this is literal text, not a live field.
+                // locale. As with insert-page-number this is literal text, not a live field.
                 var now = DateTime.Now;
                 string formatted = dateTimeFormat switch
                 {
@@ -994,7 +994,7 @@ public class TextCommands : ITextCommands
             }
         });
     }
-    public OperationResult InsertSlideNumber(IVisioBatch batch, int pageIndex, string shapeName)
+    public OperationResult InsertPageNumber(IVisioBatch batch, int pageIndex, string shapeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shapeName);
 
@@ -1014,7 +1014,7 @@ public class TextCommands : ITextCommands
                 return new OperationResult
                 {
                     Success = true,
-                    Action = "insert-slide-number",
+                    Action = "insert-page-number",
                     Message = $"Appended page number {pageIndex} to shape '{shapeName}'. Note: inserted as literal text, not a field that tracks page order.",
                     FilePath = ctx.DocumentPath
                 };

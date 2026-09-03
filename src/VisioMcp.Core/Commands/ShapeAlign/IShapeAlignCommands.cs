@@ -20,20 +20,20 @@ public interface IShapeAlignCommands
     /// alignType: 0=AlignLeft, 1=AlignCenter, 2=AlignRight, 3=AlignTop, 4=AlignMiddle, 5=AlignBottom
     /// </summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based page index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeNames">Comma-separated shape names</param>
     /// <param name="alignType">Alignment type (0-5)</param>
     [ServiceAction("align")]
-    OperationResult Align(IVisioBatch batch, int slideIndex, string shapeNames, int alignType);
+    OperationResult Align(IVisioBatch batch, int pageIndex, string shapeNames, int alignType);
 
     /// <summary>
     /// Distribute shapes evenly on a page.
     /// distributeType: 0=Horizontally, 1=Vertically
     /// </summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based page index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeNames">Comma-separated shape names</param>
     /// <param name="distributeType">0=Horizontally, 1=Vertically</param>
     [ServiceAction("distribute")]
-    OperationResult Distribute(IVisioBatch batch, int slideIndex, string shapeNames, int distributeType);
+    OperationResult Distribute(IVisioBatch batch, int pageIndex, string shapeNames, int distributeType);
 }

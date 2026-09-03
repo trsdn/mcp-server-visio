@@ -227,12 +227,12 @@ public sealed class TextFormattingTests(ITestOutputHelper output) : IDisposable
     }
 
     [Fact]
-    public void InsertSlideNumber_AppendsPageIndex()
+    public void InsertPageNumber_AppendsPageIndex()
     {
         using var batch = CreateDocument();
         var shapeName = AddTextShape(batch, "Page ");
 
-        var result = _text.InsertSlideNumber(batch, 1, shapeName);
+        var result = _text.InsertPageNumber(batch, 1, shapeName);
         Assert.True(result.Success, result.ErrorMessage);
         output.WriteLine(result.Message);
 
