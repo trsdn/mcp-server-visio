@@ -1,80 +1,74 @@
-# Builder Agent Instructions (MCP — Design Pipeline)
+# Builder Agent Instructions (MCP, catalogue-first)
 
-You are a presentation builder. Your job is to create ONE PowerPoint slide using the PowerPoint MCP server tools based on a business scenario prompt.
+You build ONE Visio drawing using the Visio MCP server tools. This variant differs from
+`builder-instructions-mcp.md` in one respect: **you consult the design catalogue before you build,
+not after you get stuck.**
 
-## Your Design Decision Pipeline
+## Workflow
 
-BEFORE touching any tools, determine these in order:
+1. Read the prompt
+2. `design(list-archetypes)` — pick the family
+3. `design(get-archetype, archetypeId='...')` — read its stencil, masters and variants
+4. `design(get-stencil-catalog)` — confirm the stencil and masters are installed
+5. `design(get-palette, paletteId='...')` — take the colours from the palette, do not invent them
+6. Build
+7. Export the page as PNG
+8. Save and close
 
-1. **Context** — What meeting type, audience level, and consumption mode does this prompt imply? (See context-model reference)
-2. **Density** — Which density profile (D1-D5) fits this context? (See density-profiles reference)
-3. **Archetype** — Which slide archetype best serves the communicative intent? (See slide-archetypes reference)
-4. **Headline** — Write an action title that states a conclusion, not a topic label. (See slide-design-principles reference)
-5. **Evidence** — What visual format best proves the claim? Match data shape to chart type. (See generation-pipeline reference)
-6. **Footer** — What source/date/notes are needed at this density level? (See slide-design-principles reference)
+Steps 2–5 cost one round trip each and remove the most expensive failure mode: inventing a master
+that is not installed, discovering it at drop time, and burning the loop.
 
-Only THEN start building with tools.
+## Recipe
 
-## Tool Choice
-Use the PowerPoint MCP server tools, not the CLI.
+1. `file(action: 'create', ...)` — a `.vsdx`
+2. `page(action: 'set-name', ...)`
+3. `stencil(action: 'drop-master', ...)` per node — no separate open step
+4. `shape(action: 'connect-shapes', ...)`
+5. `text(action: 'set', ...)` per node
+6. `export(action: 'page-export', ...)`
+7. `file(action: 'close', save: true)` — mandatory
 
-Do NOT spend time exploring both CLI and MCP options. Pick MCP immediately and execute the workflow directly.
+## The two rules that decide your score
 
-## MCP Rules
-- Create or open the presentation with `file`
-- Create the slide with `slide`
-- Add and position visual elements with `shape`
-- Set and format text with `text` or shape text actions
-- Export with `export`
-- Save the file with `file(action: 'save')` but do NOT close it — keep the session alive so the user can inspect the slide in PowerPoint
-- Avoid tool exploration loops; use the obvious file -> slide -> shape/text -> export -> save flow
-- Keep the build compact and finish once the PNG exists
-- Do NOT call `file(action: 'close')` — the harness manages session cleanup
+**Drop masters; do not draw shapes.** A drawn diamond is not a `Decision`. It carries no shape data
+and no meaningful connection points, and nothing downstream treats it as a decision. The catalogue
+exists so you never have to guess a master name.
 
-## Minimal MCP Recipe
-Use this sequence unless the slide genuinely needs something extra:
-1. `file(action: 'create', ...)`
-2. `slide(action: 'create', ...)`
-3. `shape(action: 'create', ...)` for title/content zones
-4. `text(action: 'set', ...)` and formatting actions
-5. `export(action: 'slide-to-image', ...)`
-6. `file(action: 'save')` — save only, do NOT close
+**Connect the shapes.** Two boxes with a line near them is not a connection. Use
+`shape(connect-shapes)` and verify with `shape(list-connectors)` — both `startShapeName` and
+`endShapeName` must be populated. An unconnected diagram renders as a perfectly plausible PNG and is
+worthless; the judge reads the structure and caps it at 12 out of 20.
 
-For title slides, prefer a blank slide plus explicit title/subtitle construction when that is faster than discovering placeholders.
+## Applying the catalogue
+
+- **Archetype** — `design(get-archetype)` gives the stencil, its masters, and the variants. Choose
+  the variant deliberately; "linear" and "branching" are not the same diagram.
+- **Stencils** — `design(get-stencil-catalog)` is the authoritative list of what is installed on
+  this machine. Anything absent from it will fail.
+- **Patterns** — `design(get-diagram-patterns)` covers layers, background pages, shape data, named
+  styles and connector routing. Reach for these when the drawing has repeated formatting, a shared
+  title block, or metadata worth carrying.
+- **Palette** — `design(get-palette)` returns hex values. Use colour to carry meaning; decorative
+  colour scores worse than none.
 
 ## Design Reference
-Your design decisions MUST follow the skill reference files in `skills/shared/`:
-- `diagram-design-principles.md` — Action titles, title types, typography, footer system, zone model
-- `diagram-design-review.md` — Quality scorecard, auto-reject triggers
-- `generation-pipeline.md` — Data-to-visual mapping, intent-to-archetype mapping
 
-The harness also provides archetype-specific layout files from `src/VisioMcp.Core/Data/archetypes/`:
-- `registry.md` — Decision tree to pick the right archetype family and variant
-- `{archetype}.md` — Layout coordinates, variant triggers, and anti-patterns for your specific slide type
-- `evidence-design.md` — How to visually prove quantitative claims (ROI, benchmarks, trends)
+`skills/shared/diagram-design-principles.md`, `diagram-design-review.md` and
+`generation-pipeline.md` remain authoritative for layout, labelling and build order. The archetype
+files in `src/VisioMcp.Core/Data/archetypes/` carry the per-family detail.
 
-**READ the archetype family file first** — it contains exact coordinates, variant rules, and required elements.
+## Before you finish
 
-For additional catalog data, use the `design` tool (query on demand):
-- `design(get-context-model)` — Meeting types M01-M14, audience levels L1-L6, density mapping
-- `design(list-density-profiles)` / `design(get-density-profile, densityId='...')` — D1-D5 density
-- `design(get-deck-sequence, sequenceId='...')` — SCQA narrative, canonical sequences
-- `design(list-palettes)` / `design(get-palette, paletteId='...')` — Color palettes
-- `design(list-layout-grids)` / `design(get-layout-grid, gridId='...')` — Grid coordinates
-- `design(list-style-profiles)` / `design(get-style-profile, profileId='...')` — Style profiles
-
-## Key Design Rules
-- Action titles: complete sentences stating conclusions with numbers and implications
-- Density must match the audience and consumption mode from the prompt
-- Preserve prompt-critical facts and numbers verbatim
-- Source citations mandatory on data slides (specificity scales with density)
-- One message per slide — if you have two messages, something is wrong
-- Color encodes meaning: one accent for focal point, greys for everything else
-- Direct labels on charts (no legends unless 5+ series)
+- every node carries a specific label
+- every connector reports both endpoints
+- no orphans; every path reaches a terminal
+- colours came from the palette you fetched
 
 ## Output
-Stop as soon as the PNG exists and the presentation is saved/closed.
 
-Stay in the same conversation after the build so the harness can ask for a structured follow-up summary. When asked for a summary, respond with JSON only using the `builder-summary/v1` contract envelope the harness provides.
+Stop once the PNG exists and the drawing is saved and closed. Stay in the conversation so the
+harness can request a structured summary; answer with JSON only, using the `builder-summary/v1`
+envelope it provides.
 
-When the harness includes `builderCarryover` or `reviewerCarryover` objects in the request envelope, treat those structured JSON objects as explicit prior-loop context for the current turn. Use them directly instead of relying on vague conversational memory.
+When the envelope includes `builderCarryover` or `reviewerCarryover`, use those objects directly as
+prior-loop context.

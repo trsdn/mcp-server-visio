@@ -8,6 +8,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The evaluation rubric and agent instructions describe diagrams** (#74, PR 3 of 4).
+
+  `criteria.md` scored slides: action titles, one message per slide, source citations, bullet
+  density. The judge was told to look at a PNG and score nine dimensions.
+
+  It now scores ten, split by the kind of evidence each needs. **Connectivity, completeness,
+  notation correctness and labelling are scored from the structural read added in PR 2, never from
+  the image.** A drawing whose boxes are placed but never joined renders as an entirely plausible
+  picture — lines appear between shapes that merely sit near each other, and a vision model reads
+  adjacency as connection. Layout, colour, scale, Visio structure, archetype fit and
+  professionalism remain visual. A drawing scoring 0 or 1 on connectivity is capped at 12 overall,
+  because an unconnected diagram is not a diagram.
+
+  The builder instructions — MCP, MCP catalogue-first, and CLI — now turn on two rules: drop
+  stencil masters rather than drawing shapes, and connect the shapes, verifying with
+  `shape(list-connectors)` that both endpoints are populated.
+
+- **`JUDGE_DIMENSION_KEYS` matches the rubric.** The rubric described ten dimensions and a maximum
+  of 20; the judge instructions listed nine and 18; the contract enforced nine. Nothing failed —
+  the validator zero-filled or rejected whatever it did not recognise, so a rubric change could
+  silently stop reaching the score.
+
+### Fixed
+
+- **The rubric's gap table pointed improvement rounds at two tool actions that have never
+  existed** — `design(get-layout-grid)` and `design(get-style-profile)`. Two of six rows were
+  fiction. The improver instructions likewise named `evidence-design.md`, a PowerPoint-era file
+  that is not in this repository.
+
+### Added
+
+- **`EvalCriteriaFixLocationTests`** — asserts every fix location in `criteria.md` exists,
+  resolving `design(...)` against the `[ServiceAction]` attributes on `IDesignCommands` and
+  `skills/shared/*.md` against the file system; and asserts the rubric's dimension count matches
+  `JUDGE_DIMENSION_KEYS`. Both verified against induced regressions.
+
+- **`EvalAgentInstructionActionTests`** — asserts the agent instructions only name tool actions
+  that exist, resolved from `[ServiceCategory]` and `[ServiceAction]`.
+
+  This guard exists because the first draft of these very instructions told the builder to call
+  `page(action: 'rename')` and `stencil(action: 'open')`. Neither exists — the real names are
+  `set-name`, and `drop-master` with no separate open step. Both read as entirely plausible, and
+  both came from reasoning about what a diagram tool ought to offer rather than from the interface.
+  An instruction naming a missing action does not fail loudly: the agent tries it, improvises, and
+  the loop scores the improvisation instead of the guidance under test.
+
+### Changed
+
 - **The evaluation runtime drives Visio, and reads the drawing rather than only looking at it**
   (#74, PR 2 of 4).
 
