@@ -1,0 +1,47 @@
+{
+  "name": "network-diagram",
+  "mode": "tuning",
+  "description": "Evaluate and improve Network Diagram drawings — servers, devices and the links between them",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a PERIPH_M.VSSX master",
+  "archetype": "network-diagram",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "net-branch-office",
+      "text": "Build a network diagram for a branch office with a firewall, switch, wireless access point, servers and workstations"
+    },
+    {
+      "id": "net-two-sites",
+      "text": "Build a network diagram for two sites connected over a WAN link, each with its own router and local servers"
+    },
+    {
+      "id": "net-dmz",
+      "text": "Build a network diagram showing a DMZ between an external firewall and an internal firewall, with a web server in the DMZ"
+    },
+    {
+      "id": "net-cloud-hybrid",
+      "text": "Build a network diagram for a hybrid setup with an on-premises data centre linked to a cloud environment"
+    }
+  ],
+  "outputDir": "output/network-diagram",
+  "resultsDir": "results/network-diagram"
+}

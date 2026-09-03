@@ -1,0 +1,47 @@
+{
+  "name": "system-context",
+  "mode": "tuning",
+  "description": "Evaluate and improve System Context Diagram drawings — one system, the actors around it, and what flows between them",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a BASIC_U.VSSX master",
+  "archetype": "system-context",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "ctx-payment-platform",
+      "text": "Build a system context diagram for a payment platform, showing the customer, the platform and the external card network"
+    },
+    {
+      "id": "ctx-booking-system",
+      "text": "Build a C4 context diagram for a booking system with two actor types and two external systems"
+    },
+    {
+      "id": "ctx-crm-integration",
+      "text": "Build a system context diagram for a CRM showing its boundary and the external systems it exchanges data with"
+    },
+    {
+      "id": "ctx-identity-provider",
+      "text": "Build a system context diagram for an internal application that authenticates against an external identity provider"
+    }
+  ],
+  "outputDir": "output/system-context",
+  "resultsDir": "results/system-context"
+}

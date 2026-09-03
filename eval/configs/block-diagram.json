@@ -1,0 +1,47 @@
+{
+  "name": "block-diagram",
+  "mode": "tuning",
+  "description": "Evaluate and improve Block Diagram drawings — components and relationships where no formal notation applies",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a BASIC_U.VSSX master",
+  "archetype": "block-diagram",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "block-layered-app",
+      "text": "Build a block diagram of a layered application: presentation, application, domain and data layers"
+    },
+    {
+      "id": "block-data-pipeline",
+      "text": "Build a block diagram of a data pipeline from ingestion through transformation, storage and reporting"
+    },
+    {
+      "id": "block-capability-map",
+      "text": "Build a block diagram grouping business capabilities into three domains"
+    },
+    {
+      "id": "block-service-topology",
+      "text": "Build a block diagram of a service topology with a gateway, three services and a shared cache"
+    }
+  ],
+  "outputDir": "output/block-diagram",
+  "resultsDir": "results/block-diagram"
+}

@@ -20,6 +20,7 @@ import {
   loadInstructionsFile,
   normalizeTransport,
   executeRuntimeRequest,
+  readDrawingStructure,
   shouldReuseSessionContext,
   shouldUseIsolatedProcess,
   verifyBuildArtifacts,
@@ -84,7 +85,7 @@ function formatCarryoverEnvelope(builderCarryover = [], reviewerCarryover = []) 
 function buildBuilderSummaryPrompt(promptObj, loopContext) {
   return `Return a JSON object only. No prose, no markdown.
 
-Summarize the slide you just built for "${promptObj.text}".
+Summarize the drawing you just built for "${promptObj.text}".
 
 If this session is being reused, treat the structured reviewer feedback below as the authoritative prior-loop context for this turn.
 ${formatRollingContext(loopContext, "Latest reviewer feedback carried in this conversation")}
@@ -93,7 +94,7 @@ Response contract:
 ${formatProtocolExample(getBuilderSummaryResponseSchemaExample())}`;
 }
 
-async function buildSlide(config, promptObj, pngPath, builderRuntime = null, context = {}) {
+async function buildDrawing(config, promptObj, pngPath, builderRuntime = null, context = {}) {
   const { builder } = config;
   const drawingPath = pngPath.replace(".png", ".vsdx");
   const transport = normalizeTransport(builder.transport || "cli");
@@ -103,7 +104,6 @@ async function buildSlide(config, promptObj, pngPath, builderRuntime = null, con
   const familyId = resolveArchetypeFamily(config.archetype);
   const archetypeRegistryPath = join(ARCHETYPES_DIR, "registry.md");
   const archetypeFamilyPath = join(ARCHETYPES_DIR, `${familyId}.md`);
-  const evidenceDesignPath = join(ARCHETYPES_DIR, "evidence-design.md");
 
   const instructionsFile = loadInstructionsFile({
     baseDir: __dirname,
@@ -129,14 +129,18 @@ async function buildSlide(config, promptObj, pngPath, builderRuntime = null, con
   const instructions = instructionsFile.text.replace("{CLI_PATH}", CLI_PATH);
 
   const transportPrompt = transport === "mcp"
-    ? `OUTPUT: PPTX=${drawingPath} PNG=${pngPath}
+    ? `OUTPUT: VSDX=${drawingPath} PNG=${pngPath}
 
-Use PowerPoint MCP tools only. Preferred flow: file create/open → slide create Blank → shape/text operations → export slide-to-image → file close save:true.`
+Use the Visio MCP tools only. Preferred flow: file create/open → page set-name → stencil
+drop-master per node → shape connect-shapes → text set → export page-export → file close save:true.`
     : `CLI: ${CLI_PATH}
-RULES: --color not --font-color. --alignment not --horizontal-alignment. No \\n in --text. Service is running.
-OUTPUT: PPTX=${drawingPath} PNG=${pngPath}
+RULES: session close takes --save true or --save false, not --no-save. export page-export has no
+width or height. Only one session may be open at a time. An option the action does not take is
+ignored silently, so label with text set rather than passing --text to shape add-shape.
+OUTPUT: VSDX=${drawingPath} PNG=${pngPath}
 
-Steps: read skills → session create ${drawingPath} → slide create --layout-name Blank → build shapes → export slide-to-image → session close --save.`;
+Steps: read skills → session create ${drawingPath} → stencil drop-master per node → shape
+connect-shapes → text set → export page-export → session close --save true.`;
 
   // Build variant context for the prompt
   const variantHint = promptObj.expectedVariant
@@ -158,7 +162,7 @@ Steps: read skills → session create ${drawingPath} → slide create --layout-n
 
   const prompt = `${instructions}
 
-TASK: Build ONE ${config.archetype} slide.
+TASK: Build ONE ${config.archetype} drawing.
 PROMPT: "${promptObj.text}"${variantHint}
 
 READ these skill files for design guidance:
@@ -167,7 +171,6 @@ READ these skill files for design guidance:
 READ these archetype references for layout and variant rules:
 - ${archetypeRegistryPath}
 - ${archetypeFamilyPath}
-- ${evidenceDesignPath}
 
 ${formatRollingContext(context.builderCarryover || [], "Builder carry-over from earlier loops")}
 ${formatRollingContext(context.reviewerCarryover || [], "Reviewer carry-over from earlier loops")}
@@ -239,8 +242,9 @@ ${transportPrompt}`;
   };
 }
 
-async function judgeSlide(judgeRuntime, judgeInstructions, config, promptObj, pngPath, context = {}) {
+async function judgeDrawing(judgeRuntime, judgeInstructions, config, promptObj, pngPath, context = {}) {
   const familyId = resolveArchetypeFamily(config.archetype);
+  const drawingStructure = readDrawingStructure(pngPath.replace(".png", ".vsdx"));
   const requestEnvelope = createJudgmentRequestEnvelope({
     promptId: promptObj.id,
     prompt: promptObj.text,
@@ -259,18 +263,26 @@ Score variantMatch=2 if the builder used this specific variant pattern. Score 1 
 
   const prompt = `${judgeInstructions}
 
-EVALUATE this ${config.archetype} slide.
+EVALUATE this ${config.archetype} drawing.
 PNG_PATH: ${pngPath}
 ORIGINAL PROMPT: "${promptObj.text}"${variantContext}
+
+STRUCTURE:
+${drawingStructure ? JSON.stringify(drawingStructure, null, 2) : "unavailable — score dimensions 1-4 as 0 and say so"}
 
 ${formatRollingContext(context.builderCarryover || [], "Builder carry-over available to the reviewer")}
 ${formatRollingContext(context.reviewerCarryover || [], "Reviewer carry-over from earlier loops")}
 Structured carry-over envelope for this review turn:
 ${formatCarryoverEnvelope(context.builderCarryover || [], context.reviewerCarryover || [])}
 
-You must inspect the PNG file at the exact path above. Do not infer the review from the prompt alone.
-Look specifically at title wording, title/content/source zones, hierarchy, density, whether claims are backed by visible evidence, AND visual execution quality (overlaps, readability, space utilization).
-Then score using your 9 dimensions (0-2 each, max 18).
+Inspect the PNG at the exact path above, and read STRUCTURE. Do not infer the review from the
+prompt alone.
+
+Score connectivity, completeness, notation correctness and labelling from STRUCTURE, never from
+the image — an unconnected diagram renders as a perfectly plausible picture. Score layout, colour,
+scale, Visio structure, archetype fit and professionalism from the PNG.
+
+Then score all ten dimensions (0-2 each, max 20).
 Return a JSON object only. No prose, no markdown.
 
 REQUEST ENVELOPE:
@@ -681,7 +693,7 @@ async function runConfig(configPath) {
     judgeRuntime = await createRuntime(config.judge, { executionMode: "reuse-session" });
     await executeRuntimeRequest(judgeRuntime, {
       type: "prompt",
-      prompt: `${judgeInstructions}\n\nYou will evaluate ${config.archetype} slides. Always return JSON objects only. Acknowledge with JSON {"acknowledged": true}.`,
+      prompt: `${judgeInstructions}\n\nYou will evaluate ${config.archetype} drawings. Always return JSON objects only. Acknowledge with JSON {"acknowledged": true}.`,
       timeoutMs: 60000,
     });
     console.log(`  ✅ Judge ready\n`);
@@ -757,7 +769,7 @@ async function runConfig(configPath) {
           console.log(`    🔨 Building...`);
 
           const buildResult = await executeWithRetry(
-            () => buildSlide(
+            () => buildDrawing(
               config,
               loopState.prompt,
               loopState.artifacts.pngPath,
@@ -846,7 +858,7 @@ async function runConfig(configPath) {
 
           // Helper: attempt judge with optional session recovery
           const attemptJudge = async () => {
-            return judgeSlide(
+            return judgeDrawing(
               context.runtimes.judge,
               judgeInstructions,
               config,
@@ -882,7 +894,7 @@ async function runConfig(configPath) {
               context.runtimes.judge = await createRuntime(config.judge, { executionMode: "reuse-session" });
               await executeRuntimeRequest(context.runtimes.judge, {
                 type: "prompt",
-                prompt: `${judgeInstructions}\n\nYou will evaluate ${config.archetype} slides. Always return JSON objects only. Acknowledge with JSON {"acknowledged": true}.`,
+                prompt: `${judgeInstructions}\n\nYou will evaluate ${config.archetype} drawings. Always return JSON objects only. Acknowledge with JSON {"acknowledged": true}.`,
                 timeoutMs: 60000,
               });
               console.log(`    ✅ Judge session recovered`);

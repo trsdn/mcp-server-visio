@@ -1,0 +1,47 @@
+{
+  "name": "cross-functional-flowchart",
+  "mode": "tuning",
+  "description": "Evaluate and improve Cross-Functional Flowchart drawings — a process where who performs each step matters as much as the order",
+  "goal": "Reach a consistent 16+/20, with every node connected and drawn from a BASFLO_M.VSSX master",
+  "archetype": "cross-functional-flowchart",
+  "loops": 10,
+  "builder": {
+    "model": "claude-sonnet-4.5",
+    "skillFiles": [
+      "diagram-design-principles.md"
+    ],
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
+  },
+  "judge": {
+    "model": "gpt-5.4",
+    "instructionsFile": "agents/judge-instructions.md",
+    "timeoutMs": 120000
+  },
+  "improver": {
+    "model": "claude-sonnet-4",
+    "instructionsFile": "agents/improver-instructions.md",
+    "timeoutMs": 180000
+  },
+  "prompts": [
+    {
+      "id": "xfn-purchase-approval",
+      "text": "Build a cross-functional flowchart for purchase approval across Requester, Finance and Procurement, showing who does each step"
+    },
+    {
+      "id": "xfn-hiring",
+      "text": "Build a swimlane diagram for hiring across Hiring Manager, Recruiter and Candidate, from vacancy to signed offer"
+    },
+    {
+      "id": "xfn-change-request",
+      "text": "Build a cross-functional flowchart for a change request across Requester, Change Board and Operations"
+    },
+    {
+      "id": "xfn-invoice-dispute",
+      "text": "Build a swimlane diagram for an invoice dispute across Customer, Accounts Receivable and Sales"
+    }
+  ],
+  "outputDir": "output/cross-functional-flowchart",
+  "resultsDir": "results/cross-functional-flowchart"
+}

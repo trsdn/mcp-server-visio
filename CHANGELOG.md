@@ -8,6 +8,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The evaluation configs, prompts and entry points describe diagrams** (#74, PR 4 of 4).
+
+  **37 configs became 10.** The old set named slide archetypes — `title-slide`, `waterfall-chart`,
+  `swot-analysis`, `quote` — none of which exist in a diagramming tool, and thirteen were one-off
+  A/B experiments (`title-slide-ab-opus46-high-reuse` and siblings). The new set is one config per
+  archetype from the catalogue, generated from `archetypes.json` so the IDs cannot be invented, plus
+  a two-loop smoke config.
+
+  **`prompts/test-prompts.json`**: 100 deck prompts became 53 diagram tasks across nine categories.
+  Five of them exercise the Visio-specific capabilities a drawing tool should reach for — off-page
+  references across two pages, a background page carrying the title block, shape data, a separate
+  annotation layer, and one named style applied to every process step.
+
+  **Both harnesses now pass the structural read to the judge.** `readDrawingStructure` is exported
+  from the runtime, and `run-eval.mjs` and `run-archetype-eval.mjs` include it in the judge prompt
+  with an explicit instruction to score connectivity and completeness from it rather than from the
+  image.
+
+- **`docs/ARCHETYPE-PIPELINE.md` describes the pipeline that exists.** It documented a two-layer
+  system: curated guidance plus a "learned reference catalog" built by triaging slide screenshots
+  and classifying them in batches. Every stage of that second layer has now been removed — the
+  batch classifier in PR 1, the catalog fixture in PR 1, the triage tool here — because none had a
+  live consumer. The doc also claimed 17 curated families; there are 9, and it listed `org-chart`
+  and `annotated-diagram` as "learned-only" when both are authored files.
+
+### Removed
+
+- **`eval/triage-slides.mjs`** (29 KB). It sorted slide PNGs into `eval/output/slide-triage/good`
+  and `reject`, to feed the reference catalog deleted in PR 1 — a catalog whose fixture nothing
+  referenced and whose image directory never existed. Only documentation referred to the tool.
+
+### Added
+
+- **`EvalConfigTests`** — asserts every config names an archetype present in `archetypes.json` and
+  instruction files that exist. A config naming a missing archetype does not fail: the builder is
+  asked for something no guidance describes, the judge scores it against an expectation nobody
+  wrote, and the run completes with a number that means nothing.
+
+- **`EvalRuntimeTerminologyTests` now covers all of `eval/`**, not just `eval/lib/`, including the
+  prose that tells the model what to build.
+
+  Widening it also exposed that `presentation` was too blunt a term: it matched "a layered
+  application: presentation, application, domain and data layers" — the standard name for an
+  architecture layer, in a prompt that is entirely correct. A guard that forces correct domain
+  language to be reworded trains people to weaken the guard, so the term was dropped in favour of
+  names that identify the wrong product unambiguously.
+
+### Changed
+
 - **The evaluation rubric and agent instructions describe diagrams** (#74, PR 3 of 4).
 
   `criteria.md` scored slides: action titles, one message per slide, source citations, bullet

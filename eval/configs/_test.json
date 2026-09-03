@@ -1,17 +1,18 @@
 {
-  "name": "title-slide",
+  "name": "_test",
   "mode": "baseline",
-  "description": "Evaluate and improve title slides — dark hero pattern, executive framing, visual presence",
-  "goal": "Achieve consistent 12+/14 on executive-framed titles with governing thought, audience context, and visual presence",
-  "archetype": "title-slide",
+  "description": "Smoke config — one archetype, two loops, for verifying the harness runs",
+  "goal": "Confirm the harness builds, exports, reads structure and scores without error",
+  "archetype": "flowchart",
   "loops": 2,
   "builder": {
     "model": "claude-sonnet-4.5",
     "skillFiles": [
       "diagram-design-principles.md"
     ],
-    "instructionsFile": "agents/builder-instructions.md",
-    "timeoutMs": 300000
+    "instructionsFile": "agents/builder-instructions-mcp.md",
+    "timeoutMs": 300000,
+    "transport": "mcp"
   },
   "judge": {
     "model": "gpt-5.4",
@@ -20,18 +21,10 @@
   },
   "prompts": [
     {
-      "id": "title-board-qbr",
-      "text": "Build a title slide for a Q4 board presentation about $128M revenue exceeding plan by 8%"
-    },
-    {
-      "id": "title-sales-pitch",
-      "text": "Build a title slide for a SaaS pitch to a Fortune 500 CTO about analytics platform"
-    },
-    {
-      "id": "title-incident",
-      "text": "Build a title slide for a Sev-1 incident postmortem: 45 min downtime, 10K users affected"
+      "id": "smoke-linear-flow",
+      "text": "Build a flowchart with a start, two process steps and an end, all connected"
     }
   ],
-  "outputDir": "output/title-slide",
-  "resultsDir": "results/title-slide"
+  "outputDir": "output/_test",
+  "resultsDir": "results/_test"
 }

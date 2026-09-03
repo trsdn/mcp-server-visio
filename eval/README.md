@@ -1,6 +1,7 @@
-# Slide Eval Framework
+# Diagram Eval Framework
 
-Config-driven evaluation harnesses for testing and improving VisioMcp slide-building behavior with real PowerPoint outputs.
+Config-driven evaluation harnesses for testing and improving VisioMcp's diagram-building behaviour
+against real Visio output.
 
 This directory is a development-only workflow. It is not part of the shipped MCP package.
 
@@ -12,35 +13,43 @@ This directory is a development-only workflow. It is not part of the shipped MCP
 
 ## Eval vs Official Agent Client
 
-The repo now contains both an official source-side agent client and the eval harnesses in this folder. They solve different problems:
+The repo contains both an official source-side agent client and the eval harnesses in this folder.
+They solve different problems:
 
 | Area | Primary goal | Typical output |
 |---|---|---|
-| `src\VisioMcp.Agent` | Build a deck from one user task through plan → execute → verify → repair | A presentation plus plan and run artifacts |
-| `eval\` | Measure, compare, and improve builder behavior across repeated scenarios | Score histories, PNGs, manifests, and run reports |
+| `src\VisioMcp.Agent` | Build a drawing from one user task through plan → execute → verify → repair | A `.vsdx` plus plan and run artifacts |
+| `eval\` | Measure, compare, and improve builder behaviour across repeated scenarios | Score histories, PNGs, manifests, and run reports |
 | `skills\shared\*.md` | Shared guidance consumed by both | Reusable planning and design rules |
 
 Use `src\VisioMcp.Agent` when you want one production-style build workflow.
 
-Use `eval\` when you want repeatable experiments, score tracking, archetype sweeps, or skill-tuning loops.
+Use `eval\` when you want repeatable experiments, score tracking, archetype sweeps, or skill-tuning
+loops.
 
-## Reference-Slide and Archetype Pipeline Overview
+## The judge reads the drawing, not only the picture
 
-The eval framework is also where reference-slide curation and learned-archetype material starts:
+This is the load-bearing design decision of the harness.
 
-1. Extract or import individual slides into `eval\input\individual-slides`
-2. Triage them with the direct LLM workflow into `eval\output\slide-triage\good` and `eval\output\slide-triage\reject`
-3. Use batch-list and batch-result artifacts to normalize and classify the accepted slides
-4. Regenerate the sanitized learned-reference catalog consumed by the runtime design surface
+Every successful build returns **two** artefacts: the exported PNG, and a **structural read** —
+pages, shapes, and the connectors between them, taken through `page list`, `shape list` and
+`shape list-connectors`.
 
-The full privacy and rebuild rules live in [Archetype Pipeline](../docs/ARCHETYPE-PIPELINE.md).
+The judge scores connectivity, completeness, notation correctness and labelling from the structure,
+never from the image. A drawing whose boxes are placed but never joined renders as an entirely
+plausible picture: lines appear between shapes that merely sit near each other, and a vision model
+reads adjacency as connection. Scoring the image alone reliably praises the wrong output.
+
+See `criteria.md` for the full rubric.
 
 ## Current Status
 
-The eval area currently supports two related but different workflows:
+The eval area supports two related workflows:
 
-1. **`run-archetype-eval.mjs`** — the current primary harness for archetype-by-archetype evaluation, optional skill tuning, MCP transport experiments, session reuse, and isolated process runs.
-2. **`run-eval.mjs`** — an older prompt-sweep harness that is still useful for broad CLI-based checks and builder/judge comparisons, but it is not the main direction for skill-tuning architecture.
+1. **`run-archetype-eval.mjs`** — the primary harness for archetype-by-archetype evaluation,
+   optional skill tuning, MCP transport experiments, session reuse, and isolated process runs.
+2. **`run-eval.mjs`** — an older prompt-sweep harness, still useful for broad CLI-based checks and
+   builder/judge comparisons, but not the main direction for skill-tuning architecture.
 
 Use `run-archetype-eval.mjs` for most new work.
 
@@ -63,7 +72,7 @@ This is the architecture that exists in code today. It is more structured than t
 
 Per loop, the harness can:
 
-- build one slide from a config prompt
+- build one drawing from a config prompt
 - export a PNG artifact
 - judge the exported image against a structural rubric
 - optionally run an improver step against `skills/shared/*.md`
@@ -83,7 +92,7 @@ The current harness already supports the following concepts:
 | explicit builder follow-up summary | Yes | After a successful build, the archetype harness asks the builder for a JSON summary and stores it alongside the raw response. |
 | bounded retries | Yes | Build and judge steps retry once for typed transient failures such as runtime drops, malformed review JSON, and unstable artifacts. |
 | transport/instruction validation | Yes | Builder transport is validated against the configured instructions file before execution. |
-| artifact readiness validation | Yes | PNG/PPTX artifacts are checked for size, signature, and short stability before the judge runs. |
+| artifact readiness validation | Yes | PNG/VSDX artifacts are checked for size, signature, and short stability before the judge runs. |
 | runtime selector | Partial | `copilot-sdk` is implemented; `acp` is reserved and currently throws an invalid-configuration error. |
 | persistence ledger | Yes | Each run writes a manifest, transaction ledger, per-loop records, artifact manifests, and skill snapshots. |
 | run report generation | Yes | Each run writes `run-report.json` with operator-oriented summary metrics and alerts. |
@@ -109,7 +118,7 @@ So treat the current system as a practical, stability-focused harness with sever
 |---|---|---|---|
 | **Fresh session per loop** (default) | Normal eval runs | Good balance of simplicity and independence | Less carry-over context |
 | **`reuseSessionContext: true`** | Skill-tuning loops where prior reviewer feedback should influence the next build | Lets the builder keep prior conversation state across loops | More hidden state, weaker apples-to-apples comparisons |
-| **`isolatedProcess: true`** | Stability testing, strict A/B runs, cleaner reproducibility, crash containment | Hard isolation between loops or judged slides | Higher startup cost, no conversational carry-over |
+| **`isolatedProcess: true`** | Stability testing, strict A/B runs, cleaner reproducibility, crash containment | Hard isolation between loops or judged drawings | Higher startup cost, no conversational carry-over |
 
 ### Reuse vs isolation
 
@@ -162,7 +171,7 @@ Important behavior:
 
 ```text
 Config
-  -> builder builds PPTX/PNG
+  -> builder builds VSDX/PNG
   -> judge inspects PNG and returns JSON
   -> harness normalizes/stores structured results
   -> optional improver edits skills
@@ -203,7 +212,7 @@ But it is still the older workflow and should not be treated as the long-term sk
 - GitHub Copilot CLI installed and authenticated
 - VisioMcp CLI built: `dotnet build src/VisioMcp.CLI -c Release`
 - For MCP builder transport: build the MCP server too: `dotnet build src/VisioMcp.McpServer -c Release`
-- Windows with PowerPoint installed
+- Windows with Visio installed
 
 ### Install
 
@@ -249,40 +258,18 @@ The sync script copies `eval\input`, `eval\output`, `eval\results`, and `eval\da
 
 ```bash
 node run-archetype-eval.mjs configs\kpi-dashboard.json
-node run-archetype-eval.mjs configs\title-slide.json
+node run-archetype-eval.mjs configs\flowchart.json
 node run-archetype-eval.mjs configs\all
 ```
 
-### Direct reference-slide triage
-
-Use this when you want the LLM to inspect already extracted slide PNGs directly, without MCP or PowerPoint build steps, and sort them into strong reference examples vs rejects.
-
-```bash
-node triage-slides.mjs
-node triage-slides.mjs --limit 25 --dry-run
-node triage-slides.mjs --model claude-sonnet-4.5 --min-score 16
-node triage-slides.mjs --shard-count 8 --shard-index 0
-```
-
-Default behavior:
-
-- reads PNGs from `<asset-root>\eval\input\individual-slides`
-- scores each slide directly via Copilot SDK using the judge prompt
-- applies a strict accept threshold focused on structure and visual quality
-- allows non-action-title cover/admin slides to pass if they are otherwise strong
-- supports deterministic sharding via `--shard-count` / `--shard-index` for parallel direct-LLM workers
-- moves accepted slides to `<asset-root>\eval\output\slide-triage\good`
-- moves rejected slides to `<asset-root>\eval\output\slide-triage\reject`
-- writes per-slide JSONL results and a rolling summary under `<asset-root>\eval\output\slide-triage`
-
 ### Prompt sweep harness
 
-```bash
+```powershell
 node run-eval.mjs
 node run-eval.mjs --mode baseline
 node run-eval.mjs --mode tuning
 node run-eval.mjs --start 0 --count 5
-node run-eval.mjs --category dashboard
+node run-eval.mjs --category process
 ```
 
 ## Config Schema for `run-archetype-eval.mjs`
@@ -291,11 +278,11 @@ Each JSON file in `eval/configs/` is the source of truth for one archetype run.
 
 ```jsonc
 {
-  "name": "title-slide-ab-opus46-high-reuse",
+  "name": "flowchart",
   "mode": "baseline",
   "description": "What this run is measuring",
   "goal": "Operator-facing success target",
-  "archetype": "title-slide",
+  "archetype": "flowchart",
   "loops": 4,
 
   "builder": {
@@ -331,11 +318,11 @@ Each JSON file in `eval/configs/` is the source of truth for one archetype run.
   }, // only used in tuning mode; ignored in baseline
 
   "prompts": [
-    { "id": "title-board", "text": "Build a title slide for..." }
+    { "id": "flow-order-fulfilment", "text": "Build a flowchart for order fulfilment..." }
   ],
 
-  "outputDir": "output/title-slide-ab-opus46-high-reuse",
-  "resultsDir": "results/title-slide-ab-opus46-high-reuse"
+  "outputDir": "output/flowchart",
+  "resultsDir": "results/flowchart"
 }
 ```
 
@@ -344,7 +331,7 @@ Each JSON file in `eval/configs/` is the source of truth for one archetype run.
 | Setting | What it means in the current code |
 |---|---|
 | `builder.reasoningEffort` | Passed directly into Copilot session config. |
-| `builder.transport: "mcp"` | Builder session gets the PowerPoint MCP server attached. |
+| `builder.transport: "mcp"` | Builder session gets the Visio MCP server attached. |
 | `runtime` | Optional runtime selector for the shared layer under `eval/lib/runtime/`. Omit it for the current Copilot SDK path; ACP is reserved for future work and not implemented yet. |
 | `reuseSessionContext` | Keeps one session/runtime alive across loops unless isolation is enabled. |
 | `isolatedProcess` | Uses `copilot-isolated-worker.mjs` to run the step in a separate child process. |
@@ -380,9 +367,17 @@ Use explicit `timeoutMs` when you want stable comparisons across models.
 The current expectation is:
 
 - inspect the exported PNG directly
-- score the 7 structural dimensions
+- read the structural read supplied under `structure`
+- score the **four structural dimensions from `structure`** — connectivity, completeness, notation
+  correctness, labelling — and never from the image
+- score the six visual dimensions from the PNG
 - return **one JSON object only**
-- include `dimensionScores`, `totalScore`, `maxScore`, and `gaps`
+- include `dimensionScores`, `totalScore`, `maxScore` (20), and `gaps`
+
+The dimension keys are defined once, in `JUDGE_DIMENSION_KEYS` in `lib/protocol/contracts.mjs`, and
+`EvalCriteriaFixLocationTests` asserts that `criteria.md` describes the same number. They drifted
+before — the rubric said ten and 20, the instructions said nine and 18, and the validator enforced
+nine — and nothing failed, because unrecognised dimensions were simply zero-filled.
 
 The archetype harness stores:
 
@@ -417,14 +412,14 @@ Both harnesses now write **mode-scoped artifacts** and **mode-scoped ledgers**.
 
 ### Archetype harness outputs
 
-- slide artifacts: `outputDir/<mode>/loop{N}-{promptId}.png` and `.pptx`
+- drawing artifacts: `outputDir/<mode>/loop{N}-{promptId}.png` and `.vsdx`
 - top-level summary JSON: `resultsDir/<mode>/<runName>-<timestamp>.json`
 - persistence ledger root: `resultsDir/<mode>/ledger/<runId>/`
 - generated operator report: `resultsDir/<mode>/ledger/<runId>/run-report.json`
 
 ### Prompt-sweep harness outputs
 
-- slide artifacts: `<asset-root>/eval/output/<mode>/auto-<promptId>.png` and `.pptx`
+- drawing artifacts: `<asset-root>/eval/output/<mode>/auto-<promptId>.png` and `.vsdx`
 - top-level summary JSON: `<asset-root>/eval/results/<mode>/<runName>-<timestamp>.json`
 - persistence ledger root: `<asset-root>/eval/results/<mode>/ledger/<runId>/`
 - generated operator report: `<asset-root>/eval/results/<mode>/ledger/<runId>/run-report.json`
@@ -487,7 +482,7 @@ If you are debugging instability or bad scores, inspect `builder.validation`, `j
 CLI-oriented builder guidance:
 
 - read design skills
-- build one slide with `visiocli`
+- build one drawing with `visiocli`
 - export PNG
 - save and close
 - stay available for a `builder-summary/v1` follow-up request
@@ -496,8 +491,8 @@ CLI-oriented builder guidance:
 
 MCP-oriented builder guidance:
 
-- use PowerPoint MCP tools directly
-- prefer file -> slide -> shape/text -> export -> close
+- use the Visio MCP tools directly
+- prefer file -> page -> stencil drop-master -> connect-shapes -> text -> export -> close
 - stay in the same conversation so the harness can request a structured JSON summary
 
 ### `agents/judge-instructions.md`
