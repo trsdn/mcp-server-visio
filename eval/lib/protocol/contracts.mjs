@@ -27,15 +27,18 @@ export const CONTRACTS = Object.freeze({
 });
 
 export const JUDGE_DIMENSION_KEYS = Object.freeze([
-  "archetypeMatch",
-  "variantMatch",
-  "actionTitle",
-  "infoHierarchy",
-  "contentDensity",
-  "zoneCompliance",
-  "sourceCitations",
-  "evidenceSupport",
-  "visualExecution",
+  // Structural — scored from the drawing's structure, not the rendered image.
+  "connectivity",
+  "completeness",
+  "notationCorrectness",
+  "labelling",
+  // Visual — scored from the exported PNG.
+  "layout",
+  "colourDiscipline",
+  "pageAndScale",
+  "visioStructure",
+  "archetypeFit",
+  "professionalism",
 ]);
 
 function compactText(value, maxLength = 240) {
