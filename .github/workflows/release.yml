@@ -380,7 +380,7 @@ jobs:
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
         # Create staging directory
-        $stagingDir = Join-Path $env:TEMP "ppt-skills-$([guid]::NewGuid().ToString('N').Substring(0,8))"
+        $stagingDir = Join-Path $env:TEMP "visio-skills-$([guid]::NewGuid().ToString('N').Substring(0,8))"
         New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
         try {
@@ -400,7 +400,7 @@ jobs:
           }
 
           # Create ZIP archive
-          $zipPath = Join-Path $outputDir "ppt-skills-v$version.zip"
+          $zipPath = Join-Path $outputDir "visio-skills-v$version.zip"
           Compress-Archive -Path "$stagingDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
           Write-Host "Created: $zipPath"
 
@@ -418,9 +418,9 @@ jobs:
 
         # Generate manifest.json
         $manifest = @{
-          name = "ppt-skills"
+          name = "visio-skills"
           version = $version
-          description = "PowerPoint MCP Server Agent Skills for AI coding assistants"
+          description = "Visio MCP Server Agent Skills for AI coding assistants"
           platforms = @("github-copilot", "claude-code", "cursor", "windsurf", "gemini-cli", "goose", "codex", "opencode", "amp", "kilo", "roo", "trae")
           skills = @(
             @{
@@ -446,7 +446,7 @@ jobs:
             @{ name = ".cursorrules"; type = "config"; description = "Cursor project rules" }
           )
           repository = "https://github.com/trsdn/mcp-server-visio"
-          documentation = "https://VisioMcpserver.dev/"
+          documentation = "https://github.com/trsdn/mcp-server-visio"
           buildDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
         }
         $manifest | ConvertTo-Json -Depth 10 | Set-Content -Path "$outputDir/manifest.json" -Encoding UTF8
@@ -457,7 +457,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: agent-skills
-        path: artifacts/skills/ppt-skills-*.zip
+        path: artifacts/skills/visio-skills-*.zip
 
     - name: Populate npm Skill Packages
       run: |
@@ -817,15 +817,14 @@ jobs:
         **Agent Skills** (for AI coding assistants)
         - VS Code Extension includes both skills automatically (visio-mcp + visio-cli)
         - Install via npm: `npx skillpm install visio-mcp-skill` or `npx skillpm install visio-cli-skill`
-        - Or download `ppt-skills-v${{ env.VERSION }}.zip` or install via `npx skills add trsdn/mcp-server-visio`
+        - Or download `visio-skills-v${{ env.VERSION }}.zip` or install via `npx skills add trsdn/mcp-server-visio`
 
         ### Requirements
         - Windows OS
-        - Microsoft PowerPoint 2016+
+        - Microsoft Visio 2016+
         - .NET 10 Runtime or SDK (for NuGet installation only; VS Code and MCPB bundle it)
 
         ### Documentation
-        - [Website](https://VisioMcpserver.dev/)
         - [GitHub Repository](https://github.com/trsdn/mcp-server-visio)
         - [Changelog](https://github.com/trsdn/mcp-server-visio/blob/main/CHANGELOG.md)
         NOTES

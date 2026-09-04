@@ -95,6 +95,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Required PR checks no longer deadlock non-code pull requests** (#124). Removed the
+  `pull_request.paths` filters from the required Build CLI, Build MCP Server, and CodeQL workflows,
+  while leaving their `push` filters intact.
+
+- **Release workflow no longer ships stale PowerPoint branding or a dead documentation host** (#121).
+  Renamed the agent skills release asset from `ppt-skills-v$version.zip` to
+  `visio-skills-v$version.zip`, corrected the shipped requirement to Microsoft Visio, and pointed
+  workflow-generated documentation links at the repository.
+
 - **The `style` tool never worked through the CLI.** Shipped with eight actions in #92, but never
   added to the service dispatch switch, so every call returned
   `{"success":false,"error":"Unknown command category: style"}`.
