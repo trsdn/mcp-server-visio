@@ -17,7 +17,7 @@ format:
   installed on your machine
 - **Watch it work** — ask to see Visio and follow along side by side with Claude
 
-**15 tools with 178 actions**.
+**16 tools with 180 actions**.
 
 ## Requirements
 

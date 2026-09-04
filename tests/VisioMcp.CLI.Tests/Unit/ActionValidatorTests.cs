@@ -30,6 +30,7 @@ public sealed class ActionValidatorTests
         "docproperty",
         "export",
         "file",
+        "headerfooter",
         "hyperlink",
         "layer",
         "master",
@@ -45,10 +46,9 @@ public sealed class ActionValidatorTests
     private static readonly string[] HiddenLegacyCommands =
     [
         "comment",
-        "headerfooter",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
-        // in #34; both are public. accessibility was deleted in #77 and tag in #116, so neither
-        // needs quarantining any more.
+        // in #34; both are public. accessibility was deleted in #77 and tag in #116, and
+        // headerfooter was ported to Document.Header*/Footer* in #63.
         "image",
         "printoptions",
         "vba"

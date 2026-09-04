@@ -275,10 +275,14 @@ public class ResultTypeInvariantTests
     {
         var result = new HeaderFooterResult();
         Assert.False(result.Success);
-        Assert.False(result.ShowFooter);
-        Assert.False(result.ShowSlideNumber);
-        Assert.False(result.ShowDate);
-        Assert.Null(result.FooterText);
+        Assert.Null(result.HeaderLeft);
+        Assert.Null(result.HeaderCenter);
+        Assert.Null(result.HeaderRight);
+        Assert.Null(result.FooterLeft);
+        Assert.Null(result.FooterCenter);
+        Assert.Null(result.FooterRight);
+        Assert.Equal(0d, result.HeaderMargin);
+        Assert.Equal(0d, result.FooterMargin);
     }
 
     [Fact]

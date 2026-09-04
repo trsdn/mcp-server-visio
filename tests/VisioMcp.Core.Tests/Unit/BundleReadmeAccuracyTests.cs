@@ -30,11 +30,24 @@ namespace VisioMcp.Core.Tests.Unit;
 [Trait("Feature", "Documentation")]
 public class BundleReadmeAccuracyTests
 {
-    private static readonly string[] PublicDomains =
-    [
-        "Cell", "Design", "DocumentProperty", "Export", "File", "Hyperlink", "Layer", "Master",
-        "Page", "Shape", "ShapeAlign", "Stencil", "Style", "Text", "Window"
-    ];
+    /// <summary>
+    /// Domains are discovered from <c>PublicSurface</c> rather than listed here. A hardcoded list
+    /// would have to be edited by hand every time a domain is published or suppressed, and a guard
+    /// that needs manual updating to stay honest is the thing this repository keeps being caught by
+    /// (#38, #57, #117).
+    /// </summary>
+    private static readonly Regex SuppressedPattern = new(
+        @"PublicSurface\s*=\s*false",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Marks a file as a domain interface. Needed because the glob <c>I*Commands.cs</c> also
+    /// matches implementation classes whose name happens to start with I — <c>ImageCommands.cs</c>
+    /// is the live example.
+    /// </summary>
+    private static readonly Regex ServiceCategoryPattern = new(
+        @"\[ServiceCategory\(",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ServiceActionPattern = new(
         @"\[ServiceAction\(""[^""]+""\)\]",
@@ -130,25 +143,29 @@ public class BundleReadmeAccuracyTests
         var tools = 0;
         var actions = 0;
 
-        foreach (var domain in PublicDomains)
-        {
-            var directory = Path.Combine(commandsRoot, domain);
+        Assert.True(
+            Directory.Exists(commandsRoot),
+            $"Expected the Core command domains at '{commandsRoot}'.");
 
-            if (!Directory.Exists(directory))
+        foreach (var interfaceFile in Directory.GetFiles(commandsRoot, "I*Commands.cs", SearchOption.AllDirectories))
+        {
+            var text = File.ReadAllText(interfaceFile);
+
+            // The glob also matches implementation classes such as ImageCommands.cs.
+            if (!ServiceCategoryPattern.IsMatch(text))
             {
                 continue;
             }
 
-            var interfaceFile = Directory
-                .GetFiles(directory, "I*Commands.cs", SearchOption.TopDirectoryOnly)
-                .FirstOrDefault();
-
-            if (interfaceFile is null)
+            // Suppressed domains are compiled but not offered, so they are not part of the surface.
+            if (SuppressedPattern.IsMatch(text))
             {
                 continue;
             }
 
             tools++;
+
+            var domain = Path.GetFileName(Path.GetDirectoryName(interfaceFile))!;
 
             // The hand-written file tool replaces IFileCommands, which exposes only 'test'.
             if (string.Equals(domain, "File", StringComparison.Ordinal))
@@ -157,8 +174,10 @@ public class BundleReadmeAccuracyTests
                 continue;
             }
 
-            actions += ServiceActionPattern.Matches(File.ReadAllText(interfaceFile)).Count;
+            actions += ServiceActionPattern.Matches(text).Count;
         }
+
+        Assert.True(tools > 0, "No public command domains were discovered — the guard would pass vacuously.");
 
         return (tools, actions);
     }

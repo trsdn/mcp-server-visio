@@ -939,12 +939,18 @@ public class BackgroundResult : ResultBase
 
 public class HeaderFooterResult : ResultBase
 {
-    public bool ShowFooter { get; set; }
-    public bool ShowSlideNumber { get; set; }
-    public bool ShowDate { get; set; }
+    public string? HeaderLeft { get; set; }
+    public string? HeaderCenter { get; set; }
+    public string? HeaderRight { get; set; }
+    public string? FooterLeft { get; set; }
+    public string? FooterCenter { get; set; }
+    public string? FooterRight { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? FooterText { get; set; }
+    /// <summary>Header margin in inches, as reported by <c>Document.HeaderMargin</c>.</summary>
+    public double HeaderMargin { get; set; }
+
+    /// <summary>Footer margin in inches, as reported by <c>Document.FooterMargin</c>.</summary>
+    public double FooterMargin { get; set; }
 }
 
 // ── SmartArt ─────────────────────────────────────────────
