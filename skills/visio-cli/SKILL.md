@@ -330,24 +330,24 @@ Read and write Visio print options on the document and on a page's Print Propert
 | Parameter | Description |
 |-----------|-------------|
 | `--page-index` | 1-based page index whose PageSheet print cells should be used |
-| `--print-landscape` | Document PrintLandscape option |
-| `--print-centered-h` | Document PrintCenteredH option |
-| `--print-centered-v` | Document PrintCenteredV option |
-| `--paper-size` | Document PaperSize value |
+| `--print-landscape` | Document-wide printer page orientation toggle: false = portrait, true = landscape |
+| `--print-centered-h` | Whether to center the drawing horizontally on the printer page |
+| `--print-centered-v` | Whether to center the drawing vertically on the printer page |
+| `--paper-size` | Document VisPaperSizes value: 0=Unknown, 1=Letter, 5=Legal, 8=A3, 9=A4, 11=A5, 12=B4 JIS, 13=B5 JIS, 14=Folio, 18=Note, 24=C, 25=D, 26=E |
 | `--printer` | Document Printer name. Passing the current name is safe and does not print |
-| `--print-fit-on-pages` | Document PrintFitOnPages option |
-| `--print-pages-across` | Document PrintPagesAcross value |
-| `--print-pages-down` | Document PrintPagesDown value |
-| `--print-scale` | Document PrintScale percentage |
-| `--print-page-orientation` | PageSheet PrintPageOrientation value |
-| `--print-grid` | PageSheet PrintGrid cell |
-| `--paper-kind` | PageSheet PaperKind value |
-| `--center-x` | PageSheet CenterX cell |
-| `--center-y` | PageSheet CenterY cell |
-| `--page-left-margin-inches` | PageSheet PageLeftMargin cell, in inches |
-| `--page-right-margin-inches` | PageSheet PageRightMargin cell, in inches |
-| `--page-top-margin-inches` | PageSheet PageTopMargin cell, in inches |
-| `--page-bottom-margin-inches` | PageSheet PageBottomMargin cell, in inches |
+| `--print-fit-on-pages` | Whether to fit the drawing to a specific number of printed pages using print_pages_across and print_pages_down |
+| `--print-pages-across` | Number of printed pages across when print_fit_on_pages is true |
+| `--print-pages-down` | Number of printed pages down when print_fit_on_pages is true |
+| `--print-scale` | Print scale as a fraction of full size: 1.0 = 100%, 0.75 = 75%, 2.0 = 200%. This is NOT a percentage - passing 75 means 7500%. |
+| `--print-page-orientation` | PageSheet PrintPageOrientation cell: 0=same as printer, 1=portrait, 2=landscape |
+| `--print-grid` | Whether to print the drawing grid |
+| `--paper-kind` | PageSheet PaperKind cell using Windows DMPAPER values; common values include 1=Letter, 5=Legal, 8=A3, 9=A4, 11=A5 |
+| `--center-x` | Whether to center the page horizontally on the printer page |
+| `--center-y` | Whether to center the page vertically on the printer page |
+| `--page-left-margin-inches` | PageSheet PageLeftMargin cell. Value is in inches. |
+| `--page-right-margin-inches` | PageSheet PageRightMargin cell. Value is in inches. |
+| `--page-top-margin-inches` | PageSheet PageTopMargin cell. Value is in inches. |
+| `--page-bottom-margin-inches` | PageSheet PageBottomMargin cell. Value is in inches. |
 
 
 

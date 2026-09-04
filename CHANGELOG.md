@@ -15,9 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   The old PowerPoint signature (`OutputType`, `PrintColorType`, `FrameSlides`, `FitToPage`,
   `PrintHiddenSlides`) was deleted rather than accepted and ignored. The new `get`/`set` actions
   cover `PrintLandscape`, horizontal and vertical centring, `PaperSize`, `Printer`,
-  `PrintFitOnPages`, pages across/down, `PrintScale`, `PrintPageOrientation`, `PrintGrid`,
-  `PaperKind`, `CenterX`, `CenterY`, and the four page margins in inches. `PaperHeight` and
-  `PaperWidth` are reported in inches.
+  `PrintFitOnPages`, pages across/down, `PrintScale` as a fraction of full size,
+  `PrintPageOrientation`, `PrintGrid`, `PaperKind`, `CenterX`, `CenterY`, and the four page margins
+  in inches. `PaperHeight` and `PaperWidth` are reported in inches.
 
   This tool deliberately does not expose `Document.Print`, `Document.PrintOut`, `Page.Print`, or
   `ExportAsFixedFormat`: print jobs are unsafe for agents, and fixed-format output remains in the

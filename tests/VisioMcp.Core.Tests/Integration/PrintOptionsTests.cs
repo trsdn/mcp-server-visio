@@ -54,7 +54,7 @@ public sealed class PrintOptionsTests : IDisposable
             printFitOnPages: true,
             printPagesAcross: 2,
             printPagesDown: 3,
-            printScale: 75,
+            printScale: 0.75,
             printPageOrientation: null,
             printGrid: null,
             paperKind: null,
@@ -75,7 +75,50 @@ public sealed class PrintOptionsTests : IDisposable
         Assert.True(read.PrintFitOnPages);
         Assert.Equal(2, read.PrintPagesAcross);
         Assert.Equal(3, read.PrintPagesDown);
-        Assert.Equal(75, read.PrintScale, precision: 3);
+        Assert.Equal(0.75, read.PrintScale, precision: 3);
+    }
+
+    [Fact]
+    public void PrintScale_DefaultsToOnePointZeroMeaningFullSize()
+    {
+        using var batch = CreateDocument();
+
+        var read = _printOptions.GetSettings(batch);
+
+        Assert.True(read.Success, read.ErrorMessage);
+        Assert.Equal(1.0, read.PrintScale, precision: 3);
+    }
+
+    [Fact]
+    public void PrintScale_RoundTripsFractionOfFullSize()
+    {
+        using var batch = CreateDocument();
+
+        _printOptions.SetSettings(
+            batch,
+            pageIndex: 1,
+            printLandscape: null,
+            printCenteredH: null,
+            printCenteredV: null,
+            paperSize: null,
+            printer: null,
+            printFitOnPages: null,
+            printPagesAcross: null,
+            printPagesDown: null,
+            printScale: 0.8,
+            printPageOrientation: null,
+            printGrid: null,
+            paperKind: null,
+            centerX: null,
+            centerY: null,
+            pageLeftMarginInches: null,
+            pageRightMarginInches: null,
+            pageTopMarginInches: null,
+            pageBottomMarginInches: null);
+
+        var read = _printOptions.GetSettings(batch);
+
+        Assert.Equal(0.8, read.PrintScale, precision: 3);
     }
 
     [Fact]
@@ -209,7 +252,7 @@ public sealed class PrintOptionsTests : IDisposable
                 printFitOnPages: true,
                 printPagesAcross: 2,
                 printPagesDown: 3,
-                printScale: 80,
+                printScale: 0.8,
                 printPageOrientation: 1,
                 printGrid: true,
                 paperKind: 9,
@@ -250,7 +293,7 @@ public sealed class PrintOptionsTests : IDisposable
             printFitOnPages: true,
             printPagesAcross: 2,
             printPagesDown: 3,
-            printScale: 75,
+            printScale: 0.75,
             printPageOrientation: 1,
             printGrid: true,
             paperKind: 9,
