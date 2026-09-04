@@ -310,16 +310,6 @@ public class ResultTypeInvariantTests
     }
 
     [Fact]
-    public void TagListResult_DefaultValues()
-    {
-        var result = new TagListResult();
-        Assert.False(result.Success);
-        Assert.NotNull(result.Tags);
-        Assert.Empty(result.Tags);
-        Assert.Null(result.ShapeName);
-    }
-
-    [Fact]
     public void ColorSchemeListResult_DefaultValues()
     {
         var result = new ColorSchemeListResult();

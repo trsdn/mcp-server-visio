@@ -989,24 +989,6 @@ public class PageSetupResult : ResultBase
     public int NotesOrientation { get; set; }
 }
 
-// ── Tags ─────────────────────────────────────────────────
-
-public class TagListResult : ResultBase
-{
-    public int SlideIndex { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ShapeName { get; set; }
-
-    public List<TagInfo> Tags { get; set; } = [];
-}
-
-public class TagInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
-}
-
 // ── Color Scheme ─────────────────────────────────────────
 
 public class ColorSchemeListResult : ResultBase

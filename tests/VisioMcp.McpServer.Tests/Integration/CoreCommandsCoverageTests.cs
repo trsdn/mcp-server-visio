@@ -13,7 +13,6 @@ using VisioMcp.Core.Commands.Master;
 using VisioMcp.Core.Commands.PrintOptions;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
-using VisioMcp.Core.Commands.Tag;
 using VisioMcp.Core.Commands.Text;
 using VisioMcp.Core.Commands.Vba;
 using VisioMcp.Core.Commands.Window;
@@ -160,15 +159,6 @@ public class CoreCommandsCoverageTests
             $"IShapeAlignCommands has {coreMethodCount} [ServiceAction] methods but ShapealignAction has only {enumValueCount} enum values.");
     }
 
-
-    [Fact]
-    public void ITagCommands_AllMethodsHaveEnumValues()
-    {
-        var coreMethodCount = GetServiceActionMethodCount(typeof(ITagCommands));
-        var enumValueCount = Enum.GetValues<TagAction>().Length;
-        Assert.True(enumValueCount >= coreMethodCount,
-            $"ITagCommands has {coreMethodCount} [ServiceAction] methods but TagAction has only {enumValueCount} enum values.");
-    }
 
     // ── Existing mapping tests ───────────────────────────────
 
@@ -329,18 +319,6 @@ public class CoreCommandsCoverageTests
             var exception = Record.Exception(() => ServiceRegistry.Shapealign.ToActionString(action));
             Assert.Null(exception);
             Assert.NotEmpty(ServiceRegistry.Shapealign.ToActionString(action));
-        }
-    }
-
-
-    [Fact]
-    public void TagAction_AllEnumValuesHaveMappings()
-    {
-        foreach (var action in Enum.GetValues<TagAction>())
-        {
-            var exception = Record.Exception(() => ServiceRegistry.Tag.ToActionString(action));
-            Assert.Null(exception);
-            Assert.NotEmpty(ServiceRegistry.Tag.ToActionString(action));
         }
     }
 
