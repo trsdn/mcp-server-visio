@@ -645,6 +645,46 @@ jobs:
         name: npm-skill-packages
         path: npm-packages
 
+    - name: Verify package set (bidirectional)
+      run: |
+        $version = $env:VERSION
+
+        # Every expected package must exist, and nothing beyond it may be pushed.
+        # VisioMcp.Core and VisioMcp.ComInterop are deliberately IsPackable=false: they are
+        # implementation detail, not a curated API, and a NuGet publish cannot be withdrawn.
+        $expected = @{
+          "nupkg"     = "VisioMcp.McpServer.$version.nupkg"
+          "cli-nupkg" = "VisioMcp.CLI.$version.nupkg"
+        }
+
+        $failed = $false
+
+        foreach ($dir in $expected.Keys) {
+          $wanted = $expected[$dir]
+          $found = @(Get-ChildItem -Path $dir -Filter *.nupkg -File -ErrorAction SilentlyContinue |
+                     Select-Object -ExpandProperty Name)
+
+          if ($found -notcontains $wanted) {
+            Write-Output "::error::Expected package '$wanted' was not produced in '$dir/'."
+            $failed = $true
+          }
+
+          $unexpected = @($found | Where-Object { $_ -ne $wanted })
+          foreach ($extra in $unexpected) {
+            Write-Output "::error::Unexpected package '$extra' in '$dir/'. If a project was made packable on purpose, add it to the expected set in this step first - NuGet publishes cannot be withdrawn."
+            $failed = $true
+          }
+
+          Write-Output "$dir/ -> found: $($found -join ', ')"
+        }
+
+        if ($failed) {
+          throw "Package set verification failed. Nothing was pushed."
+        }
+
+        Write-Output "Package set verified: $($expected.Values -join ', ')"
+      shell: pwsh
+
     - name: NuGet Login (OIDC)
       uses: NuGet/login@v1
       id: nuget-login

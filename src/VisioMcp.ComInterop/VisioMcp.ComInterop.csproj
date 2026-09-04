@@ -16,16 +16,12 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
 
-    <PackageId>VisioMcp.ComInterop</PackageId>
-    <Title>VisioMcp COM Interop Library</Title>
-    <Description>COM interop utilities for Visio automation. Provides low-level COM object lifecycle management, STA threading, OLE message filtering, and Visio session management. Foundation library for robust Visio COM automation.</Description>
-    <PackageTags>visio;automation;com;interop;ole;sta;threading;windows</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>See https://github.com/trsdn/mcp-server-visio/releases for release notes</PackageReleaseNotes>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-
-    <!-- Package Validation -->
-    <EnablePackageValidation>true</EnablePackageValidation>
+    <!--
+      Not published to NuGet, for the same reason as VisioMcp.Core: 20 public types vs 2 internal,
+      so there is no curated API boundary, and PackAsTool already bundles this assembly into the
+      VisioMcp.CLI and VisioMcp.McpServer packages. See VisioMcp.Core.csproj for the full rationale.
+    -->
+    <IsPackable>false</IsPackable>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
@@ -55,12 +51,6 @@
     </ItemGroup>
     <Delete Files="@(PdbFilesToDelete)" />
   </Target>
-
-  <ItemGroup>
-    <!-- Include README and LICENSE in package -->
-    <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
