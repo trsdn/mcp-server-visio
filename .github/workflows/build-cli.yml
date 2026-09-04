@@ -19,17 +19,6 @@ on:
       - '.github/workflows/build-cli.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'src/VisioMcp.CLI/**'
-      - 'src/VisioMcp.Core/**'
-      - 'src/VisioMcp.ComInterop/**'
-      - 'tests/VisioMcp.CLI.Tests/**'
-      - 'tests/VisioMcp.Core.Tests/**'
-      - 'tests/VisioMcp.ComInterop.Tests/**'
-      - 'global.json'
-      - 'Directory.Build.props'
-      - 'Directory.Packages.props'
-      - '.github/workflows/build-cli.yml'
   # Manual trigger. Also the mechanism by which a dormant workflow can be registered with, and
   # verified against, GitHub Actions - see #12.
   workflow_dispatch:

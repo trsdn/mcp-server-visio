@@ -19,17 +19,6 @@ on:
       - '.github/workflows/build-mcp-server.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'src/VisioMcp.McpServer/**'
-      - 'src/VisioMcp.Core/**'
-      - 'src/VisioMcp.ComInterop/**'
-      - 'tests/VisioMcp.McpServer.Tests/**'
-      - 'tests/VisioMcp.Core.Tests/**'
-      - 'tests/VisioMcp.ComInterop.Tests/**'
-      - 'global.json'
-      - 'Directory.Build.props'
-      - 'Directory.Packages.props'
-      - '.github/workflows/build-mcp-server.yml'
   # Manual trigger. Also the mechanism by which a dormant workflow can be registered with, and
   # verified against, GitHub Actions - see #12.
   workflow_dispatch:
