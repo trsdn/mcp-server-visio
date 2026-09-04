@@ -3,8 +3,9 @@ name: visio-cli
 description: >
   Automate Microsoft Visio on Windows via CLI. Use when creating, reading,
   or modifying Visio diagrams from scripts, CI/CD, or coding agents.
-  Best current support: sessions, pages, shapes, text, ShapeSheet cells, and stencil masters.
-  Triggers: Visio, vsdx, diagram, shape, page, stencil, ShapeSheet, visiocli.
+  Best current support: sessions, pages, shapes, containers, callouts, text,
+  ShapeSheet cells, and stencil masters.
+  Triggers: Visio, vsdx, diagram, shape, page, container, callout, stencil, ShapeSheet, visiocli.
 ---
 
 # Visio Automation with visiocli
@@ -21,7 +22,7 @@ description: >
 |------|---------|------|
 | 1. Session | `session create/open` | Always first |
 | 2. Pages | `page create/list/read` | Navigate or add diagram pages |
-| 3. Add content | `shape`, `text`, `stencil` | Draw shapes, set text, drop masters |
+| 3. Add content | `shape`, `text`, `stencil`, `container` | Draw shapes, set text, drop masters, add containers and callouts |
 | 4. ShapeSheet | `cell read/write/list` | Inspect or edit core cells |
 | 4. Save & close | `session close --save` | Always last |
 
