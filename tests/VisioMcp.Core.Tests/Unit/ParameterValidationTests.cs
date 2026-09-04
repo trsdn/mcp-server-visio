@@ -7,7 +7,6 @@ using VisioMcp.Core.Commands.Master;
 using VisioMcp.Core.Commands.Page;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
-using VisioMcp.Core.Commands.Tag;
 using VisioMcp.Core.Commands.Text;
 using VisioMcp.Core.Commands.Vba;
 using VisioMcp.Core.Commands.Window;
@@ -1480,40 +1479,6 @@ public class ParameterValidationTests
     }
 
     // ── Custom Show Commands ─────────────────────────────────
-
-    // ── Tag Commands ─────────────────────────────────────────
-
-    [Fact]
-    public void TagSetTag_NullTagName_ThrowsArgumentNullException()
-    {
-        var commands = new TagCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetTag(null!, 1, null, null!, "value"));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void TagSetTag_EmptyTagName_ThrowsArgumentException(string tagName)
-    {
-        var commands = new TagCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetTag(null!, 1, null, tagName, "value"));
-    }
-
-    [Fact]
-    public void TagDeleteTag_NullTagName_ThrowsArgumentNullException()
-    {
-        var commands = new TagCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.DeleteTag(null!, 1, null, null!));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void TagDeleteTag_EmptyTagName_ThrowsArgumentException(string tagName)
-    {
-        var commands = new TagCommands();
-        Assert.Throws<ArgumentException>(() => commands.DeleteTag(null!, 1, null, tagName));
-    }
 
     // ── Slide Import Commands ────────────────────────────────
 

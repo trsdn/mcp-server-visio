@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **The `tag` domain** (#116). Classified *Remap* in #22, but there is nothing to remap to under that
+  name, and the code could never have run.
+
+  Probed against a live Visio 16.0 instance: `Tags` is absent on `Document`, `Page` **and** `Shape`,
+  using `Slides` — which Visio certainly does not have — as the control for what "absent" looks like.
+  `Tags` is a PowerPoint collection (`Presentation.Tags`, `Slide.Tags`, `Shape.Tags`).
+
+  All three actions walked `ctx.Document.Slides`, so every one would have thrown
+  `RuntimeBinderException` the moment it ran. It stayed quiet only because `PublicSurface = false`
+  kept it off both the MCP and CLI surfaces.
+
+  The capability itself was never missing — it has two Visio-native homes, both verified in the same
+  probe: user cells (`User.*`, reachable through `cell`; `AddNamedRow(242)` then a `User.*` write
+  round-tripped) and Shape Data (`Prop.*`, already four `shape` actions). Porting would have added a
+  third name for a thing that already had two — the overlap trap called out in #64 and #65.
+
+  Also removed the stale `accessibility` entry from both hidden-domain lists:
+  `src/VisioMcp.Core/Commands/Accessibility/` was deleted in #77, so the entry could never match and
+  implied a domain that is gone.
+
+  Categories go from 21 to 20 (15 public, 5 suppressed); interface methods from 193 to 190. The
+  public surface is unchanged at 15 tools and 178 actions — `tag` was already suppressed.
+
+### Added
+
+- **`PowerPointResidueTests`** (#116) — asserts that no Core command domain reaches for the
+  PowerPoint object model except the ones openly awaiting a port.
+
+  The allow-list is deliberately two-way: a domain outside it may not use `.Slides` or
+  `ctx.Presentation`, and a domain inside it *must* — so the list cannot quietly outlive the port
+  that clears it. Same shape as `FeaturesDocumentAccuracyTests`, which fails rather than passing
+  vacuously, and it exists because this repository has repeatedly paid for lists that drifted out of
+  step with the code they describe (#38, #57, #117).
+
+  Verified RED before the deletion: it reported `Tag (3 usages)`. It now permits exactly `Comment`
+  (#62), `HeaderFooter` (#63) and `Image` (#64), and will fail when the last of those is ported
+  unless the entry is removed.
+
 ### Fixed
 
 - **The Release build regenerated the CLI skill with 5 of 15 commands** (#117), reintroducing the
