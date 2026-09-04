@@ -11,15 +11,6 @@ namespace VisioMcp.Build.Tasks;
 public class GenerateSkillFile : Microsoft.Build.Utilities.Task
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-    private static readonly HashSet<string> VisioCliCommandAllowList = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "session",
-        "page",
-        "shape",
-        "text",
-        "cell",
-        "stencil"
-    };
 
     /// <summary>Path to the Scriban template file (.sbn)</summary>
     [Required]
@@ -116,18 +107,6 @@ public class GenerateSkillFile : Microsoft.Build.Utilities.Task
             if (manifest != null)
             {
                 var commands = manifest.Commands ?? new List<ManifestCommand>();
-                if (IsCliSkillTemplate())
-                {
-                    commands = commands
-                        .Where(c =>
-                        {
-                            var commandName = c.Name;
-                            return commandName is string name
-                                && !string.IsNullOrWhiteSpace(name)
-                                && VisioCliCommandAllowList.Contains(name);
-                        })
-                        .ToList();
-                }
 
                 model.ToolCount = commands.Count;
                 model.OperationCount = commands.Sum(c => c.Actions?.Length ?? 0);
@@ -178,11 +157,6 @@ public class GenerateSkillFile : Microsoft.Build.Utilities.Task
         json = json.Replace("\"\"", "\"");
 
         return json;
-    }
-
-    private bool IsCliSkillTemplate()
-    {
-        return Path.GetFileName(TemplatePath).Equals("SKILL.cli.sbn", StringComparison.OrdinalIgnoreCase);
     }
 }
 

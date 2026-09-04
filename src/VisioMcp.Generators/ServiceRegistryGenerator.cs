@@ -430,12 +430,22 @@ public class ServiceRegistryGenerator : IIncrementalGenerator
 
     private static void GenerateRouteFromSettings(StringBuilder sb, ServiceInfo info, List<ExposedParameter> allExposedParams)
     {
+        // #103: reject options the selected action does not consume, rather than parsing them,
+        // dropping them, and reporting success.
+        GenerateUnconsumedOptionRejection(sb, info, allExposedParams);
+
         sb.AppendLine("        /// <summary>");
         sb.AppendLine("        /// Routes a CLI action using CliSettings (bridges Settings → RouteCliArgs).");
         sb.AppendLine("        /// Used by generated CLI command classes.");
         sb.AppendLine("        /// </summary>");
         sb.AppendLine("        public static (string Command, object? Args) RouteFromSettings(string action, CliSettings settings)");
         sb.AppendLine("        {");
+
+        if (allExposedParams.Count > 0)
+        {
+            sb.AppendLine("            RejectOptionsNotConsumedByAction(action, settings);");
+            sb.AppendLine();
+        }
 
         if (allExposedParams.Count == 0)
         {
@@ -470,6 +480,166 @@ public class ServiceRegistryGenerator : IIncrementalGenerator
 
         sb.AppendLine("        }");
         sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits the per-action option allow-list and the rejection routine for #103.
+    ///
+    /// A CLI command is a single Spectre.Console command whose settings object carries the union
+    /// of every action's options, so an option belonging to one action is still parsed and bound
+    /// when a different action is selected. Before this, the surplus value was simply dropped and
+    /// the command reported success — <c>shape add-shape --text "Start"</c> produced an unlabelled
+    /// shape and <c>success: true</c>. The allow-list is generated from the Core interface, the
+    /// same source the dispatch is built from, so it cannot drift from the actual signatures.
+    /// </summary>
+    private static void GenerateUnconsumedOptionRejection(StringBuilder sb, ServiceInfo info, List<ExposedParameter> allExposedParams)
+    {
+        if (allExposedParams.Count == 0)
+            return;
+
+        // action -> CLI option names (kebab-case, without the leading --) that the action consumes
+        var consumedByAction = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // option name -> actions that accept it, so a rejection can point somewhere useful
+        var actionsByOption = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var method in info.Methods)
+        {
+            var options = new List<string>();
+            foreach (var exposedName in GetExposedParameterNames(method))
+            {
+                var option = StringHelper.ToKebabCase(exposedName);
+                if (!options.Contains(option, StringComparer.OrdinalIgnoreCase))
+                    options.Add(option);
+
+                if (!actionsByOption.TryGetValue(option, out var actions))
+                {
+                    actions = new List<string>();
+                    actionsByOption[option] = actions;
+                }
+
+                if (!actions.Contains(method.ActionName, StringComparer.OrdinalIgnoreCase))
+                    actions.Add(method.ActionName);
+            }
+
+            consumedByAction[method.ActionName] = options;
+        }
+
+        sb.AppendLine("        // ============================================");
+        sb.AppendLine("        // CLI per-action option validation (generated)");
+        sb.AppendLine("        // ============================================");
+        sb.AppendLine();
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine("        /// CLI options each action actually consumes, generated from the Core interface.");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        private static readonly System.Collections.Generic.Dictionary<string, string[]> OptionsConsumedByAction =");
+        sb.AppendLine("            new(System.StringComparer.OrdinalIgnoreCase)");
+        sb.AppendLine("            {");
+        foreach (var method in info.Methods)
+        {
+            var options = consumedByAction[method.ActionName];
+            var literal = options.Count == 0
+                ? "[]"
+                : "[" + string.Join(", ", options.Select(o => $"\"{o}\"")) + "]";
+            sb.AppendLine($"                [\"{method.ActionName}\"] = {literal},");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine();
+
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine("        /// Actions that do accept a given option, used to make a rejection actionable.");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        private static readonly System.Collections.Generic.Dictionary<string, string[]> ActionsAcceptingOption =");
+        sb.AppendLine("            new(System.StringComparer.OrdinalIgnoreCase)");
+        sb.AppendLine("            {");
+        foreach (var kvp in actionsByOption.OrderBy(k => k.Key, StringComparer.Ordinal))
+        {
+            var literal = "[" + string.Join(", ", kvp.Value.Select(a => $"\"{a}\"")) + "]";
+            sb.AppendLine($"                [\"{kvp.Key}\"] = {literal},");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine();
+
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine("        /// Throws when the caller supplied an option the selected action does not consume.");
+        sb.AppendLine("        /// Silently discarding it is worse for an agent than failing: a success result with a");
+        sb.AppendLine("        /// dropped value gives it no signal to retry (#103).");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        private static void RejectOptionsNotConsumedByAction(string action, CliSettings settings)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            if (!OptionsConsumedByAction.TryGetValue(action, out var consumed))");
+        sb.AppendLine("            {");
+        sb.AppendLine("                // Unknown action; ValidActions reports that separately.");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            System.Collections.Generic.List<string>? rejected = null;");
+        sb.AppendLine();
+
+        foreach (var p in allExposedParams)
+        {
+            var option = StringHelper.ToKebabCase(p.Name);
+            var property = StringHelper.ToPascalCase(p.Name);
+            sb.AppendLine($"            if (settings.{property} is not null && !Consumes(consumed, \"{option}\"))");
+            sb.AppendLine($"                (rejected ??= new()).Add(\"{option}\");");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("            if (rejected is null)");
+        sb.AppendLine("                return;");
+        sb.AppendLine();
+        sb.AppendLine("            var details = new System.Collections.Generic.List<string>(rejected.Count);");
+        sb.AppendLine("            foreach (var option in rejected)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                details.Add(ActionsAcceptingOption.TryGetValue(option, out var accepting) && accepting.Length > 0");
+        sb.AppendLine("                    ? $\"--{option} (accepted by: {string.Join(\", \", accepting)})\"");
+        sb.AppendLine("                    : $\"--{option}\");");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            var accepted = consumed.Length == 0");
+        sb.AppendLine("                ? \"(none)\"");
+        sb.AppendLine("                : string.Join(\", \", System.Linq.Enumerable.Select(consumed, o => \"--\" + o));");
+        sb.AppendLine();
+        sb.AppendLine("            throw new System.ArgumentException(");
+        sb.AppendLine("                $\"Action '{action}' does not accept {string.Join(\"; \", details)}. \" +");
+        sb.AppendLine("                \"The value would have been discarded without warning, so the command was rejected instead. \" +");
+        sb.AppendLine("                $\"Options accepted by '{action}': {accepted}.\");");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        private static bool Consumes(string[] consumed, string option)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            foreach (var candidate in consumed)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                if (string.Equals(candidate, option, System.StringComparison.OrdinalIgnoreCase))");
+        sb.AppendLine("                    return true;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            return false;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// The CLI-exposed parameter names for a single action, mirroring the mapping
+    /// <see cref="GetAllExposedParameters"/> uses so the allow-list matches the settings object.
+    /// </summary>
+    private static IEnumerable<string> GetExposedParameterNames(MethodInfo method)
+    {
+        foreach (var p in method.Parameters)
+        {
+            if (p.IsFileOrValue)
+            {
+                yield return p.Name;
+                yield return $"{p.Name}{p.FileSuffix}";
+            }
+            else if (p.IsFromString && p.IsEnum)
+            {
+                yield return p.ExposedName ?? p.Name;
+            }
+            else
+            {
+                yield return p.Name;
+            }
+        }
     }
 
     /// <summary>

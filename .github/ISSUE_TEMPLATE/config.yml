@@ -1,0 +1,14 @@
+# Blank issues are disabled deliberately: the bug and feature forms require the information that
+# otherwise has to be asked for in a round trip - expected vs actual, reproduction steps,
+# environment, and sanitized output.
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/trsdn/mcp-server-visio/security/advisories/new
+    about: Report privately via a GitHub Security Advisory. Never open a public issue for a vulnerability.
+  - name: Question or usage help
+    url: https://github.com/trsdn/mcp-server-visio/discussions
+    about: Ask how to do something with the MCP Server or the CLI.
+  - name: Visio COM object model reference
+    url: https://learn.microsoft.com/office/vba/api/overview/visio
+    about: The authoritative reference for what Visio itself supports.

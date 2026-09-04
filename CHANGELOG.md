@@ -8,6 +8,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The Release build regenerated the CLI skill with 5 of 15 commands** (#117), reintroducing the
+  defect #57 fixed and added a guard for.
+
+  ROOT CAUSE: `GenerateSkillFile` filtered the skill manifest through a hardcoded
+  `VisioCliCommandAllowList` of six names. `session` is not a public `[ServiceCategory]` — it is a
+  hand-written CLI command — so the six-entry list only ever matched five, and `design`,
+  `docproperty`, `export`, `file`, `hyperlink`, `layer`, `master`, `shapealign`, `style` and
+  `window` were dropped from `skills/visio-cli/SKILL.md` on every Release build.
+
+  It stayed hidden because three things lined up: generation runs on Release only, so Debug work
+  never saw it; `CliSkillCoverageTests` lives in the Core suite, which is dominated by Visio
+  integration tests; and `pre-commit.ps1` **auto-stages** the regenerated `SKILL.md`, so a
+  contributor committing anything would have silently committed the degraded file. Reproduced on a
+  clean worktree at `21fe948` before changing anything, to confirm it was pre-existing.
+
+  FIX: removed the allow-list and the `IsCliSkillTemplate()` helper that existed only to apply it.
+  The CLI skill is now generated from the same public-surface manifest as everything else, which is
+  what the #57 guard asserts.
+
+- **CLI silently accepted and discarded options the selected action does not consume** (#103).
+
+  ROOT CAUSE: each CLI command is a single Spectre.Console command whose settings object carries
+  the union of every action's options, so an option belonging to one action was still parsed and
+  bound when a different action was selected — then dropped, with `success: true`. The canonical
+  case, `shape add-shape --text "Start"`, produced an unlabelled shape and reported success;
+  `AddShape` has no `text` parameter. The existing `check-cli-settings-usage.ps1` did not catch it,
+  because `--text` *is* read — just by other actions. The gap was per-action, not per-command.
+
+  This is worse for agents than for humans. A human eventually looks at the drawing; an agent takes
+  `success: true` as confirmation and moves on, and the mistake surfaces much later as a diagram
+  whose boxes are all blank.
+
+  FIX: `ServiceRegistryGenerator` now emits a per-action option allow-list built from the same Core
+  interface the dispatch is generated from, so it cannot drift from the actual signatures. Supplying
+  an option the action does not consume is rejected with a non-zero exit and a JSON error rather
+  than warned about — a warning attached to a success result is exactly the signal agents ignore.
+  The message names the offending option and the actions that *do* accept it:
+
+  ```
+  Action 'add-shape' does not accept --text (accepted by: add-textbox, add-text-effect).
+  The value would have been discarded without warning, so the command was rejected instead.
+  Options accepted by 'add-shape': --page-index, --auto-shape-type, --left, --top, --width, --height.
+  ```
+
+  `--session` and `--output` are CLI plumbing rather than action parameters and are never rejected.
+
 - **`FEATURES.md` understated what is implemented** (#38). The connectors table said
   *"Port / redesign"* for work that was already finished, which invites it to be done twice — the
   costlier direction of drift, because nothing fails to reveal it.
@@ -31,9 +77,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`CODE_OF_CONDUCT.md`** (#1) — Contributor Covenant 2.1, with the scope section naming this
+  repository's community spaces (issues, pull requests, review comments, discussions, commit
+  messages) and a private reporting route to the maintainer.
+
+- **Issue forms replace the markdown issue templates** (#1). `bug_report.yml` and
+  `feature_request.yml` require the information that otherwise costs a round trip to ask for: the
+  bug form requires reproduction steps, expected *and* actual behaviour separately, sanitized output,
+  and environment/version; the feature form requires problem, use case and desired outcome.
+
+  Both ask which entry point is involved, because MCP Server and CLI are equal surfaces and "it
+  works in one but not the other" is a distinct class of report. Both warn against pasting
+  confidential project, customer and file names, and the bug form makes that an explicit checkbox
+  (Rule 26).
+
+  `config.yml` disables blank issues deliberately and adds contact links routing security reports to
+  a private advisory rather than a public issue.
+
+  Converting them also removed the PowerPoint terminology the old templates still carried —
+  "presentation", "Slides (Slide operations)", "Animations/Transitions", and a `VisioMcp.exe`
+  invocation that no longer exists.
+
+- **`UnconsumedOptionRejectionTests`** (#103) — reproduces the `add-shape --text` case, asserts the
+  rejection message points at an action that does accept the option, and sweeps every public
+  category to check both that the allow-list rejects surplus options and that it never rejects
+  options nobody supplied. Verified RED before the generator change.
+
 - **`FeaturesDocumentAccuracyTests`** — asserts every action `FEATURES.md` marks `**Shipped**`
   carries a matching `[ServiceAction]`, and fails if it finds no claims to check rather than
   passing vacuously. Verified against an induced regression.
+
+### Changed
+
+- **`VisioMcp.Core` and `VisioMcp.ComInterop` are no longer packable** (#6). Nothing from this repo
+  has been published to NuGet yet, which made this the only moment the package scope was still free
+  to choose — NuGet publishes cannot be withdrawn.
+
+  Measured rather than assumed: `Core` has 176 public types against 6 internal, `ComInterop` 20
+  against 2, so neither has ever had an encapsulation boundary. The 22 public `I*Commands`
+  interfaces carry 194 `[ServiceAction]` methods, and the source generators turn each one into an
+  MCP tool action and a CLI action — the interfaces grow by design with every new action, so
+  publishing them would make **every new action a breaking change** on a released API. `PackAsTool`
+  bundles both assemblies into the `VisioMcp.CLI` and `VisioMcp.McpServer` packages anyway, so
+  consumers lose nothing.
+
+  The sister repo `mcp-server-ppt` shipped its `Core`/`ComInterop` before making this call and now
+  has them stranded at 1.0.0 while the tools moved on.
+
+  `release.yml` gains a bidirectional package-set gate before the NuGet push: every expected package
+  must exist, and nothing beyond it may be pushed. A project that silently becomes packable now
+  fails the release instead of being published by accident.
 
 ### Removed
 

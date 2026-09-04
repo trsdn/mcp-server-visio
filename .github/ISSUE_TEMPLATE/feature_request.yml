@@ -1,0 +1,77 @@
+name: Feature Request
+description: Suggest a capability VisioMcp should have
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste confidential content.** Describe the use case generically rather than naming
+        a customer, project or document.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: >
+        What are you unable to do today? Describe the situation rather than the solution - what you
+        tried, and where it stopped.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: >
+        Who needs this and what are they trying to achieve? Concrete scenarios are far more useful
+        than a general capability statement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: >
+        What should be true once this is done? If you know the shape of it, sketch the action and
+        parameters - but the outcome matters more than the design.
+      placeholder: |
+        A `comment` tool action that lists every comment on a page, so an agent can read review
+        feedback without opening the document in Visio.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: entry-point
+    attributes:
+      label: Entry point
+      description: >
+        MCP Server and CLI are equal entry points, and every action must work identically through
+        both. Which one prompted this request?
+      options:
+        - MCP Server
+        - CLI (visiocli)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: visio-api
+    attributes:
+      label: Visio COM surface
+      description: >
+        If you know which part of the Visio object model this maps to (for example
+        `Document.Comments`, `Page.Import`, `Shape.Hyperlinks`), name it. Evidence that it exists -
+        a probe against a live Visio instance, or the Microsoft Learn page - is especially welcome.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, and why they were not sufficient.
+    validations:
+      required: false

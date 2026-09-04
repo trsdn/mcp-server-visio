@@ -14,17 +14,23 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
 
-    <!-- Package Information -->
-    <PackageId>VisioMcp.Core</PackageId>
-    <Title>VisioMcp Core Library</Title>
-    <Description>Core library for Visio automation via COM interop. Provides shared command implementations for document sessions, pages, shapes, text, ShapeSheet cells, stencils, and future Visio-native domains used by VisioMcp.McpServer and VisioMcp.CLI.</Description>
-    <PackageTags>visio;automation;com;shapesheet;pages;shapes;core;mcp</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>See https://github.com/trsdn/mcp-server-visio/releases for release notes</PackageReleaseNotes>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <!--
+      Not published to NuGet. This assembly is an implementation detail of VisioMcp.McpServer and
+      VisioMcp.CLI, not a curated public API:
 
-    <!-- Package Validation -->
-    <EnablePackageValidation>true</EnablePackageValidation>
+        - 176 public types vs 6 internal - there has never been an encapsulation boundary here.
+        - The 22 public I*Commands interfaces carry 194 [ServiceAction] methods, and the source
+          generators turn each one into an MCP tool action and a CLI action. The interfaces grow by
+          design with every new action, so publishing them would make every new action a breaking
+          change on a released API.
+        - PackAsTool bundles this assembly into the VisioMcp.CLI and VisioMcp.McpServer packages
+          anyway, so consumers lose nothing.
+
+      The sister repo mcp-server-ppt shipped its Core/ComInterop before making this call and now has
+      them stranded at 1.0.0 while the tools moved on. NuGet publishes cannot be withdrawn, so this
+      stays false unless a deliberately curated API surface is carved out first.
+    -->
+    <IsPackable>false</IsPackable>
 
     <!-- Documentation - temporarily suppress CS1591 during rebuild -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -63,12 +69,6 @@
     <EmbeddedResource Include="Data\*.json" />
     <EmbeddedResource Include="Data\*.md" />
     <EmbeddedResource Include="Data\archetypes\*.md" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Include README and LICENSE in package -->
-    <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

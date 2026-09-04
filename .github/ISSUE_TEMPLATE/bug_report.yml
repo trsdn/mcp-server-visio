@@ -1,0 +1,109 @@
+name: Bug Report
+description: Report something VisioMcp does incorrectly
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report.
+
+        **Do not report security vulnerabilities here.** Use
+        [Security Advisories](https://github.com/trsdn/mcp-server-visio/security/advisories) instead.
+
+        **Do not paste confidential content.** Replace customer and project names, file names and
+        paths with generic equivalents before submitting.
+
+  - type: dropdown
+    id: entry-point
+    attributes:
+      label: Entry point
+      description: VisioMcp has two equal entry points. Which one did you use?
+      options:
+        - MCP Server
+        - CLI (visiocli)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: >
+        The exact commands or tool calls, in order. Include the tool and action for MCP
+        (for example `shape` / `add-shape`) or the full command line for the CLI.
+      placeholder: |
+        1. visiocli session open --file "C:\temp\diagram.vsdx"
+        2. visiocli shape add-shape -s <sid> --page-index 1 --auto-shape-type 1 --left 100 --top 100 --width 120 --height 60
+        3. visiocli shape list -s <sid> --page-index 1
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: >
+        What actually happened. If the command reported success but produced the wrong result, say
+        so explicitly - silent failures are the most valuable reports.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output and error messages
+      description: >
+        The full JSON result or error, and any stack trace. Remove file paths, customer names and
+        anything else confidential first.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        Run `visiocli --version` and `dotnet --version`. Visio version is under
+        File > Account > About Visio.
+      value: |
+        - VisioMcp version:
+        - Visio version (e.g. Visio 365, Visio 2021):
+        - Windows version:
+        - .NET version:
+        - Installation method (NuGet tool / binary download / source build):
+        - File format (.vsdx / .vsdm):
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample document
+      description: >
+        If a document is needed to reproduce this, attach a minimal one with all sensitive data
+        removed. Optional, but it usually shortens the fix considerably.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I have removed confidential project, customer and file names from this report.
+          required: true
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
