@@ -5,51 +5,50 @@ using VisioMcp.Core.Models;
 namespace VisioMcp.Core.Commands.Image;
 
 /// <summary>
-/// Image operations: insert pictures into slides.
+/// Image operations: insert and adjust imported pictures on Visio pages.
 /// </summary>
 [ServiceCategory("image")]
-[McpTool("image", Title = "Image Operations", Destructive = true, Category = "media", PublicSurface = false,
-    Description = "Insert and adjust images on slides. Supports PNG, JPG, BMP, GIF, SVG, TIFF. "
-    + "Positions in points (72pt = 1 inch). width/height: 0 = keep original size. "
-    + "crop values in points from each edge. brightness/contrast: 0.0-1.0 (0.5 = normal).")]
+[McpTool("image", Title = "Image Operations", Destructive = true, Category = "media", PublicSurface = true,
+    Description = "Insert and adjust imported bitmap images on Visio pages. Positions and sizes use "
+    + "Visio page coordinates in points (72 pt = 1 inch; Y increases upward); width/height 0 keeps "
+    + "the original import size. Crop values are points hidden beyond each picture edge while preserving "
+    + "the shape frame: left/right/top/bottom expand the underlying image, and left/bottom use negative "
+    + "ImgOffsetX/Y. Brightness and contrast are Visio percentage fractions from 0.0 to 1.0; 0.5 is "
+    + "neutral/unchanged. Do not pass PowerPoint-style 0 as neutral: in Visio 0 means 0% (fully dark/"
+    + "minimum contrast). Visio has no color-key transparent color action.")]
 public interface IImageCommands
 {
-    /// <summary>Insert a picture from a file path onto a slide.</summary>
+    /// <summary>Insert a picture from a file path onto a Visio page.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="imagePath">Path to the image file</param>
-    /// <param name="left">Position from left in points</param>
-    /// <param name="top">Position from top in points</param>
+    /// <param name="left">Visio page X coordinate in points (72 pt = 1 inch)</param>
+    /// <param name="top">Visio page Y coordinate in points; Y increases upward</param>
     /// <param name="width">Width in points (0 = original)</param>
     /// <param name="height">Height in points (0 = original)</param>
     [ServiceAction("insert")]
-    OperationResult Insert(IVisioBatch batch, int slideIndex, string imagePath, float left, float top, float width, float height);
+    OperationResult Insert(IVisioBatch batch, int pageIndex, string imagePath, float left, float top, float width, float height);
 
-    /// <summary>Crop an image shape by specifying crop amounts on each side.</summary>
+    /// <summary>
+    /// Crop an imported image shape by hiding point amounts beyond each edge while preserving the
+    /// shape frame.
+    /// </summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeName">Name of the picture shape</param>
-    /// <param name="cropLeft">Crop from left in points (0 = no crop)</param>
-    /// <param name="cropRight">Crop from right in points (0 = no crop)</param>
-    /// <param name="cropTop">Crop from top in points (0 = no crop)</param>
-    /// <param name="cropBottom">Crop from bottom in points (0 = no crop)</param>
+    /// <param name="cropLeft">Points hidden beyond the left edge (0 = no left crop)</param>
+    /// <param name="cropRight">Points hidden beyond the right edge (0 = no right crop)</param>
+    /// <param name="cropTop">Points hidden beyond the top edge (0 = no top crop)</param>
+    /// <param name="cropBottom">Points hidden beyond the bottom edge (0 = no bottom crop)</param>
     [ServiceAction("crop")]
-    OperationResult Crop(IVisioBatch batch, int slideIndex, string shapeName, float cropLeft, float cropRight, float cropTop, float cropBottom);
+    OperationResult Crop(IVisioBatch batch, int pageIndex, string shapeName, float cropLeft, float cropRight, float cropTop, float cropBottom);
 
-    /// <summary>Set brightness and contrast on a picture shape.</summary>
+    /// <summary>Set brightness and contrast on an imported image shape.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="shapeName">Name of the picture shape</param>
-    /// <param name="brightness">Brightness value (0.0 to 1.0)</param>
-    /// <param name="contrast">Contrast value (0.0 to 1.0)</param>
+    /// <param name="brightness">Visio percentage fraction (0.0 to 1.0); 0.5 is neutral/unchanged</param>
+    /// <param name="contrast">Visio percentage fraction (0.0 to 1.0); 0.5 is neutral/unchanged</param>
     [ServiceAction("set-brightness-contrast")]
-    OperationResult SetBrightnessContrast(IVisioBatch batch, int slideIndex, string shapeName, float brightness, float contrast);
-
-    /// <summary>Set a transparent color on a picture shape. Pixels matching this color become transparent.</summary>
-    /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
-    /// <param name="shapeName">Name of the picture shape</param>
-    /// <param name="colorHex">Hex color string (#RRGGBB) to make transparent</param>
-    [ServiceAction("set-transparent-color")]
-    OperationResult SetTransparentColor(IVisioBatch batch, int slideIndex, string shapeName, string colorHex);
+    OperationResult SetBrightnessContrast(IVisioBatch batch, int pageIndex, string shapeName, float brightness, float contrast);
 }
