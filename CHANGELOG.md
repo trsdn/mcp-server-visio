@@ -6,7 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `dependency-review` licence check blocked a security fix** (#141). `@github/copilot` and its
+  eight platform binaries declare `LicenseRef-bad-see-license-in-license.md`, which is a scancode
+  *classification artifact* — the terms could not be parsed because the package points at its own
+  `LICENSE.md` rather than declaring an SPDX identifier — not an incompatible licence.
+
+  The effect was that the licence check blocked the security fix for two **high** severity advisories
+  against `@github/copilot` in `eval/` and `src/VisioMcp.Agent` (PRs #138, #140). A vulnerability gate
+  refusing a vulnerability fix, on packages that are development tooling and never ship: `release.yml`
+  publishes only the two skill npm packages, the NuGet tools, the VSIX and the MCPB bundle.
+
+  Fixed with `allow-dependencies-licenses` scoped to exactly those nine packages, and commented in
+  place alongside the existing `allow-ghsas` exception. Deliberately NOT by adding the `LicenseRef` to
+  `allow-licenses`, which would permit any dependency whose licence cannot be classified — a far
+  larger hole than the problem justifies.
+
 ### Added
+
+- **`container` adds Visio-native containers, list containers, and callouts** (#123). Added a new
+  public domain rather than overloading `shape`, because containers keep independent member shapes in
+  a structural membership relationship while `shape(group)` fuses shapes into one composite shape.
+
+  The new actions cover dropping built-in containers and callouts, dropping list containers from the
+  installed list stencil, adding/removing members, reading members and memberships, fitting containers
+  to contents, inserting list members, and reading callout associations.
 
 - **`image` is Visio-native and public again** (#64). Reimplemented imported picture operations on
   `Page.Import` and Visio's image ShapeSheet cells, with `insert`, `crop`, and

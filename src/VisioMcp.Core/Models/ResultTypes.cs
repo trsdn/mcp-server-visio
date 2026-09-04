@@ -201,6 +201,102 @@ public class LayerDetailResult : ResultBase
     public LayerInfo? Layer { get; set; }
 }
 
+// ── Containers / Lists / Callouts ───────────────────────────
+
+public class ContainerListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public List<ContainerInfo> Containers { get; set; } = [];
+}
+
+public class ContainerDetailResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public ContainerInfo? Container { get; set; }
+}
+
+public class ContainerMembershipResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public List<ContainerInfo> Containers { get; set; } = [];
+}
+
+public class ContainerMemberListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ContainerName { get; set; } = string.Empty;
+    public List<ContainerMemberInfo> Members { get; set; } = [];
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ContainerMemberInfo>? ListMembers { get; set; }
+}
+
+public class ContainerInfo
+{
+    public int ShapeId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string NameU { get; set; } = string.Empty;
+    public string HeadingText { get; set; } = string.Empty;
+    public int ContainerType { get; set; }
+    public string ContainerTypeName { get; set; } = string.Empty;
+    public bool IsList { get; set; }
+    public int ResizeAsNeeded { get; set; }
+    public string ResizeAsNeededName { get; set; } = string.Empty;
+    public double MarginPoints { get; set; }
+    public bool LockMembership { get; set; }
+    public int ContainerStyle { get; set; }
+    public int HeadingStyle { get; set; }
+    public int MemberCount { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ContainerMemberInfo>? Members { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ContainerMemberInfo>? ListMembers { get; set; }
+}
+
+public class ContainerMemberInfo
+{
+    public int ShapeId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string NameU { get; set; } = string.Empty;
+}
+
+public class CalloutListResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public List<CalloutInfo> Callouts { get; set; } = [];
+}
+
+public class CalloutDetailResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public CalloutInfo? Callout { get; set; }
+}
+
+public class CalloutAssociationResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public List<CalloutInfo> Callouts { get; set; } = [];
+}
+
+public class CalloutInfo
+{
+    public int ShapeId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string NameU { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public bool IsCallout { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TargetShapeName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TargetShapeId { get; set; }
+}
+
 // ── Shape ─────────────────────────────────────────────────
 
 public class ShapeListResult : ResultBase

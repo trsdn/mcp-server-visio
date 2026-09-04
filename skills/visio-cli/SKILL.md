@@ -3,8 +3,9 @@ name: visio-cli
 description: >
   Automate Microsoft Visio on Windows via CLI. Use when creating, reading,
   or modifying Visio diagrams from scripts, CI/CD, or coding agents.
-  Best current support: sessions, pages, shapes, text, ShapeSheet cells, and stencil masters.
-  Triggers: Visio, vsdx, diagram, shape, page, stencil, ShapeSheet, visiocli.
+  Best current support: sessions, pages, shapes, containers, callouts, text,
+  ShapeSheet cells, and stencil masters.
+  Triggers: Visio, vsdx, diagram, shape, page, container, callout, stencil, ShapeSheet, visiocli.
 ---
 
 # Visio Automation with visiocli
@@ -21,7 +22,7 @@ description: >
 |------|---------|------|
 | 1. Session | `session create/open` | Always first |
 | 2. Pages | `page create/list/read` | Navigate or add diagram pages |
-| 3. Add content | `shape`, `text`, `stencil` | Draw shapes, set text, drop masters |
+| 3. Add content | `shape`, `text`, `stencil`, `container` | Draw shapes, set text, drop masters, add containers and callouts |
 | 4. ShapeSheet | `cell read/write/list` | Inspect or edit core cells |
 | 4. Save & close | `session close --save` | Always last |
 
@@ -175,6 +176,34 @@ Visio reviewer comments attached to pages or shapes.
 | `--shape-name` | Optional shape name used to return only comments attached to that shape |
 | `--text` | Comment text (required for: add) |
 | `--comment-index` | 1-based index from page-level list results (required for: delete) |
+
+
+
+### container
+
+Visio containers, list containers, and callouts for structural membership while shapes remain independent.
+
+**Actions:** `list`, `read`, `drop`, `drop-list`, `add-member`, `remove-member`, `list-members`, `containers-of`, `fit-to-contents`, `insert-list-member`, `drop-callout`, `list-callouts`, `read-callout`, `callouts-of`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index (required) |
+| `--nested-options` | 0 includes nested containers and lists; 1 excludes containers and lists nested inside another container |
+| `--container-name` | Container or list shape name, as reported by list (required for: read, add-member, remove-member, list-members, fit-to-contents) |
+| `--member-flags` | 0 returns all members; add 1 to exclude containers, 2 connectors, 4 callouts, 8 plain elements, 16 nested members, or 32 explicit list members |
+| `--target-shape-name` | Existing top-level shape to make the first container member (required for: drop, drop-list, drop-callout) |
+| `--master-name` | Built-in container master name, for example 'Plain', 'Classic', or 'Banner'. Omitted uses 'Plain' |
+| `--heading-text` | Optional heading text to write into the new container shape |
+| `--margin` | Optional member margin in points |
+| `--resize-mode` | Optional resize mode: 0=no automatic resize, 1=expand only, 2=expand and contract |
+| `--stencil-path` | Optional stencil path or installed stencil file name. Omitted uses 'timelinetodolist_u.vssx' |
+| `--member-shape-name` | Existing top-level shape to add as a member (required for: add-member, remove-member, insert-list-member) |
+| `--add-options` | 0 uses ResizeAsNeeded, 1 expands the container to fit the member, 2 does not expand |
+| `--shape-name` | Shape whose memberships should be read (required for: containers-of, callouts-of) |
+| `--list-name` | List container shape name (required for: insert-list-member) |
+| `--position` | 1-based insertion point. 1 inserts before the first item; a value greater than the list length appends |
+| `--text` | Optional callout text |
+| `--callout-name` | Callout shape name, as reported by list-callouts (required for: read-callout) |
 
 
 

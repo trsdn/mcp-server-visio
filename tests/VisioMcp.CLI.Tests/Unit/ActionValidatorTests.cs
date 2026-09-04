@@ -28,6 +28,7 @@ public sealed class ActionValidatorTests
         "session",
         "cell",
         "comment",
+        "container",
         "design",
         "docproperty",
         "export",

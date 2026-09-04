@@ -743,10 +743,13 @@ public class ShapeCommands : IShapeCommands
             dynamic shape = page.Shapes.Item(shapeName);
             try
             {
+                var containerIds = GetContainerIds(shape.MemberOfContainers);
+
                 TrySetCell(shape, "PinX", left.HasValue ? ToPageCoordinate(left.Value) : (float?)null);
                 TrySetCell(shape, "PinY", top.HasValue ? ToPageCoordinate(top.Value) : (float?)null);
                 TrySetCell(shape, "Width", width.HasValue ? ToPageCoordinate(width.Value) : (float?)null);
                 TrySetCell(shape, "Height", height.HasValue ? ToPageCoordinate(height.Value) : (float?)null);
+                RestoreContainerMembership(page, shape, containerIds);
 
                 return new OperationResult
                 {
@@ -762,6 +765,72 @@ public class ShapeCommands : IShapeCommands
                 ComUtilities.Release(ref page!);
             }
         });
+    }
+
+    private static List<int> GetContainerIds(object? rawIds)
+    {
+        if (rawIds is null)
+        {
+            return [];
+        }
+
+        if (rawIds is Array array)
+        {
+            var ids = new List<int>(array.Length);
+            foreach (object? value in array)
+            {
+                if (value is not null)
+                {
+                    ids.Add(Convert.ToInt32(value, CultureInfo.InvariantCulture));
+                }
+            }
+
+            return ids;
+        }
+
+        return [Convert.ToInt32(rawIds, CultureInfo.InvariantCulture)];
+    }
+
+    private static void RestoreContainerMembership(dynamic page, dynamic shape, List<int> containerIds)
+    {
+        if (containerIds.Count == 0)
+        {
+            return;
+        }
+
+        var currentContainerIds = GetContainerIds(shape.MemberOfContainers);
+        foreach (int containerId in containerIds)
+        {
+            if (currentContainerIds.Contains(containerId))
+            {
+                continue;
+            }
+
+            dynamic? shapes = null;
+            dynamic? container = null;
+            dynamic? properties = null;
+            bool? lockMembership = null;
+            try
+            {
+                shapes = page.Shapes;
+                container = shapes.ItemFromID(containerId);
+                properties = container.ContainerProperties;
+                lockMembership = Convert.ToBoolean(properties.LockMembership, CultureInfo.InvariantCulture);
+                properties.LockMembership = false;
+                properties.AddMember(shape, 1);
+            }
+            finally
+            {
+                if (properties != null && lockMembership.HasValue)
+                {
+                    properties.LockMembership = lockMembership.GetValueOrDefault();
+                }
+
+                if (properties != null) ComUtilities.Release(ref properties!);
+                if (container != null) ComUtilities.Release(ref container!);
+                if (shapes != null) ComUtilities.Release(ref shapes!);
+            }
+        }
     }
 
     public OperationResult Delete(IVisioBatch batch, int pageIndex, string shapeName)

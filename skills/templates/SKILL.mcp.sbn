@@ -3,13 +3,13 @@ name: visio-mcp
 description: >
   Automate Microsoft Visio on Windows via COM interop. Use when creating, reading,
   or modifying Visio diagrams. Best current support covers sessions, pages, shapes,
-  text, ShapeSheet cells, and stencil masters.
-  Triggers: Visio, vsdx, diagram, page, shape, stencil, ShapeSheet.
+  containers, callouts, text, ShapeSheet cells, and stencil masters.
+  Triggers: Visio, vsdx, diagram, page, shape, container, callout, stencil, ShapeSheet.
 ---
 
 # Visio MCP Server Skill
 
-Provides {{ operationcount }} generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, shapes, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
+Provides {{ operationcount }} generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
 
 ## Workflow Checklist
 
@@ -18,9 +18,10 @@ Provides {{ operationcount }} generated operations via Model Context Protocol. T
 | 1. Open file | `file` | `open` or `create` | Always first |
 | 2. Manage pages | `page` | `list`, `create`, `read` | Choose the working page |
 | 3. Add shapes | `shape` or `stencil` | `add-shape`, `add-textbox`, `drop-master` | Add diagram elements |
-| 4. Edit text | `text` | `get`, `set`, `find`, `replace` | Update labels |
-| 5. Edit cells | `cell` | `read`, `write`, `set-formula` | Adjust ShapeSheet-backed geometry |
-| 6. Save & close | `file` | `close` with `save: true` | Always last |
+| 4. Add structure | `container` | `drop`, `add-member`, `drop-callout` | Keep independent shapes organized or annotated |
+| 5. Edit text | `text` | `get`, `set`, `find`, `replace` | Update labels |
+| 6. Edit cells | `cell` | `read`, `write`, `set-formula` | Adjust ShapeSheet-backed geometry |
+| 7. Save & close | `file` | `close` with `save: true` | Always last |
 
 ## Preconditions
 
@@ -45,7 +46,7 @@ Important:
 
 ## Page and Shape Workflow
 
-Use `page`, `shape`, `text`, `cell`, and `stencil` together for the current Visio MVP:
+Use `page`, `shape`, `container`, `text`, `cell`, and `stencil` together for the current Visio MVP:
 
 ```
 1. page(action: 'create', pageName: 'Overview')  → Add a page if needed
@@ -53,6 +54,7 @@ Use `page`, `shape`, `text`, `cell`, and `stencil` together for the current Visi
 3. text(action: 'set', pageIndex: 1, shapeName: 'Rectangle.1', text: 'Start')  → Label it
 4. cell(action: 'write', pageIndex: 1, shapeName: 'Rectangle.1', cellName: 'Width', value: '3')  → Refine geometry
 5. stencil(action: 'drop-master', pageIndex: 1, stencilPath: '...', masterName: 'Rectangle', xPosition: 2, yPosition: 2)  → Use a built-in master
+6. container(action: 'drop', pageIndex: 1, targetShapeName: 'Rectangle.1')  → Keep related shapes independent but structurally associated
 ```
 
 **Note:** Shape names should be discovered with `shape(list)` before later operations target them.
@@ -168,6 +170,7 @@ After writes, read back the page, shape, text, or cell you changed:
 | Create/open/save diagrams | `file` | open, create, close |
 | Create/manage pages | `page` | create, list, read |
 | Add/modify shapes | `shape` | add-shape, add-textbox, move-resize, delete |
+| Manage containers and callouts | `container` | drop, add-member, list-members, drop-callout |
 | Set text content | `text` | set, get |
 | Edit ShapeSheet cells | `cell` | read, write, set-formula |
 | Use stencil masters | `stencil` | list-masters, drop-master |
