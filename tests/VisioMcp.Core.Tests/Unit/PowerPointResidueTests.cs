@@ -32,7 +32,6 @@ public class PowerPointResidueTests
     /// </summary>
     private static readonly string[] AwaitingPort =
     [
-        "Image" // #64
     ];
 
     private static readonly Regex PowerPointCall = new(
@@ -61,6 +60,16 @@ public class PowerPointResidueTests
     public void EveryDomainListedAsAwaitingAPort_StillHasPowerPointCalls()
     {
         var offenders = ScanDomains();
+
+        if (AwaitingPort.Length == 0)
+        {
+            Assert.True(
+                offenders.Count == 0,
+                "AwaitingPort is empty because every reachable Core domain should now be Visio-native. "
+                + "PowerPoint object model calls remain in: "
+                + string.Join(", ", offenders.Select(o => $"{o.Key} ({o.Value} usages)")));
+            return;
+        }
 
         var stale = AwaitingPort
             .Where(domain => !offenders.ContainsKey(domain))

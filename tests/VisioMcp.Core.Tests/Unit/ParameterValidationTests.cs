@@ -394,38 +394,6 @@ public class ParameterValidationTests
         Assert.Throws<ArgumentException>(() => commands.SetBrightnessContrast(null!, 1, shapeName, 0.5f, 0.5f));
     }
 
-    [Fact]
-    public void ImageSetTransparentColor_NullShapeName_ThrowsArgumentNullException()
-    {
-        var commands = new ImageCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetTransparentColor(null!, 1, null!, "#FFFFFF"));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ImageSetTransparentColor_EmptyShapeName_ThrowsArgumentException(string shapeName)
-    {
-        var commands = new ImageCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetTransparentColor(null!, 1, shapeName, "#FFFFFF"));
-    }
-
-    [Fact]
-    public void ImageSetTransparentColor_NullColorHex_ThrowsArgumentNullException()
-    {
-        var commands = new ImageCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.SetTransparentColor(null!, 1, "Image1", null!));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ImageSetTransparentColor_EmptyColorHex_ThrowsArgumentException(string colorHex)
-    {
-        var commands = new ImageCommands();
-        Assert.Throws<ArgumentException>(() => commands.SetTransparentColor(null!, 1, "Image1", colorHex));
-    }
-
     // ── Shape Commands ───────────────────────────────────────
 
     [Fact]

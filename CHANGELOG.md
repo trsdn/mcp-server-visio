@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`image` is Visio-native and public again** (#64). Reimplemented imported picture operations on
+  `Page.Import` and Visio's image ShapeSheet cells, with `insert`, `crop`, and
+  `set-brightness-contrast` actions.
+
+  `insert` imports a real image file as a `visTypeForeignObject` and positions/sizes it with
+  `PinX`, `PinY`, `Width`, and `Height` in points. `crop` preserves the shape frame and writes
+  point-based hidden extents through `ImgOffsetX`, `ImgOffsetY`, `ImgWidth`, and `ImgHeight`.
+
+  Brightness and contrast are deliberately documented as Visio percentage fractions from `0.0` to
+  `1.0`, with `0.5` as neutral/unchanged. This avoids the PowerPoint trap where neutral was `0`;
+  passing `0` to Visio means `0%`, not unchanged.
+
+  `set-transparent-color` was deleted rather than approximated: Visio has whole-image
+  `Transparency`, but no colour-key transparent-colour equivalent.
+
 - **`comment` is Visio-native and public again** (#62). Reimplemented reviewer comments on
   `Page.Comments` and `Shape.Comments`, with `list`, `add`, `delete`, and `clear` actions.
 

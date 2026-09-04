@@ -34,6 +34,7 @@ public sealed class ActionValidatorTests
         "file",
         "headerfooter",
         "hyperlink",
+        "image",
         "layer",
         "master",
         "page",
@@ -49,10 +50,8 @@ public sealed class ActionValidatorTests
     private static readonly string[] HiddenLegacyCommands =
     [
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
-        // in #34; both are public. accessibility was deleted in #77 and tag in #116, and
-        // headerfooter was ported to Document.Header*/Footer* in #63, and printoptions to
-        // Document.Print* plus PageSheet print cells in #65.
-        "image",
+        // in #34; both are public. accessibility was deleted in #77 and tag in #116. Headerfooter,
+        // printoptions and image were ported in #63, #65 and #64 respectively.
         "vba"
     ];
 
@@ -149,4 +148,3 @@ public sealed class ActionValidatorTests
         public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
     }
 }
-
