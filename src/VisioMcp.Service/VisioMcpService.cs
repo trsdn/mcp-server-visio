@@ -13,6 +13,7 @@ using VisioMcp.Core.Commands.Image;
 using VisioMcp.Core.Commands.Layer;
 using VisioMcp.Core.Commands.Master;
 using VisioMcp.Core.Commands.Page;
+using VisioMcp.Core.Commands.PrintOptions;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
 using VisioMcp.Core.Commands.Stencil;
@@ -60,6 +61,7 @@ public sealed class VisioMcpService : IDisposable
     private readonly HyperlinkCommands _hyperlinkCommands = new();
     private readonly DocumentPropertyCommands _documentPropertyCommands = new();
     private readonly HeaderFooterCommands _headerFooterCommands = new();
+    private readonly PrintOptionsCommands _printOptionsCommands = new();
     private readonly StyleCommands _styleCommands = new();
 
     public VisioMcpService()
@@ -257,6 +259,9 @@ public sealed class VisioMcpService : IDisposable
                 "headerfooter" => await DispatchSimpleAsync<HeaderfooterAction>(action, request,
                     ServiceRegistry.Headerfooter.TryParseAction,
                     (a, batch) => ServiceRegistry.Headerfooter.DispatchToCore(_headerFooterCommands, a, batch, request.Args)),
+                "printoptions" => await DispatchSimpleAsync<PrintoptionsAction>(action, request,
+                    ServiceRegistry.Printoptions.TryParseAction,
+                    (a, batch) => ServiceRegistry.Printoptions.DispatchToCore(_printOptionsCommands, a, batch, request.Args)),
                 "style" => await DispatchSimpleAsync<StyleAction>(action, request,
                     ServiceRegistry.Style.TryParseAction,
                     (a, batch) => ServiceRegistry.Style.DispatchToCore(_styleCommands, a, batch, request.Args)),
