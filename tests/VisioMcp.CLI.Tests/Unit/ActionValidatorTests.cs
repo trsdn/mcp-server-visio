@@ -35,6 +35,7 @@ public sealed class ActionValidatorTests
         "layer",
         "master",
         "page",
+        "printoptions",
         "shape",
         "shapealign",
         "stencil",
@@ -48,9 +49,9 @@ public sealed class ActionValidatorTests
         "comment",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public. accessibility was deleted in #77 and tag in #116, and
-        // headerfooter was ported to Document.Header*/Footer* in #63.
+        // headerfooter was ported to Document.Header*/Footer* in #63, and printoptions to
+        // Document.Print* plus PageSheet print cells in #65.
         "image",
-        "printoptions",
         "vba"
     ];
 
@@ -147,7 +148,6 @@ public sealed class ActionValidatorTests
         public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
     }
 }
-
 
 
 

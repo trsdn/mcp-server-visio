@@ -321,6 +321,36 @@ Visio page lifecycle, guides, and routing commands.
 
 
 
+### printoptions
+
+Read and write Visio print options on the document and on a page's Print Properties section.
+
+**Actions:** `get`, `set`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index whose PageSheet print cells should be used |
+| `--print-landscape` | Document PrintLandscape option |
+| `--print-centered-h` | Document PrintCenteredH option |
+| `--print-centered-v` | Document PrintCenteredV option |
+| `--paper-size` | Document PaperSize value |
+| `--printer` | Document Printer name. Passing the current name is safe and does not print |
+| `--print-fit-on-pages` | Document PrintFitOnPages option |
+| `--print-pages-across` | Document PrintPagesAcross value |
+| `--print-pages-down` | Document PrintPagesDown value |
+| `--print-scale` | Document PrintScale percentage |
+| `--print-page-orientation` | PageSheet PrintPageOrientation value |
+| `--print-grid` | PageSheet PrintGrid cell |
+| `--paper-kind` | PageSheet PaperKind value |
+| `--center-x` | PageSheet CenterX cell |
+| `--center-y` | PageSheet CenterY cell |
+| `--page-left-margin-inches` | PageSheet PageLeftMargin cell, in inches |
+| `--page-right-margin-inches` | PageSheet PageRightMargin cell, in inches |
+| `--page-top-margin-inches` | PageSheet PageTopMargin cell, in inches |
+| `--page-bottom-margin-inches` | PageSheet PageBottomMargin cell, in inches |
+
+
+
 ### shape
 
 Shape management: list, read, create, move, resize, delete, z-order.

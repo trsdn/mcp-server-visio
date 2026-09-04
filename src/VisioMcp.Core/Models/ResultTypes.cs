@@ -953,6 +953,38 @@ public class HeaderFooterResult : ResultBase
     public double FooterMargin { get; set; }
 }
 
+// ── Print Options ─────────────────────────────────────────
+
+public class PrintOptionsResult : ResultBase
+{
+    /// <summary>1-based page index whose PageSheet print cells were read.</summary>
+    public int PageIndex { get; set; }
+
+    public bool PrintLandscape { get; set; }
+    public bool PrintCenteredH { get; set; }
+    public bool PrintCenteredV { get; set; }
+    public int PaperSize { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Printer { get; set; }
+
+    public bool PrintFitOnPages { get; set; }
+    public int PrintPagesAcross { get; set; }
+    public int PrintPagesDown { get; set; }
+    public double PrintScale { get; set; }
+    public double PaperHeightInches { get; set; }
+    public double PaperWidthInches { get; set; }
+    public int PrintPageOrientation { get; set; }
+    public bool PrintGrid { get; set; }
+    public int PaperKind { get; set; }
+    public bool CenterX { get; set; }
+    public bool CenterY { get; set; }
+    public double PageLeftMarginInches { get; set; }
+    public double PageRightMarginInches { get; set; }
+    public double PageTopMarginInches { get; set; }
+    public double PageBottomMarginInches { get; set; }
+}
+
 // ── SmartArt ─────────────────────────────────────────────
 
 public class SmartArtInfoResult : ResultBase
