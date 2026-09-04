@@ -276,6 +276,30 @@ Hyperlinks attached to shapes.
 
 
 
+### image
+
+Image operations: insert and adjust imported pictures on Visio pages.
+
+**Actions:** `insert`, `crop`, `set-brightness-contrast`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index (required) |
+| `--image-path` | Path to the image file (required for: insert) |
+| `--left` | Visio page X coordinate in points (72 pt = 1 inch) (required for: insert) |
+| `--top` | Visio page Y coordinate in points; Y increases upward (required for: insert) |
+| `--width` | Width in points (0 = original) (required for: insert) |
+| `--height` | Height in points (0 = original) (required for: insert) |
+| `--shape-name` | Name of the picture shape (required for: crop, set-brightness-contrast) |
+| `--crop-left` | Points hidden beyond the left edge (0 = no left crop) (required for: crop) |
+| `--crop-right` | Points hidden beyond the right edge (0 = no right crop) (required for: crop) |
+| `--crop-top` | Points hidden beyond the top edge (0 = no top crop) (required for: crop) |
+| `--crop-bottom` | Points hidden beyond the bottom edge (0 = no bottom crop) (required for: crop) |
+| `--brightness` | Visio percentage fraction (0.0 to 1.0); 0.5 is neutral/unchanged (required for: set-brightness-contrast) |
+| `--contrast` | Visio percentage fraction (0.0 to 1.0); 0.5 is neutral/unchanged (required for: set-brightness-contrast) |
+
+
+
 ### layer
 
 Visio layer management for page-level organization, visibility, and shape membership.
