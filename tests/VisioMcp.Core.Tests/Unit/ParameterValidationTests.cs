@@ -1450,7 +1450,7 @@ public class ParameterValidationTests
     public void CommentAdd_NullText_ThrowsArgumentNullException()
     {
         var commands = new CommentCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.Add(null!, 1, null!, "Author", 0, 0));
+        Assert.Throws<ArgumentNullException>(() => commands.Add(null!, 1, null!));
     }
 
     [Theory]
@@ -1459,23 +1459,21 @@ public class ParameterValidationTests
     public void CommentAdd_EmptyText_ThrowsArgumentException(string text)
     {
         var commands = new CommentCommands();
-        Assert.Throws<ArgumentException>(() => commands.Add(null!, 1, text, "Author", 0, 0));
+        Assert.Throws<ArgumentException>(() => commands.Add(null!, 1, text));
     }
 
     [Fact]
-    public void CommentAdd_NullAuthor_ThrowsArgumentNullException()
+    public void CommentAdd_ZeroPageIndex_ThrowsArgumentOutOfRangeException()
     {
         var commands = new CommentCommands();
-        Assert.Throws<ArgumentNullException>(() => commands.Add(null!, 1, "Comment text", null!, 0, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => commands.Add(null!, 0, "Comment text"));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void CommentAdd_EmptyAuthor_ThrowsArgumentException(string author)
+    [Fact]
+    public void CommentDelete_ZeroCommentIndex_ThrowsArgumentOutOfRangeException()
     {
         var commands = new CommentCommands();
-        Assert.Throws<ArgumentException>(() => commands.Add(null!, 1, "Comment text", author, 0, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => commands.Delete(null!, 1, 0));
     }
 
     // ── Custom Show Commands ─────────────────────────────────

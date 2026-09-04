@@ -1,3 +1,4 @@
+using System.Globalization;
 using VisioMcp.ComInterop;
 using VisioMcp.ComInterop.Session;
 using VisioMcp.Core.Models;
@@ -6,103 +7,107 @@ namespace VisioMcp.Core.Commands.Comment;
 
 public class CommentCommands : ICommentCommands
 {
-    public CommentListResult List(IVisioBatch batch, int slideIndex)
+    private const int VisObjTypeDoc = 10;
+    private const int VisObjTypePage = 14;
+    private const int VisObjTypeShape = 17;
+
+    public CommentListResult List(IVisioBatch batch, int pageIndex, string? shapeName = null)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
+
         return batch.Execute((ctx, ct) =>
         {
-            var result = new CommentListResult { Success = true, FilePath = ctx.DocumentPath };
-            dynamic pres = ctx.Document;
+            dynamic? page = null;
+            dynamic? comments = null;
+            dynamic? filterShape = null;
+            try
+            {
+                page = GetPage(ctx, pageIndex);
+                comments = page.Comments;
 
-            if (slideIndex > 0)
-            {
-                dynamic slide = pres.Slides.Item(slideIndex);
-                try
+                string? normalizedShapeName = null;
+                if (!string.IsNullOrWhiteSpace(shapeName))
                 {
-                    ReadCommentsFromSlide(slide, slideIndex, result);
+                    filterShape = GetShape(page, shapeName);
+                    normalizedShapeName = filterShape.Name?.ToString();
                 }
-                finally
+
+                var result = new CommentListResult
                 {
-                    ComUtilities.Release(ref slide!);
-                }
-            }
-            else
-            {
-                dynamic slides = pres.Slides;
-                try
+                    Success = true,
+                    FilePath = ctx.DocumentPath,
+                    PageIndex = pageIndex,
+                    ShapeName = normalizedShapeName
+                };
+
+                int count = Convert.ToInt32(comments.Count, CultureInfo.InvariantCulture);
+                for (int i = 1; i <= count; i++)
                 {
-                    int count = (int)slides.Count;
-                    for (int i = 1; i <= count; i++)
+                    dynamic? comment = null;
+                    dynamic? associatedObject = null;
+                    try
                     {
-                        dynamic slide = slides.Item(i);
-                        try
+                        comment = comments.Item(i);
+                        associatedObject = comment.AssociatedObject;
+                        var info = ReadCommentInfo(comment, associatedObject, pageIndex, i);
+
+                        if (normalizedShapeName is null ||
+                            string.Equals(info.AssociatedShapeName, normalizedShapeName, StringComparison.Ordinal))
                         {
-                            ReadCommentsFromSlide(slide, i, result);
-                        }
-                        finally
-                        {
-                            ComUtilities.Release(ref slide!);
+                            result.Comments.Add(info);
                         }
                     }
+                    finally
+                    {
+                        if (associatedObject != null) ComUtilities.Release(ref associatedObject!);
+                        if (comment != null) ComUtilities.Release(ref comment!);
+                    }
                 }
-                finally
-                {
-                    ComUtilities.Release(ref slides!);
-                }
-            }
 
-            return result;
+                return result;
+            }
+            finally
+            {
+                if (filterShape != null) ComUtilities.Release(ref filterShape!);
+                if (comments != null) ComUtilities.Release(ref comments!);
+                if (page != null) ComUtilities.Release(ref page!);
+            }
         });
     }
 
-    public OperationResult Add(IVisioBatch batch, int slideIndex, string text, string author, float left, float top)
+    public OperationResult Add(IVisioBatch batch, int pageIndex, string text, string? shapeName = null)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentException.ThrowIfNullOrWhiteSpace(author);
 
         return batch.Execute((ctx, ct) =>
         {
-            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
+            dynamic? page = null;
+            dynamic? shape = null;
+            dynamic? comments = null;
+            dynamic? comment = null;
             try
             {
-                // Comments.Add2(Left, Top, Author, AuthorInitials, Text)
-                string initials = author.Length >= 2
-                    ? string.Concat(author.AsSpan(0, 1).ToString().ToUpperInvariant(), author.AsSpan(1, 1))
-                    : author.ToUpperInvariant();
-                slide.Comments.Add2(left, top, author, initials, text);
+                page = GetPage(ctx, pageIndex);
+                if (!string.IsNullOrWhiteSpace(shapeName))
+                {
+                    shape = GetShape(page, shapeName);
+                    comments = shape.Comments;
+                }
+                else
+                {
+                    comments = page.Comments;
+                }
+
+                comment = comments.Add(text);
 
                 return new OperationResult
                 {
                     Success = true,
                     Action = "add",
-                    Message = $"Added comment by '{author}' on slide {slideIndex}",
-                    FilePath = ctx.DocumentPath
-                };
-            }
-            finally
-            {
-                ComUtilities.Release(ref slide!);
-            }
-        });
-    }
-
-    public OperationResult Delete(IVisioBatch batch, int slideIndex, int commentIndex)
-    {
-        return batch.Execute((ctx, ct) =>
-        {
-            dynamic slide = ((dynamic)ctx.Document).Slides.Item(slideIndex);
-            dynamic? comments = null;
-            dynamic? comment = null;
-            try
-            {
-                comments = slide.Comments;
-                comment = comments.Item(commentIndex);
-                comment.Delete();
-
-                return new OperationResult
-                {
-                    Success = true,
-                    Action = "delete",
-                    Message = $"Deleted comment {commentIndex} on slide {slideIndex}",
+                    Message = shapeName is null
+                        ? $"Added page comment on page {pageIndex}"
+                        : $"Added shape comment on shape '{shapeName}' on page {pageIndex}",
                     FilePath = ctx.DocumentPath
                 };
             }
@@ -110,106 +115,153 @@ public class CommentCommands : ICommentCommands
             {
                 if (comment != null) ComUtilities.Release(ref comment!);
                 if (comments != null) ComUtilities.Release(ref comments!);
-                ComUtilities.Release(ref slide!);
+                if (shape != null) ComUtilities.Release(ref shape!);
+                if (page != null) ComUtilities.Release(ref page!);
             }
         });
     }
 
-    public OperationResult Clear(IVisioBatch batch, int slideIndex)
+    public OperationResult Delete(IVisioBatch batch, int pageIndex, int commentIndex)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(commentIndex);
+
         return batch.Execute((ctx, ct) =>
         {
-            dynamic pres = ctx.Document;
-            int cleared = 0;
+            dynamic? page = null;
+            dynamic? comments = null;
+            dynamic? comment = null;
+            try
+            {
+                page = GetPage(ctx, pageIndex);
+                comments = page.Comments;
+                comment = comments.Item(commentIndex);
+                comment.Delete();
 
-            void ClearSlide(dynamic s)
-            {
-                dynamic comments = s.Comments;
-                try
+                return new OperationResult
                 {
-                    // Delete from last to first to avoid index shift
-                    for (int i = (int)comments.Count; i >= 1; i--)
-                    {
-                        dynamic c = comments.Item(i);
-                        try { c.Delete(); cleared++; }
-                        finally { ComUtilities.Release(ref c!); }
-                    }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref comments!);
-                }
+                    Success = true,
+                    Action = "delete",
+                    Message = $"Deleted comment {commentIndex} on page {pageIndex}",
+                    FilePath = ctx.DocumentPath
+                };
             }
-
-            if (slideIndex > 0)
+            finally
             {
-                dynamic slide = pres.Slides.Item(slideIndex);
-                try { ClearSlide(slide); }
-                finally { ComUtilities.Release(ref slide!); }
+                if (comment != null) ComUtilities.Release(ref comment!);
+                if (comments != null) ComUtilities.Release(ref comments!);
+                if (page != null) ComUtilities.Release(ref page!);
             }
-            else
-            {
-                dynamic slides = pres.Slides;
-                try
-                {
-                    int count = (int)slides.Count;
-                    for (int i = 1; i <= count; i++)
-                    {
-                        dynamic slide = slides.Item(i);
-                        try { ClearSlide(slide); }
-                        finally { ComUtilities.Release(ref slide!); }
-                    }
-                }
-                finally
-                {
-                    ComUtilities.Release(ref slides!);
-                }
-            }
-
-            return new OperationResult
-            {
-                Success = true,
-                Action = "clear",
-                Message = slideIndex > 0
-                    ? $"Cleared {cleared} comment(s) from slide {slideIndex}"
-                    : $"Cleared {cleared} comment(s) from all slides",
-                FilePath = ctx.DocumentPath
-            };
         });
     }
 
-    private static void ReadCommentsFromSlide(dynamic slide, int slideIdx, CommentListResult result)
+    public OperationResult Clear(IVisioBatch batch, int pageIndex)
     {
-        dynamic comments = slide.Comments;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageIndex);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic? page = null;
+            dynamic? comments = null;
+            try
+            {
+                page = GetPage(ctx, pageIndex);
+                comments = page.Comments;
+                int cleared = Convert.ToInt32(comments.Count, CultureInfo.InvariantCulture);
+                comments.DeleteAll();
+
+                return new OperationResult
+                {
+                    Success = true,
+                    Action = "clear",
+                    Message = $"Cleared {cleared} comment(s) from page {pageIndex}",
+                    FilePath = ctx.DocumentPath
+                };
+            }
+            finally
+            {
+                if (comments != null) ComUtilities.Release(ref comments!);
+                if (page != null) ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    private static CommentInfo ReadCommentInfo(dynamic comment, dynamic? associatedObject, int pageIndex, int commentIndex)
+    {
+        var info = new CommentInfo
+        {
+            PageIndex = pageIndex,
+            CommentIndex = commentIndex,
+            Text = comment.Text?.ToString() ?? string.Empty,
+            AuthorName = comment.AuthorName?.ToString() ?? string.Empty,
+            AuthorInitials = comment.AuthorInitials?.ToString() ?? string.Empty,
+            CreateDate = ToIsoString(comment.CreateDate),
+            EditDate = ToIsoString(comment.EditDate),
+            AssociatedObjectType = "None"
+        };
+
+        if (associatedObject is null)
+        {
+            return info;
+        }
+
+        int objectType = Convert.ToInt32(associatedObject.ObjectType, CultureInfo.InvariantCulture);
+        info.AssociatedObjectType = ObjectTypeName(objectType);
+
+        if (objectType == VisObjTypeShape)
+        {
+            info.AssociatedShapeName = associatedObject.Name?.ToString();
+        }
+        else if (objectType == VisObjTypePage)
+        {
+            info.AssociatedPageName = associatedObject.Name?.ToString();
+        }
+
+        return info;
+    }
+
+    private static dynamic GetPage(VisioContext ctx, int pageIndex)
+    {
+        dynamic? pages = null;
         try
         {
-            int count = (int)comments.Count;
-            for (int i = 1; i <= count; i++)
-            {
-                dynamic c = comments.Item(i);
-                try
-                {
-                    var info = new CommentInfo
-                    {
-                        SlideIndex = slideIdx,
-                        CommentIndex = i,
-                        Text = c.Text?.ToString() ?? "",
-                        Author = c.Author?.ToString() ?? "",
-                        Left = Convert.ToSingle(c.Left),
-                        Top = Convert.ToSingle(c.Top),
-                    };
-                    try { info.DateTime = c.DateTime?.ToString(); } catch { }
-                    result.Comments.Add(info);
-                }
-                finally
-                {
-                    ComUtilities.Release(ref c!);
-                }
-            }
+            pages = ((dynamic)ctx.Document).Pages;
+            return pages.Item(pageIndex);
         }
         finally
         {
-            ComUtilities.Release(ref comments!);
+            if (pages != null) ComUtilities.Release(ref pages!);
         }
+    }
+
+    private static dynamic GetShape(dynamic page, string shapeName)
+    {
+        dynamic? shapes = null;
+        try
+        {
+            shapes = page.Shapes;
+            return shapes.Item(shapeName);
+        }
+        finally
+        {
+            if (shapes != null) ComUtilities.Release(ref shapes!);
+        }
+    }
+
+    private static string ToIsoString(object value)
+    {
+        return Convert.ToDateTime(value, CultureInfo.InvariantCulture)
+            .ToString("O", CultureInfo.InvariantCulture);
+    }
+
+    private static string ObjectTypeName(int objectType)
+    {
+        return objectType switch
+        {
+            VisObjTypeDoc => "Document",
+            VisObjTypePage => "Page",
+            VisObjTypeShape => "Shape",
+            _ => $"ObjectType:{objectType}"
+        };
     }
 }

@@ -1095,6 +1095,31 @@ public class ServiceRegistryGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine("    };");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Maps CLI command names to generated long option names without leading dashes.</summary>");
+        sb.AppendLine("    public static readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<string>> ValidOptionsByCommand = new()");
+        sb.AppendLine("    {");
+
+        foreach (var cat in publicCategories)
+        {
+            var cliCommandName = cat.McpToolName.Replace("_", "");
+            var options = ServiceInfoExtractor.GetAllExposedParameters(cat)
+                .Select(p => StringHelper.ToKebabCase(p.Name))
+                .Append("output");
+
+            if (!cat.NoSession)
+            {
+                options = options.Append("session");
+            }
+
+            var optionList = string.Join(", ", options
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(o => o, StringComparer.OrdinalIgnoreCase)
+                .Select(o => $"\"{o}\""));
+            sb.AppendLine($"        [\"{cliCommandName}\"] = new[] {{ {optionList} }},");
+        }
+
+        sb.AppendLine("    };");
         sb.AppendLine("}");
 
         return sb.ToString();

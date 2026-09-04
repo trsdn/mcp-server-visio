@@ -2,6 +2,8 @@ using System.Reflection;
 using VisioMcp.CLI.Commands;
 using VisioMcp.CLI.Generated;
 using VisioMcp.CLI.Infrastructure;
+using VisioMcp.Generated;
+using VisioMcp.Service;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -59,6 +61,14 @@ internal sealed class Program
                 }
             }
             return RunServiceDaemon(pipeNameOverride);
+        }
+
+        if (TryGetGeneratedCommandOptionError(filteredArgs, out var optionError))
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(
+                new { success = false, error = optionError },
+                ServiceProtocol.JsonOptions));
+            return 1;
         }
 
         if (showBanner) RenderHeader();
@@ -144,6 +154,94 @@ internal sealed class Program
             }
             return -1;
         }
+    }
+
+    private static bool TryGetGeneratedCommandOptionError(string[] args, out string error)
+    {
+        error = string.Empty;
+
+        if (args.Length < 2)
+        {
+            return false;
+        }
+
+        var command = args[0].Trim().ToLowerInvariant();
+        if (!_CliCategoryMetadata.ValidOptionsByCommand.TryGetValue(command, out var validOptions))
+        {
+            return false;
+        }
+
+        var valid = new HashSet<string>(validOptions, StringComparer.OrdinalIgnoreCase)
+        {
+            "help"
+        };
+
+        for (var i = 1; i < args.Length; i++)
+        {
+            var token = args[i];
+
+            if (token == "--")
+            {
+                return false;
+            }
+
+            if (!LooksLikeOption(token))
+            {
+                continue;
+            }
+
+            var optionName = GetOptionName(token);
+            if (optionName is null)
+            {
+                error = $"Command '{command}' does not accept {token}. Options accepted by '{command}': {FormatAcceptedOptions(validOptions)}.";
+                return true;
+            }
+
+            if (!valid.Contains(optionName))
+            {
+                error = $"Command '{command}' does not accept --{optionName}. Options accepted by '{command}': {FormatAcceptedOptions(validOptions)}.";
+                return true;
+            }
+
+            if (!token.Contains('=', StringComparison.Ordinal) && i + 1 < args.Length)
+            {
+                i++;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool LooksLikeOption(string token)
+    {
+        return token.Length > 1
+            && token[0] == '-'
+            && !char.IsDigit(token[1])
+            && token[1] != '.';
+    }
+
+    private static string? GetOptionName(string token)
+    {
+        if (token.StartsWith("--", StringComparison.Ordinal))
+        {
+            var end = token.IndexOf('=', StringComparison.Ordinal);
+            return end > 2 ? token[2..end] : token[2..];
+        }
+
+        return token switch
+        {
+            "-s" => "session",
+            "-o" => "output",
+            "-h" => "help",
+            _ => null
+        };
+    }
+
+    private static string FormatAcceptedOptions(IEnumerable<string> options)
+    {
+        return string.Join(", ", options
+            .OrderBy(option => option, StringComparer.OrdinalIgnoreCase)
+            .Select(option => "--" + option));
     }
 
     private static void RegisterOfficeAssemblyResolver()
@@ -327,4 +425,3 @@ internal sealed class Program
         return 0;
     }
 }
-

@@ -15,9 +15,9 @@ namespace VisioMcp.Core.Tests.Unit;
 /// working with slides will reach for slide concepts that do not exist here, and the tool
 /// description cannot argue it out of what the parameter list says.
 ///
-/// Scoped to the public surface. The suppressed domains — <c>comment</c>, <c>image</c>,
-/// <c>accessibility</c>, <c>tag</c> and the rest — still carry <c>slideIndex</c> and are excluded
-/// until they are ported (#62–#66, #77). They do not ship, so they cannot mislead anyone.
+/// Scoped to the public surface. The suppressed domains — <c>image</c>, <c>vba</c> and the rest —
+/// still carry <c>slideIndex</c> and are excluded until they are ported (#64, #66). They do not ship,
+/// so they cannot mislead anyone.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Speed", "Fast")]
@@ -28,8 +28,8 @@ public class PublicSurfaceNamingTests
 {
     private static readonly string[] PublicDomains =
     [
-        "Cell", "Design", "DocumentProperty", "Export", "File", "Hyperlink", "Layer", "Master",
-        "Page", "Shape", "ShapeAlign", "Stencil", "Style", "Text", "Window"
+        "Cell", "Comment", "Design", "DocumentProperty", "Export", "File", "Hyperlink", "Layer",
+        "Master", "Page", "Shape", "ShapeAlign", "Stencil", "Style", "Text", "Window"
     ];
 
     private static readonly Regex ActionPattern = new(
