@@ -14,8 +14,8 @@ namespace VisioMcp.Core.Commands.Image;
     + "the original import size. Crop values are points hidden beyond each picture edge while preserving "
     + "the shape frame: left/right/top/bottom expand the underlying image, and left/bottom use negative "
     + "ImgOffsetX/Y. Brightness and contrast are Visio percentage fractions from 0.0 to 1.0; 0.5 is "
-    + "neutral/unchanged. Do not pass PowerPoint-style 0 as neutral: in Visio 0 means 0% (fully dark/"
-    + "minimum contrast). Visio has no color-key transparent color action.")]
+    + "neutral/unchanged. 0 is NOT neutral: in Visio it means 0% (fully dark/minimum contrast). "
+    + "Visio has no color-key transparent color action.")]
 public interface IImageCommands
 {
     /// <summary>Insert a picture from a file path onto a Visio page.</summary>
