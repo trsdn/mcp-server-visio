@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`container` adds Visio-native containers, list containers, and callouts** (#123). Added a new
+  public domain rather than overloading `shape`, because containers keep independent member shapes in
+  a structural membership relationship while `shape(group)` fuses shapes into one composite shape.
+
+  The new actions cover dropping built-in containers and callouts, dropping list containers from the
+  installed list stencil, adding/removing members, reading members and memberships, fitting containers
+  to contents, inserting list members, and reading callout associations.
+
 - **`image` is Visio-native and public again** (#64). Reimplemented imported picture operations on
   `Page.Import` and Visio's image ShapeSheet cells, with `insert`, `crop`, and
   `set-brightness-contrast` actions.
