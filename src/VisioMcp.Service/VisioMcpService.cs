@@ -7,6 +7,7 @@ using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
 using VisioMcp.Core.Commands.Export;
 using VisioMcp.Core.Commands.File;
+using VisioMcp.Core.Commands.HeaderFooter;
 using VisioMcp.Core.Commands.Hyperlink;
 using VisioMcp.Core.Commands.Image;
 using VisioMcp.Core.Commands.Layer;
@@ -15,6 +16,7 @@ using VisioMcp.Core.Commands.Page;
 using VisioMcp.Core.Commands.Shape;
 using VisioMcp.Core.Commands.ShapeAlign;
 using VisioMcp.Core.Commands.Stencil;
+using VisioMcp.Core.Commands.Style;
 using VisioMcp.Core.Commands.Text;
 using VisioMcp.Core.Commands.Vba;
 using VisioMcp.Core.Commands.Window;
@@ -57,6 +59,8 @@ public sealed class VisioMcpService : IDisposable
     private readonly WindowCommands _windowCommands = new();
     private readonly HyperlinkCommands _hyperlinkCommands = new();
     private readonly DocumentPropertyCommands _documentPropertyCommands = new();
+    private readonly HeaderFooterCommands _headerFooterCommands = new();
+    private readonly StyleCommands _styleCommands = new();
 
     public VisioMcpService()
     {
@@ -250,6 +254,12 @@ public sealed class VisioMcpService : IDisposable
                 "docproperty" => await DispatchSimpleAsync<DocpropertyAction>(action, request,
                     ServiceRegistry.Docproperty.TryParseAction,
                     (a, batch) => ServiceRegistry.Docproperty.DispatchToCore(_documentPropertyCommands, a, batch, request.Args)),
+                "headerfooter" => await DispatchSimpleAsync<HeaderfooterAction>(action, request,
+                    ServiceRegistry.Headerfooter.TryParseAction,
+                    (a, batch) => ServiceRegistry.Headerfooter.DispatchToCore(_headerFooterCommands, a, batch, request.Args)),
+                "style" => await DispatchSimpleAsync<StyleAction>(action, request,
+                    ServiceRegistry.Style.TryParseAction,
+                    (a, batch) => ServiceRegistry.Style.DispatchToCore(_styleCommands, a, batch, request.Args)),
                 _ => new ServiceResponse { Success = false, ErrorMessage = $"Unknown command category: {category}" }
             };
         }

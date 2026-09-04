@@ -39,7 +39,7 @@ The recommended sequence today is:
 
 ## Domains in migration backlog
 
-Five command domains inherited from the PowerPoint ancestor remain compiled but suppressed from
+Four command domains inherited from the PowerPoint ancestor remain compiled but suppressed from
 the public surface via `[McpTool(..., PublicSurface = false)]`. A further fourteen were probed,
 found to have no Visio analogue at all, and **deleted** — 4,768 lines and 82 actions removed in #22.
 
@@ -71,7 +71,6 @@ survives translation while the concept does not — Visio has no `Tags` collecti
 | Domain | Disposition | Owner | Visio evidence | Tracking |
 |---|---|---|---|---|
 | `comment` | Port | @trsdn | `Page/Shape/Document.Comments` with `Add`, `Item`, `DeleteAll`; verified by adding, editing and deleting a comment | [#62](https://github.com/trsdn/mcp-server-visio/issues/62) |
-| `headerfooter` | Port | @trsdn | `Document.HeaderLeft/Center/Right`, `FooterLeft/Center/Right`, `HeaderFooterFont`, `HeaderMargin` all present | [#63](https://github.com/trsdn/mcp-server-visio/issues/63) |
 | `image` | Port | @trsdn | `Page.Import` returned a shape with `Type=4` (`visTypeForeignObject`); `Shape.Export` wrote it back to disk | [#64](https://github.com/trsdn/mcp-server-visio/issues/64) |
 | `printoptions` | Port | @trsdn | `Document.Print`, `PrintOut`, `ExportAsFixedFormat`, `PrintLandscape`, `PrintCenteredH`, `PaperSize` present | [#65](https://github.com/trsdn/mcp-server-visio/issues/65) |
 | `vba` | Port | @trsdn | `Document.VBProject` and `Application.VBE` present; Visio supports VBA and `.vsdm` | [#66](https://github.com/trsdn/mcp-server-visio/issues/66) |

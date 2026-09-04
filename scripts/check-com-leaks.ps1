@@ -12,7 +12,15 @@ $cleanFiles = @()
 
 Get-ChildItem -Path (Join-Path $rootDir "src") -Recurse -Filter "*.cs" | ForEach-Object {
     $content = Get-Content $_.FullName -Raw
-    $hasDynamic = $content -match "dynamic\s+\w+\s*=.*\."
+
+    # ctx.Document and ctx.Application are owned by VisioContext for the life of the batch. No
+    # command releases them - doing so would tear down the caller's document - so a file whose only
+    # dynamics are these has nothing to release, and must not be reported as a leak. Stripping them
+    # before the test keeps the check precise: a file that acquires any *other* COM object without
+    # releasing it is still caught.
+    $ownedByContext = $content -replace "dynamic\s+\w+\s*=\s*(?:\(dynamic\))?\s*ctx\.(?:Document|Application)\s*;", ""
+
+    $hasDynamic = $ownedByContext -match "dynamic\s+\w+\s*=.*\."
     $hasRelease = $content -match "ComUtilities\.Release"
     # Session files own the Application/Document lifetime for the whole session, so they
     # deliberately hold COM references outside any single operation and release them on

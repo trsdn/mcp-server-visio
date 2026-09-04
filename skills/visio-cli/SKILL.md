@@ -224,6 +224,25 @@ File management commands for Visio documents. Handles file validation and metada
 
 
 
+### headerfooter
+
+Document headers and footers: the six text fields printed above and below every page.
+
+**Actions:** `get`, `set`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--header-left` | Text in the left header position. Empty string clears it |
+| `--header-center` | Text in the centre header position. Empty string clears it |
+| `--header-right` | Text in the right header position. Empty string clears it |
+| `--footer-left` | Text in the left footer position. Empty string clears it |
+| `--footer-center` | Text in the centre footer position. Empty string clears it |
+| `--footer-right` | Text in the right footer position. Empty string clears it |
+| `--header-margin` | Header distance from the paper edge, in inches |
+| `--footer-margin` | Footer distance from the paper edge, in inches |
+
+
+
 ### hyperlink
 
 Hyperlinks attached to shapes.

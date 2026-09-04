@@ -6,6 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`headerfooter` is Visio-native and public again** (#63). Reimplemented on
+  `Document.HeaderLeft/Center/Right` and `FooterLeft/Center/Right`, taking the public surface to 16
+  tools and 180 actions.
+
+  Visio's model is document-scoped and field-based — six independent strings — rather than
+  PowerPoint's per-slide *show footer / show slide number / show date* toggles. So this is not a
+  rename:
+
+  | PowerPoint parameter | Fate |
+  |---|---|
+  | `slideIndex` | Dropped — headers and footers are document-wide in Visio |
+  | `showSlideNumber`, `showDate` | Dropped — a page number is the field code `&p` inside one of the six fields, not a boolean |
+  | `footerText` | Becomes six independent fields |
+
+  Dropping them is enough on its own to make them *rejected* rather than ignored: since #103 the CLI
+  allow-list is generated from the interface, so `headerfooter get --header-center x` now fails with
+  `Action 'get' does not accept --header-center (accepted by: set)`.
+
+  Field codes (`&p`, `&P`, `&d`, `&D`, `&t`, `&f`, `&n`, `&&`) are stored verbatim and expanded only
+  on output, so `get` returns the code rather than the expanded value. The tool description says so,
+  because an agent cannot discover it from the schema.
+
+  **Trap worth recording:** `HeaderMargin` and `FooterMargin` are *parameterised* properties —
+  `double HeaderMargin(Variant UnitsNameOrCode)` — so a plain `dynamic` assignment does not bind and
+  fails silently. They are written through `InvokeMember` with `BindingFlags.SetProperty`, the only
+  form the IDispatch binder accepts for a property that takes an argument, and there is a round-trip
+  test specifically for it.
+
+  Eight integration tests against real Visio, including save-and-reopen persistence.
+
+- **`ServiceDispatchCoverageTests`** — asserts every public domain has a case in the hand-written
+  dispatch switch in `VisioMcp.Service/VisioMcpService.cs`.
+
+  The MCP tool and the CLI settings are both *generated* from the Core interface, so a new domain
+  reaches both surfaces automatically. The dispatch switch is not generated, and nothing checked it,
+  so a domain could pass the coverage audit, ship its MCP tool and CLI command, and still answer
+  every call with `Unknown command category`. `audit-core-coverage.ps1` checks generated dispatch
+  files, which is a different thing.
+
+### Changed
+
+- **`check-com-leaks.ps1` no longer counts context-owned references.** `ctx.Document` and
+  `ctx.Application` are owned by `VisioContext` for the life of the batch and are released by no
+  command — doing so would tear down the caller's document — so a file whose only `dynamic` locals
+  are those has nothing to release. The old file-level heuristic ("has `dynamic` assignments but no
+  `ComUtilities.Release` anywhere") could not express that, and reported the new
+  `HeaderFooterCommands` as a leak.
+
+  Stripping those two assignments before the test is a refinement rather than an exemption: a file
+  that acquires any *other* COM object without releasing it is still caught. Verified by inducing a
+  real leak (`dynamic pages = doc.Pages;` with no release) in the same file, confirming it is
+  reported, then removing it and confirming the check goes clean again.
+
+### Fixed
+
+- **The `style` tool never worked through the CLI.** Shipped with eight actions in #92, but never
+  added to the service dispatch switch, so every call returned
+  `{"success":false,"error":"Unknown command category: style"}`.
+
+  Found by `ServiceDispatchCoverageTests` above on its first run, and confirmed against a live daemon
+  before and after the fix. This is the second instance of the miss Rule 24 already records for the
+  `duplicate` action — hence a guard rather than another note.
+
 ### Removed
 
 - **The `tag` domain** (#116). Classified *Remap* in #22, but there is nothing to remap to under that
