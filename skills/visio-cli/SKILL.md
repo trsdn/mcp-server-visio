@@ -163,6 +163,21 @@ Visio ShapeSheet cell operations for reading and writing cells on a shape, a pag
 
 
 
+### comment
+
+Visio reviewer comments attached to pages or shapes.
+
+**Actions:** `list`, `add`, `delete`, `clear`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--page-index` | 1-based page index (required) |
+| `--shape-name` | Optional shape name used to return only comments attached to that shape |
+| `--text` | Comment text (required for: add) |
+| `--comment-index` | 1-based index from page-level list results (required for: delete) |
+
+
+
 ### design
 
 Diagram design guidance: which diagram to draw, which stencil and masters to drop, and the Visio techniques that separate a usable drawing from a plausible-looking one.

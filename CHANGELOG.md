@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`comment` is Visio-native and public again** (#62). Reimplemented reviewer comments on
+  `Page.Comments` and `Shape.Comments`, with `list`, `add`, `delete`, and `clear` actions.
+
+  The old PowerPoint parameters `author`, `left`, and `top` were deleted rather than accepted and
+  ignored: Visio `Comments.Add` takes only text, `AuthorName` is read-only, and reviewer comments
+  attach to a page or shape through `AssociatedObject` rather than x/y coordinates. List results now
+  return `Text`, `AuthorName`, `AuthorInitials`, `CreateDate`, `EditDate`, and associated page/shape
+  information.
+
+  The tool deliberately remains page-scoped. `Document.Comments` is useful as a document-wide
+  collection, but exposing it as a second target would create a separate index namespace and ambiguous
+  deletes; page-level indexes match the actionable `list`/`delete` workflow. Shape comments are
+  filtered from `Page.Comments` so the returned `commentIndex` is still deletable by `delete`.
+
+  This is not the ShapeSheet `Comment` cell. That cell is Visio's screen-tip/accessibility text and
+  remains managed by the shape alt-text surface; reviewer comments never write it.
+
 - **`printoptions` is Visio-native and public again** (#65). Reimplemented as an
   options-only surface over `Document.Print*` settings and the PageSheet Print Properties cells for
   one page.

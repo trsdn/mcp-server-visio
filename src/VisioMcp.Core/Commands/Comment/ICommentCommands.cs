@@ -5,43 +5,42 @@ using VisioMcp.Core.Models;
 namespace VisioMcp.Core.Commands.Comment;
 
 /// <summary>
-/// Legacy PowerPoint-only slide comments commands retained from the bootstrap template.
+/// Visio reviewer comments attached to pages or shapes.
 /// </summary>
 [ServiceCategory("comment")]
-[McpTool("comment", Title = "Legacy PowerPoint Slide Comments", Destructive = true, Category = "comments", PublicSurface = false,
-    Description = "Legacy PowerPoint-only surface retained during the Visio migration. Not Visio-native. "
-    + "If you still use this legacy surface: add, list, delete comments on slides. "
-    + "slide_index: 1-based (0 = all slides for list/clear). "
-    + "comment_index: 1-based (from list results) for delete. "
-    + "left/top: position in points (0 = top-left corner).")]
+[McpTool("comment", Title = "Reviewer Comments", Destructive = true, Category = "comments", PublicSurface = true,
+    Description = "Add, list, delete, and clear Visio reviewer comments on a page. "
+    + "Pass shape_name to add a shape-attached reviewer comment or to filter list results to one shape. "
+    + "Visio reviewer comments are separate from the ShapeSheet Comment cell used for accessibility alt text; "
+    + "use shape(set-alt-text/read-alt-text) for that field. "
+    + "Document.Comments is deliberately not exposed here; this tool is page-scoped so indexes match page-level list results.")]
 public interface ICommentCommands
 {
-    /// <summary>List all comments on a slide (0 = all slides).</summary>
+    /// <summary>List reviewer comments on a page, optionally filtered to one shape.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index, or 0 for all slides</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeName">Optional shape name used to return only comments attached to that shape</param>
     [ServiceAction("list")]
-    CommentListResult List(IVisioBatch batch, int slideIndex);
+    CommentListResult List(IVisioBatch batch, int pageIndex, string? shapeName = null);
 
-    /// <summary>Add a comment to a slide.</summary>
+    /// <summary>Add a reviewer comment to a page or shape.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
+    /// <param name="pageIndex">1-based page index</param>
     /// <param name="text">Comment text</param>
-    /// <param name="author">Author name</param>
-    /// <param name="left">Horizontal position in points (0 = top-left)</param>
-    /// <param name="top">Vertical position in points (0 = top-left)</param>
+    /// <param name="shapeName">Optional shape name; omitted means add a page-level comment</param>
     [ServiceAction("add")]
-    OperationResult Add(IVisioBatch batch, int slideIndex, string text, string author, float left, float top);
+    OperationResult Add(IVisioBatch batch, int pageIndex, string text, string? shapeName = null);
 
-    /// <summary>Delete a comment by index on a slide.</summary>
+    /// <summary>Delete a reviewer comment by its 1-based page comment index.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index</param>
-    /// <param name="commentIndex">1-based comment index</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="commentIndex">1-based index from page-level list results</param>
     [ServiceAction("delete")]
-    OperationResult Delete(IVisioBatch batch, int slideIndex, int commentIndex);
+    OperationResult Delete(IVisioBatch batch, int pageIndex, int commentIndex);
 
-    /// <summary>Delete all comments on a slide (0 = all slides).</summary>
+    /// <summary>Delete all reviewer comments on a page.</summary>
     /// <param name="batch">Batch context</param>
-    /// <param name="slideIndex">1-based slide index, or 0 for all slides</param>
+    /// <param name="pageIndex">1-based page index</param>
     [ServiceAction("clear")]
-    OperationResult Clear(IVisioBatch batch, int slideIndex);
+    OperationResult Clear(IVisioBatch batch, int pageIndex);
 }

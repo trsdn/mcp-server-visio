@@ -32,8 +32,7 @@ public class PowerPointResidueTests
     /// </summary>
     private static readonly string[] AwaitingPort =
     [
-        "Comment", // #62
-        "Image"    // #64
+        "Image" // #64
     ];
 
     private static readonly Regex PowerPointCall = new(

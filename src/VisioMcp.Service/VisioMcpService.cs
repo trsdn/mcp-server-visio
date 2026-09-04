@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using VisioMcp.ComInterop.Session;
 using VisioMcp.Core.Commands.Cell;
+using VisioMcp.Core.Commands.Comment;
 using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
 using VisioMcp.Core.Commands.Export;
@@ -50,6 +51,7 @@ public sealed class VisioMcpService : IDisposable
     private readonly ShapeCommands _shapeCommands = new();
     private readonly ShapeAlignCommands _shapeAlignCommands = new();
     private readonly CellCommands _cellCommands = new();
+    private readonly CommentCommands _commentCommands = new();
     private readonly StencilCommands _stencilCommands = new();
     private readonly TextCommands _textCommands = new();
     private readonly MasterCommands _masterCommands = new();
@@ -223,6 +225,9 @@ public sealed class VisioMcpService : IDisposable
                 "cell" => await DispatchSimpleAsync<CellAction>(action, request,
                     ServiceRegistry.Cell.TryParseAction,
                     (a, batch) => ServiceRegistry.Cell.DispatchToCore(_cellCommands, a, batch, request.Args)),
+                "comment" => await DispatchSimpleAsync<CommentAction>(action, request,
+                    ServiceRegistry.Comment.TryParseAction,
+                    (a, batch) => ServiceRegistry.Comment.DispatchToCore(_commentCommands, a, batch, request.Args)),
                 "stencil" => await DispatchSimpleAsync<StencilAction>(action, request,
                     ServiceRegistry.Stencil.TryParseAction,
                     (a, batch) => ServiceRegistry.Stencil.DispatchToCore(_stencilCommands, a, batch, request.Args)),

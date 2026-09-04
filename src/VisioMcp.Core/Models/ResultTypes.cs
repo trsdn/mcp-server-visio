@@ -887,20 +887,30 @@ public class MediaInfoResult : ResultBase
 
 public class CommentListResult : ResultBase
 {
+    public int PageIndex { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ShapeName { get; set; }
+
     public List<CommentInfo> Comments { get; set; } = [];
 }
 
 public class CommentInfo
 {
-    public int SlideIndex { get; set; }
+    public int PageIndex { get; set; }
     public int CommentIndex { get; set; }
-    public string Author { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
-    public float Left { get; set; }
-    public float Top { get; set; }
+    public string AuthorName { get; set; } = string.Empty;
+    public string AuthorInitials { get; set; } = string.Empty;
+    public string CreateDate { get; set; } = string.Empty;
+    public string EditDate { get; set; } = string.Empty;
+    public string AssociatedObjectType { get; set; } = string.Empty;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? DateTime { get; set; }
+    public string? AssociatedPageName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AssociatedShapeName { get; set; }
 }
 
 // ── Placeholder ──────────────────────────────────────────

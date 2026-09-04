@@ -19,6 +19,7 @@ public sealed class ActionValidatorTests
         [typeof(ShapeAction), typeof(ServiceRegistry.Shape)],
         [typeof(TextAction), typeof(ServiceRegistry.Text)],
         [typeof(CellAction), typeof(ServiceRegistry.Cell)],
+        [typeof(CommentAction), typeof(ServiceRegistry.Comment)],
         [typeof(WindowAction), typeof(ServiceRegistry.Window)]
     ];
 
@@ -26,6 +27,7 @@ public sealed class ActionValidatorTests
     [
         "session",
         "cell",
+        "comment",
         "design",
         "docproperty",
         "export",
@@ -46,7 +48,6 @@ public sealed class ActionValidatorTests
 
     private static readonly string[] HiddenLegacyCommands =
     [
-        "comment",
         // hyperlink was reimplemented on Shape.Hyperlinks in #35 and master on Document.Masters
         // in #34; both are public. accessibility was deleted in #77 and tag in #116, and
         // headerfooter was ported to Document.Header*/Footer* in #63, and printoptions to
@@ -148,6 +149,4 @@ public sealed class ActionValidatorTests
         public IReadOnlyList<string> Raw { get; } = Array.Empty<string>();
     }
 }
-
-
 
