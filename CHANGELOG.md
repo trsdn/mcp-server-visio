@@ -25,6 +25,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`page` auto-layout and routing controls** (#126). Added page-scoped actions for destructive
+  full-page layout, safer selection-scoped layout, incremental layout, layout direction changes,
+  passive routing, line route extension, spacing, placement depth, and resize-page settings.
+
+  The feature stays in the existing `page` domain because Visio exposes these operations on `Page`
+  and `Selection`, and the configuration lives on the page's PageSheet cells. Tool guidance warns
+  that automatic layout repositions shapes and points agents to `shape(connect-shapes)` when they
+  only need dynamic connectors.
+
 - **`container` adds Visio-native containers, list containers, and callouts** (#123). Added a new
   public domain rather than overloading `shape`, because containers keep independent member shapes in
   a structural membership relationship while `shape(group)` fuses shapes into one composite shape.

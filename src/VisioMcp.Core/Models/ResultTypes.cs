@@ -154,10 +154,14 @@ public class PageRoutingSettingsResult : ResultBase
     public string PageName { get; set; } = string.Empty;
     public int RouteStyle { get; set; }
     public int ConnectorRoutingExtension { get; set; }
+    public int LineRouteExtension { get; set; }
     public int LineJumpCode { get; set; }
     public int LineJumpStyle { get; set; }
     public int WalkPreference { get; set; }
     public int PlaceStyle { get; set; }
+    public int PlaceDepth { get; set; }
+    public bool ResizePage { get; set; }
+    public bool LayoutRoutePassive { get; set; }
     public float LineJumpFactorX { get; set; }
     public float LineJumpFactorY { get; set; }
     public float LineToLineX { get; set; }
@@ -168,6 +172,34 @@ public class PageRoutingSettingsResult : ResultBase
     public float BlockSizeY { get; set; }
     public int PageLineJumpDirX { get; set; }
     public int PageLineJumpDirY { get; set; }
+}
+
+public class PageLayoutResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string PageName { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ShapeNames { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; set; }
+
+    public List<PageLayoutShapeChange> Shapes { get; set; } = [];
+}
+
+public class PageLayoutShapeChange
+{
+    public int ShapeId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public float BeforeLeft { get; set; }
+    public float BeforeTop { get; set; }
+    public float AfterLeft { get; set; }
+    public float AfterTop { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public bool Moved { get; set; }
 }
 
 // ── Layer ──────────────────────────────────────────────────

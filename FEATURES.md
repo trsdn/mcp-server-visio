@@ -15,7 +15,7 @@ The following domains are implemented and covered by focused validation:
 | Domain | CLI | MCP | VS Code surface | Status | Notes |
 |---|---|---|---|---|---|
 | File / Session | Yes | Yes | Via MCP extension | Validated | Open, create, list, close, save, visible mode |
-| Page | Yes | Yes | Via MCP extension | Validated | List, read, create, rename, delete; background pages (mark, attach, detach) |
+| Page | Yes | Yes | Via MCP extension | Validated | List, read, create, rename, delete; background pages (mark, attach, detach); auto-layout and routing settings |
 | Layer | Yes | Yes | Via MCP extension | Validated | List, read, create, delete, shape membership, visibility/print/lock/color flags |
 | Shape | Yes | Yes | Via MCP extension | Validated MVP | List, read, add basic shapes, add text boxes, move/resize, delete |
 | Text | Yes | Yes | Via MCP extension | Validated MVP | Get, set, find, replace, word count |
