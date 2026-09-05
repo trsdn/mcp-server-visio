@@ -10,6 +10,15 @@ namespace VisioMcp.Core.Commands.Page;
 [ServiceCategory("page")]
 [McpTool("page", Title = "Page Operations", Destructive = true, Category = "pages",
     Description = "List, inspect, create, rename, and delete Visio pages, manage page guides, and control page-level routing and line jump settings. "
+    + "AUTO-LAYOUT WARNING: layout-page, layout-selection, incremental-layout, and change-layout-direction move shapes. "
+    + "Use them only when the user asked to tidy a diagram or accepted automatic placement; they can discard deliberate manual positioning. "
+    + "Prefer shape(connect-shapes) when you only need dynamic connectors between existing shapes; those connectors reroute as shapes move. "
+    + "layout-selection is the safer tidy-up default because it moves only the named selected shapes; layout-page relayouts the whole page. "
+    + "LAYOUT STYLE VALUES: place_style 0=default, 1=top-to-bottom, 2=left-to-right, 3=radial, 4=bottom-to-top, 5=right-to-left, 6=circular, 7=compact down-right, 8=compact right-down, 9=compact right-up, 10=compact up-right, 11=compact up-left, 12=compact left-up, 13=compact left-down, 14=compact down-left, 15=parent default, 16-27=hierarchy variants. "
+    + "route_style 0=default, 1=right-angle, 2=straight, 3=org chart NS, 4=org chart WE, 5=flowchart NS, 6=flowchart WE, 7=tree NS, 8=tree WE, 9=network, 10=org chart SN, 11=org chart EW, 12=flowchart SN, 13=flowchart EW, 14=tree SN, 15=tree EW, 16=center-to-center, 17=simple NS, 18=simple WE, 19=simple SN, 20=simple EW, 21=simple HV, 22=simple VH. "
+    + "line_route_extension 0=default straight, 1=straight, 2=curved. place_depth 0=default, 1=medium, 2=deep, 3=shallow. "
+    + "layout direction values: 0=rotate right, 1=rotate left, 2=flip vertical, 3=flip horizontal. "
+    + "incremental layout values: align_or_space 1=align, 2=space, 3=align and space; align_horizontal/align_vertical 0=none, 1=default, 2=left/top, 3=center/middle, 4=right/bottom. "
     + "WORKFLOW: file(open) → page(create, name='Overview') → shape(add-shape) → text(set). "
     + "All page indices are 1-based. position=0 means append at end. "
     + "BACKGROUND PAGES: a Visio background page is a normal page marked as a background and then shown behind "
@@ -109,11 +118,60 @@ public interface IPageCommands
     PageRoutingSettingsResult GetRoutingSettings(IVisioBatch batch, int pageIndex);
 
     /// <summary>
+    /// Destructively relayout every shape and reroute connectors on a page using the page's layout ShapeSheet settings.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    [ServiceAction("layout-page")]
+    PageLayoutResult LayoutPage(IVisioBatch batch, int pageIndex);
+
+    /// <summary>
+    /// Destructively relayout only the named selected shapes using the page's layout ShapeSheet settings.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeNames">Comma-separated top-level shape names to layout as a selection</param>
+    [ServiceAction("layout-selection")]
+    PageLayoutResult LayoutSelection(IVisioBatch batch, int pageIndex, string shapeNames);
+
+    /// <summary>
+    /// Make small alignment and/or spacing adjustments without a full relayout.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="shapeNames">Optional comma-separated shape names. Omitted applies to the whole page; provided applies to only those selected shapes</param>
+    /// <param name="alignOrSpace">1=align, 2=space, 3=align and space</param>
+    /// <param name="alignHorizontal">0=none, 1=default, 2=left, 3=center, 4=right</param>
+    /// <param name="alignVertical">0=none, 1=default, 2=top, 3=middle, 4=bottom</param>
+    /// <param name="spaceHorizontal">Horizontal edge-to-edge spacing in points. Must be non-negative</param>
+    /// <param name="spaceVertical">Vertical edge-to-edge spacing in points. Must be non-negative</param>
+    [ServiceAction("incremental-layout")]
+    PageLayoutResult IncrementalLayout(IVisioBatch batch, int pageIndex, string? shapeNames = null, int alignOrSpace = 3, int alignHorizontal = 1, int alignVertical = 1, float spaceHorizontal = 36f, float spaceVertical = 36f);
+
+    /// <summary>
+    /// Rotate or flip a connected diagram's layout without rotating or flipping the individual shapes.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="direction">0=rotate right, 1=rotate left, 2=flip vertical, 3=flip horizontal</param>
+    [ServiceAction("change-layout-direction")]
+    PageLayoutResult ChangeLayoutDirection(IVisioBatch batch, int pageIndex, int direction = 0);
+
+    /// <summary>
+    /// Temporarily enable or disable Visio's advanced dynamic connector routing on the page.
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="passive">True disables advanced routing; false enables normal dynamic routing. Default Visio behavior is false</param>
+    [ServiceAction("set-passive-routing")]
+    PageRoutingSettingsResult SetPassiveRouting(IVisioBatch batch, int pageIndex, bool passive = false);
+
+    /// <summary>
     /// Set the page route style (`RouteStyle` page sheet cell).
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="routeStyle">Connector routing style, written to the page RouteStyle cell. Controls whether connectors run at right angles, straight, or along a tree or flowchart layout. Read the current value with get-routing-settings before changing it</param>
+    /// <param name="routeStyle">RouteStyle cell value: 0=default, 1=right-angle, 2=straight, 3=org chart NS, 4=org chart WE, 5=flowchart NS, 6=flowchart WE, 7=tree NS, 8=tree WE, 9=network, 10=org chart SN, 11=org chart EW, 12=flowchart SN, 13=flowchart EW, 14=tree SN, 15=tree EW, 16=center-to-center, 17=simple NS, 18=simple WE, 19=simple SN, 20=simple EW, 21=simple HV, 22=simple VH</param>
     [ServiceAction("set-route-style")]
     OperationResult SetRouteStyle(IVisioBatch batch, int pageIndex, int routeStyle);
 
@@ -122,9 +180,18 @@ public interface IPageCommands
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="connectorRoutingExtension">Routing extension, written to the page ConLineRouteExt cell. Selects whether connectors are drawn with straight or curved segments</param>
+    /// <param name="connectorRoutingExtension">ConLineRouteExt cell value: 0=default straight, 1=straight, 2=curved</param>
     [ServiceAction("set-connector-routing-extension")]
     OperationResult SetConnectorRoutingExtension(IVisioBatch batch, int pageIndex, int connectorRoutingExtension);
+
+    /// <summary>
+    /// Set the page line route extension (`LineRouteExt` page sheet cell).
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="lineRouteExtension">0=default straight, 1=straight, 2=curved</param>
+    [ServiceAction("set-line-route-extension")]
+    OperationResult SetLineRouteExtension(IVisioBatch batch, int pageIndex, int lineRouteExtension = 0);
 
     /// <summary>
     /// Set the line jump code (`LineJumpCode` page sheet cell).
@@ -158,9 +225,37 @@ public interface IPageCommands
     /// </summary>
     /// <param name="batch">Batch context</param>
     /// <param name="pageIndex">1-based page index</param>
-    /// <param name="placeStyle">Automatic layout style used when shapes are placed, written to the page PlaceStyle cell</param>
+    /// <param name="placeStyle">PlaceStyle cell value: 0=default, 1=top-to-bottom, 2=left-to-right, 3=radial, 4=bottom-to-top, 5=right-to-left, 6=circular, 7=compact down-right, 8=compact right-down, 9=compact right-up, 10=compact up-right, 11=compact up-left, 12=compact left-up, 13=compact left-down, 14=compact down-left, 15=parent default, 16=hierarchy top-bottom left, 17=hierarchy top-bottom center, 18=hierarchy top-bottom right, 19=hierarchy bottom-top left, 20=hierarchy bottom-top center, 21=hierarchy bottom-top right, 22=hierarchy left-right top, 23=hierarchy left-right middle, 24=hierarchy left-right bottom, 25=hierarchy right-left top, 26=hierarchy right-left middle, 27=hierarchy right-left bottom</param>
     [ServiceAction("set-place-style")]
     OperationResult SetPlaceStyle(IVisioBatch batch, int pageIndex, int placeStyle);
+
+    /// <summary>
+    /// Set the automatic layout spacing (`AvenueSizeX` and `AvenueSizeY` page sheet cells).
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="avenueSizeX">Horizontal shape spacing in points</param>
+    /// <param name="avenueSizeY">Vertical shape spacing in points</param>
+    [ServiceAction("set-layout-spacing")]
+    PageRoutingSettingsResult SetLayoutSpacing(IVisioBatch batch, int pageIndex, float avenueSizeX = 21.2598f, float avenueSizeY = 21.2598f);
+
+    /// <summary>
+    /// Set automatic layout analysis depth (`PlaceDepth` page sheet cell).
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="placeDepth">0=default, 1=medium, 2=deep, 3=shallow</param>
+    [ServiceAction("set-place-depth")]
+    PageRoutingSettingsResult SetPlaceDepth(IVisioBatch batch, int pageIndex, int placeDepth = 0);
+
+    /// <summary>
+    /// Set whether layout may enlarge the page to enclose the diagram (`ResizePage` page sheet cell).
+    /// </summary>
+    /// <param name="batch">Batch context</param>
+    /// <param name="pageIndex">1-based page index</param>
+    /// <param name="resizePage">True lets Visio enlarge the page after layout; false keeps the page size</param>
+    [ServiceAction("set-resize-page")]
+    PageRoutingSettingsResult SetResizePage(IVisioBatch batch, int pageIndex, bool resizePage = false);
 
     /// <summary>
     /// Read whether a page is a background, and which background page it shows behind itself.

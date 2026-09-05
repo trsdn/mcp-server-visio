@@ -3,7 +3,7 @@ name: visio-cli
 description: >
   Automate Microsoft Visio on Windows via CLI. Use when creating, reading,
   or modifying Visio diagrams from scripts, CI/CD, or coding agents.
-  Best current support: sessions, pages, shapes, containers, callouts, text,
+  Best current support: sessions, pages, auto-layout, shapes, containers, callouts, text,
   ShapeSheet cells, and stencil masters.
   Triggers: Visio, vsdx, diagram, shape, page, container, callout, stencil, ShapeSheet, visiocli.
 ---
@@ -23,8 +23,10 @@ description: >
 | 1. Session | `session create/open` | Always first |
 | 2. Pages | `page create/list/read` | Navigate or add diagram pages |
 | 3. Add content | `shape`, `text`, `stencil`, `container` | Draw shapes, set text, drop masters, add containers and callouts |
-| 4. ShapeSheet | `cell read/write/list` | Inspect or edit core cells |
-| 4. Save & close | `session close --save` | Always last |
+| 4. Connect | `shape connect-shapes` | Add dynamic connectors that stay attached |
+| 5. Tidy only if requested | `page layout-selection` / `page layout-page` | Auto-layout moves shapes; prefer selection scope |
+| 6. ShapeSheet | `cell read/write/list` | Inspect or edit core cells |
+| 7. Save & close | `session close --save` | Always last |
 
 > **10+ commands?** Use `visiocli -q batch --input commands.json` — sends all commands in one process with automatic session management. See Rule 8.
 
@@ -367,23 +369,36 @@ Masters held inside the working document.
 
 Visio page lifecycle, guides, and routing commands.
 
-**Actions:** `list`, `read`, `create`, `set-name`, `delete`, `list-guides`, `add-guide`, `set-guide-position`, `delete-guide`, `get-routing-settings`, `set-route-style`, `set-connector-routing-extension`, `set-line-jump-code`, `set-line-jump-style`, `set-walk-preference`, `set-place-style`, `read-background`, `set-background`, `set-back-page`, `clear-back-page`
+**Actions:** `list`, `read`, `create`, `set-name`, `delete`, `list-guides`, `add-guide`, `set-guide-position`, `delete-guide`, `get-routing-settings`, `layout-page`, `layout-selection`, `incremental-layout`, `change-layout-direction`, `set-passive-routing`, `set-route-style`, `set-connector-routing-extension`, `set-line-route-extension`, `set-line-jump-code`, `set-line-jump-style`, `set-walk-preference`, `set-place-style`, `set-layout-spacing`, `set-place-depth`, `set-resize-page`, `read-background`, `set-background`, `set-back-page`, `clear-back-page`
 
 | Parameter | Description |
 |-----------|-------------|
-| `--page-index` | 1-based page index (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, set-route-style, set-connector-routing-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style, read-background, set-background, set-back-page, clear-back-page) |
+| `--page-index` | 1-based page index (required for: read, set-name, delete, list-guides, add-guide, set-guide-position, delete-guide, get-routing-settings, layout-page, layout-selection, incremental-layout, change-layout-direction, set-passive-routing, set-route-style, set-connector-routing-extension, set-line-route-extension, set-line-jump-code, set-line-jump-style, set-walk-preference, set-place-style, set-layout-spacing, set-place-depth, set-resize-page, read-background, set-background, set-back-page, clear-back-page) |
 | `--position` | 1-based insertion position. Pass 0 to append the page at the end (required for: create) |
 | `--name` | Page name. Must be unique within the document (required for: create, set-name) |
 | `--guide-type` | 1 = point, 2 = horizontal guide line, 3 = vertical guide line (required for: add-guide) |
 | `--x-position` | Guide X position in points. Ignored for a horizontal guide (required for: add-guide, set-guide-position) |
 | `--y-position` | Guide Y position in points. Ignored for a vertical guide. Visio measures Y upward from the bottom of the page (required for: add-guide, set-guide-position) |
 | `--guide-name` | Guide shape name, as reported by list-guides (required for: set-guide-position, delete-guide) |
-| `--route-style` | Connector routing style, written to the page RouteStyle cell. Controls whether connectors run at right angles, straight, or along a tree or flowchart layout. Read the current value with get-routing-settings before changing it (required for: set-route-style) |
-| `--connector-routing-extension` | Routing extension, written to the page ConLineRouteExt cell. Selects whether connectors are drawn with straight or curved segments (required for: set-connector-routing-extension) |
+| `--shape-names` | Comma-separated top-level shape names to layout as a selection (required for: layout-selection) |
+| `--align-or-space` | 1=align, 2=space, 3=align and space |
+| `--align-horizontal` | 0=none, 1=default, 2=left, 3=center, 4=right |
+| `--align-vertical` | 0=none, 1=default, 2=top, 3=middle, 4=bottom |
+| `--space-horizontal` | Horizontal edge-to-edge spacing in points. Must be non-negative |
+| `--space-vertical` | Vertical edge-to-edge spacing in points. Must be non-negative |
+| `--direction` | 0=rotate right, 1=rotate left, 2=flip vertical, 3=flip horizontal |
+| `--passive` | True disables advanced routing; false enables normal dynamic routing. Default Visio behavior is false |
+| `--route-style` | RouteStyle cell value: 0=default, 1=right-angle, 2=straight, 3=org chart NS, 4=org chart WE, 5=flowchart NS, 6=flowchart WE, 7=tree NS, 8=tree WE, 9=network, 10=org chart SN, 11=org chart EW, 12=flowchart SN, 13=flowchart EW, 14=tree SN, 15=tree EW, 16=center-to-center, 17=simple NS, 18=simple WE, 19=simple SN, 20=simple EW, 21=simple HV, 22=simple VH (required for: set-route-style) |
+| `--connector-routing-extension` | ConLineRouteExt cell value: 0=default straight, 1=straight, 2=curved (required for: set-connector-routing-extension) |
+| `--line-route-extension` | 0=default straight, 1=straight, 2=curved |
 | `--line-jump-code` | Which connectors draw a jump where lines cross, written to the page LineJumpCode cell (required for: set-line-jump-code) |
 | `--line-jump-style` | Shape of the jump drawn where connectors cross, written to the page LineJumpStyle cell (required for: set-line-jump-style) |
 | `--walk-preference` | Which side of a shape a connector prefers to leave from, written to the page WalkPreference cell (required for: set-walk-preference) |
-| `--place-style` | Automatic layout style used when shapes are placed, written to the page PlaceStyle cell (required for: set-place-style) |
+| `--place-style` | PlaceStyle cell value: 0=default, 1=top-to-bottom, 2=left-to-right, 3=radial, 4=bottom-to-top, 5=right-to-left, 6=circular, 7=compact down-right, 8=compact right-down, 9=compact right-up, 10=compact up-right, 11=compact up-left, 12=compact left-up, 13=compact left-down, 14=compact down-left, 15=parent default, 16=hierarchy top-bottom left, 17=hierarchy top-bottom center, 18=hierarchy top-bottom right, 19=hierarchy bottom-top left, 20=hierarchy bottom-top center, 21=hierarchy bottom-top right, 22=hierarchy left-right top, 23=hierarchy left-right middle, 24=hierarchy left-right bottom, 25=hierarchy right-left top, 26=hierarchy right-left middle, 27=hierarchy right-left bottom (required for: set-place-style) |
+| `--avenue-size-x` | Horizontal shape spacing in points |
+| `--avenue-size-y` | Vertical shape spacing in points |
+| `--place-depth` | 0=default, 1=medium, 2=deep, 3=shallow |
+| `--resize-page` | True lets Visio enlarge the page after layout; false keeps the page size |
 | `--is-background` | True to make it a background page, false to turn it back into a normal page (required for: set-background) |
 | `--back-page-name` | Name of the background page to show behind it, exactly as reported by list (required for: set-back-page) |
 

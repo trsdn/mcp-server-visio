@@ -30,9 +30,11 @@ For new work, follow this order:
 1. Open or create the file.
 2. Inspect or create the target page.
 3. Add shapes or drop stencil masters.
-4. Set text labels.
-5. Use ShapeSheet edits only when needed.
-6. Save and close cleanly.
+4. Connect related shapes with `shape connect-shapes` so connectors stay attached.
+5. Set text labels.
+6. Use `page layout-selection` only when the user wants a tidy-up of specific shapes. `page layout-page` is destructive and can discard deliberate manual placement.
+7. Use ShapeSheet edits only when needed.
+8. Save and close cleanly.
 
 ## Prefer Targeted Edits
 

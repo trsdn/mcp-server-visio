@@ -11,7 +11,7 @@ Windows-first Visio automation through real desktop COM, exposed consistently th
 `mcp-server-visio` is no longer just a renamed template. It already ships a validated Visio-native MVP with:
 
 - document sessions
-- page operations
+- page operations, including background pages and automatic layout
 - layer management
 - shape create/read/move/delete flows
 - text read/write/find/replace
@@ -36,7 +36,7 @@ All new Visio work is expected to stay aligned across these surfaces.
 | Domain | Status | Notes |
 |---|---|---|
 | File / Session | Validated | Create, open, list, save, close, visible mode |
-| Page | Validated | List, read, create, rename, delete |
+| Page | Validated | List, read, create, rename, delete, background pages, auto-layout and routing settings |
 | Layer | Validated | List, read, create, delete, shape membership, visibility/print/lock/color |
 | Shape | Validated MVP | List, read, add basic shapes/text boxes, move/resize, delete |
 | Text | Validated MVP | Get, set, find, replace, word count |

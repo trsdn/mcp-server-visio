@@ -2,14 +2,14 @@
 name: visio-mcp
 description: >
   Automate Microsoft Visio on Windows via COM interop. Use when creating, reading,
-  or modifying Visio diagrams. Best current support covers sessions, pages, shapes,
-  containers, callouts, text, ShapeSheet cells, and stencil masters.
+  or modifying Visio diagrams. Best current support covers sessions, pages,
+  auto-layout, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters.
   Triggers: Visio, vsdx, diagram, page, shape, container, callout, stencil, ShapeSheet.
 ---
 
 # Visio MCP Server Skill
 
-Provides 198 generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
+Provides 207 generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, auto-layout, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
 
 ## Workflow Checklist
 
@@ -18,10 +18,12 @@ Provides 198 generated operations via Model Context Protocol. The current Visio 
 | 1. Open file | `file` | `open` or `create` | Always first |
 | 2. Manage pages | `page` | `list`, `create`, `read` | Choose the working page |
 | 3. Add shapes | `shape` or `stencil` | `add-shape`, `add-textbox`, `drop-master` | Add diagram elements |
-| 4. Add structure | `container` | `drop`, `add-member`, `drop-callout` | Keep independent shapes organized or annotated |
-| 5. Edit text | `text` | `get`, `set`, `find`, `replace` | Update labels |
-| 6. Edit cells | `cell` | `read`, `write`, `set-formula` | Adjust ShapeSheet-backed geometry |
-| 7. Save & close | `file` | `close` with `save: true` | Always last |
+| 4. Connect shapes | `shape` | `connect-shapes` | Add dynamic connectors that stay attached |
+| 5. Add structure | `container` | `drop`, `add-member`, `drop-callout` | Keep independent shapes organized or annotated |
+| 6. Tidy only if requested | `page` | `layout-selection`, `layout-page` | Auto-layout moves shapes; prefer selection scope |
+| 7. Edit text | `text` | `get`, `set`, `find`, `replace` | Update labels |
+| 8. Edit cells | `cell` | `read`, `write`, `set-formula` | Adjust ShapeSheet-backed geometry |
+| 9. Save & close | `file` | `close` with `save: true` | Always last |
 
 ## Preconditions
 
@@ -55,9 +57,11 @@ Use `page`, `shape`, `container`, `text`, `cell`, and `stencil` together for the
 4. cell(action: 'write', pageIndex: 1, shapeName: 'Rectangle.1', cellName: 'Width', value: '3')  → Refine geometry
 5. stencil(action: 'drop-master', pageIndex: 1, stencilPath: '...', masterName: 'Rectangle', xPosition: 2, yPosition: 2)  → Use a built-in master
 6. container(action: 'drop', pageIndex: 1, targetShapeName: 'Rectangle.1')  → Keep related shapes independent but structurally associated
+7. page(action: 'layout-selection', pageIndex: 1, shapeNames: 'Rectangle.1,Rectangle.2')  → Tidy selected connected shapes only when requested
 ```
 
 **Note:** Shape names should be discovered with `shape(list)` before later operations target them.
+**Warning:** `page(layout-page)` and `page(layout-selection)` reposition shapes. Use `shape(connect-shapes)` when the goal is only to connect existing shapes.
 
 ## CRITICAL: Execution Rules (MUST FOLLOW)
 

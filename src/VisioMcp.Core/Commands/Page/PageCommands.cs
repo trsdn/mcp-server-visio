@@ -14,13 +14,21 @@ public class PageCommands : IPageCommands
     private const int VisGuidePoint = 1;
     private const int VisGuideHorizontal = 2;
     private const int VisGuideVertical = 3;
+    private const short VisSelTypeEmpty = 0;
+    private const short VisSelModeSkipSuper = 0;
+    private const short VisSelect = 2;
+    private const short VisPoints = 50;
     private const float PointsPerInch = 72f;
+    private const float MovementTolerancePoints = 0.01f;
     private const string RouteStyleCell = "RouteStyle";
     private const string ConnectorRoutingExtensionCell = "ConLineRouteExt";
     private const string LineJumpCodeCell = "LineJumpCode";
     private const string LineJumpStyleCell = "LineJumpStyle";
     private const string WalkPreferenceCell = "WalkPreference";
     private const string PlaceStyleCell = "PlaceStyle";
+    private const string LineRouteExtensionCell = "LineRouteExt";
+    private const string PlaceDepthCell = "PlaceDepth";
+    private const string ResizePageCell = "ResizePage";
     private const string LineJumpFactorXCell = "LineJumpFactorX";
     private const string LineJumpFactorYCell = "LineJumpFactorY";
     private const string LineToLineXCell = "LineToLineX";
@@ -354,29 +362,7 @@ public class PageCommands : IPageCommands
             dynamic pageSheet = page.PageSheet;
             try
             {
-                return new PageRoutingSettingsResult
-                {
-                    Success = true,
-                    FilePath = ctx.DocumentPath,
-                    PageIndex = pageIndex,
-                    PageName = page.Name?.ToString() ?? string.Empty,
-                    RouteStyle = ReadPageSheetIntCell(pageSheet, RouteStyleCell),
-                    ConnectorRoutingExtension = ReadPageSheetIntCell(pageSheet, ConnectorRoutingExtensionCell),
-                    LineJumpCode = ReadPageSheetIntCell(pageSheet, LineJumpCodeCell),
-                    LineJumpStyle = ReadPageSheetIntCell(pageSheet, LineJumpStyleCell),
-                    WalkPreference = ReadPageSheetIntCell(pageSheet, WalkPreferenceCell),
-                    PlaceStyle = ReadPageSheetIntCell(pageSheet, PlaceStyleCell),
-                    LineJumpFactorX = ReadPageSheetFloatCell(pageSheet, LineJumpFactorXCell),
-                    LineJumpFactorY = ReadPageSheetFloatCell(pageSheet, LineJumpFactorYCell),
-                    LineToLineX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, LineToLineXCell)),
-                    LineToLineY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, LineToLineYCell)),
-                    AvenueSizeX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, AvenueSizeXCell)),
-                    AvenueSizeY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, AvenueSizeYCell)),
-                    BlockSizeX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, BlockSizeXCell)),
-                    BlockSizeY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, BlockSizeYCell)),
-                    PageLineJumpDirX = ReadPageSheetIntCell(pageSheet, PageLineJumpDirXCell),
-                    PageLineJumpDirY = ReadPageSheetIntCell(pageSheet, PageLineJumpDirYCell)
-                };
+                return DescribeRoutingSettings(ctx, page, pageSheet, pageIndex);
             }
             finally
             {
@@ -403,6 +389,187 @@ public class PageCommands : IPageCommands
 
     public OperationResult SetPlaceStyle(IVisioBatch batch, int pageIndex, int placeStyle)
         => SetRoutingIntValue(batch, pageIndex, PlaceStyleCell, placeStyle, "set-place-style");
+
+    public PageLayoutResult LayoutPage(IVisioBatch batch, int pageIndex)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            try
+            {
+                return ApplyLayout(ctx, (object)page, pageIndex, "page", null, (Action)(() => page.Layout()));
+            }
+            finally
+            {
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageLayoutResult LayoutSelection(IVisioBatch batch, int pageIndex, string shapeNames)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shapeNames);
+        string[] names = ParseShapeNames(shapeNames);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic? selection = null;
+            try
+            {
+                selection = CreateSelection(page, names);
+                return ApplyLayout(ctx, (object)page, pageIndex, "selection", string.Join(",", names), (Action)(() => selection.Layout()), names);
+            }
+            finally
+            {
+                if (selection != null) ComUtilities.Release(ref selection!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageLayoutResult IncrementalLayout(
+        IVisioBatch batch,
+        int pageIndex,
+        string? shapeNames = null,
+        int alignOrSpace = 3,
+        int alignHorizontal = 1,
+        int alignVertical = 1,
+        float spaceHorizontal = 36f,
+        float spaceVertical = 36f)
+    {
+        ValidateIncrementalLayoutArguments(alignOrSpace, alignHorizontal, alignVertical, spaceHorizontal, spaceVertical);
+        string[]? names = string.IsNullOrWhiteSpace(shapeNames) ? null : ParseShapeNames(shapeNames);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic? selection = null;
+            try
+            {
+                if (names is null)
+                {
+                    return ApplyLayout(ctx, (object)page, pageIndex, "page", null,
+                        (Action)(() => page.LayoutIncremental(alignOrSpace, alignHorizontal, alignVertical, spaceHorizontal, spaceVertical, VisPoints)));
+                }
+
+                selection = CreateSelection(page, names);
+                return ApplyLayout(ctx, (object)page, pageIndex, "selection", string.Join(",", names),
+                    (Action)(() => selection.LayoutIncremental(alignOrSpace, alignHorizontal, alignVertical, spaceHorizontal, spaceVertical, VisPoints)), names);
+            }
+            finally
+            {
+                if (selection != null) ComUtilities.Release(ref selection!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageLayoutResult ChangeLayoutDirection(IVisioBatch batch, int pageIndex, int direction = 0)
+    {
+        ValidateRange(direction, 0, 3, nameof(direction), "Layout direction must be 0 (rotate right), 1 (rotate left), 2 (flip vertical), or 3 (flip horizontal).");
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            try
+            {
+                return ApplyLayout(ctx, (object)page, pageIndex, "page", null, (Action)(() => page.LayoutChangeDirection(direction)));
+            }
+            finally
+            {
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageRoutingSettingsResult SetPassiveRouting(IVisioBatch batch, int pageIndex, bool passive = false)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic pageSheet = page.PageSheet;
+            try
+            {
+                page.LayoutRoutePassive = passive;
+                return DescribeRoutingSettings(ctx, page, pageSheet, pageIndex);
+            }
+            finally
+            {
+                ComUtilities.Release(ref pageSheet!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public OperationResult SetLineRouteExtension(IVisioBatch batch, int pageIndex, int lineRouteExtension = 0)
+    {
+        ValidateRange(lineRouteExtension, 0, 2, nameof(lineRouteExtension), "Line route extension must be 0 (default straight), 1 (straight), or 2 (curved).");
+        return SetRoutingIntValue(batch, pageIndex, LineRouteExtensionCell, lineRouteExtension, "set-line-route-extension");
+    }
+
+    public PageRoutingSettingsResult SetLayoutSpacing(IVisioBatch batch, int pageIndex, float avenueSizeX = 21.2598f, float avenueSizeY = 21.2598f)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(avenueSizeX);
+        ArgumentOutOfRangeException.ThrowIfNegative(avenueSizeY);
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic pageSheet = page.PageSheet;
+            try
+            {
+                SetPageSheetPointCell(pageSheet, AvenueSizeXCell, avenueSizeX);
+                SetPageSheetPointCell(pageSheet, AvenueSizeYCell, avenueSizeY);
+                return DescribeRoutingSettings(ctx, page, pageSheet, pageIndex);
+            }
+            finally
+            {
+                ComUtilities.Release(ref pageSheet!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageRoutingSettingsResult SetPlaceDepth(IVisioBatch batch, int pageIndex, int placeDepth = 0)
+    {
+        ValidateRange(placeDepth, 0, 3, nameof(placeDepth), "Place depth must be 0 (default), 1 (medium), 2 (deep), or 3 (shallow).");
+
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic pageSheet = page.PageSheet;
+            try
+            {
+                SetPageSheetIntCell(pageSheet, PlaceDepthCell, placeDepth);
+                return DescribeRoutingSettings(ctx, page, pageSheet, pageIndex);
+            }
+            finally
+            {
+                ComUtilities.Release(ref pageSheet!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
+
+    public PageRoutingSettingsResult SetResizePage(IVisioBatch batch, int pageIndex, bool resizePage = false)
+    {
+        return batch.Execute((ctx, ct) =>
+        {
+            dynamic page = GetPage(ctx, pageIndex);
+            dynamic pageSheet = page.PageSheet;
+            try
+            {
+                SetPageSheetBoolCell(pageSheet, ResizePageCell, resizePage);
+                return DescribeRoutingSettings(ctx, page, pageSheet, pageIndex);
+            }
+            finally
+            {
+                ComUtilities.Release(ref pageSheet!);
+                ComUtilities.Release(ref page!);
+            }
+        });
+    }
 
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
     {
@@ -434,6 +601,251 @@ public class PageCommands : IPageCommands
             }
         });
     }
+
+    private static PageRoutingSettingsResult DescribeRoutingSettings(VisioContext ctx, dynamic page, dynamic pageSheet, int pageIndex)
+    {
+        return new PageRoutingSettingsResult
+        {
+            Success = true,
+            FilePath = ctx.DocumentPath,
+            PageIndex = pageIndex,
+            PageName = page.Name?.ToString() ?? string.Empty,
+            RouteStyle = ReadPageSheetIntCell(pageSheet, RouteStyleCell),
+            ConnectorRoutingExtension = ReadPageSheetIntCell(pageSheet, ConnectorRoutingExtensionCell),
+            LineRouteExtension = ReadPageSheetIntCell(pageSheet, LineRouteExtensionCell),
+            LineJumpCode = ReadPageSheetIntCell(pageSheet, LineJumpCodeCell),
+            LineJumpStyle = ReadPageSheetIntCell(pageSheet, LineJumpStyleCell),
+            WalkPreference = ReadPageSheetIntCell(pageSheet, WalkPreferenceCell),
+            PlaceStyle = ReadPageSheetIntCell(pageSheet, PlaceStyleCell),
+            PlaceDepth = ReadPageSheetIntCell(pageSheet, PlaceDepthCell),
+            ResizePage = ReadPageSheetBoolCell(pageSheet, ResizePageCell),
+            LayoutRoutePassive = Convert.ToBoolean(page.LayoutRoutePassive),
+            LineJumpFactorX = ReadPageSheetFloatCell(pageSheet, LineJumpFactorXCell),
+            LineJumpFactorY = ReadPageSheetFloatCell(pageSheet, LineJumpFactorYCell),
+            LineToLineX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, LineToLineXCell)),
+            LineToLineY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, LineToLineYCell)),
+            AvenueSizeX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, AvenueSizeXCell)),
+            AvenueSizeY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, AvenueSizeYCell)),
+            BlockSizeX = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, BlockSizeXCell)),
+            BlockSizeY = ConvertToPoints(ReadPageSheetFloatCell(pageSheet, BlockSizeYCell)),
+            PageLineJumpDirX = ReadPageSheetIntCell(pageSheet, PageLineJumpDirXCell),
+            PageLineJumpDirY = ReadPageSheetIntCell(pageSheet, PageLineJumpDirYCell)
+        };
+    }
+
+    private static PageLayoutResult ApplyLayout(
+        VisioContext ctx,
+        object pageObject,
+        int pageIndex,
+        string scope,
+        string? shapeNames,
+        Action layoutAction,
+        IReadOnlyCollection<string>? names = null)
+    {
+        dynamic page = pageObject;
+        IReadOnlyDictionary<string, PageLayoutShapeChange> before = ReadShapeSnapshots(page, names);
+        layoutAction();
+        IReadOnlyDictionary<string, PageLayoutShapeChange> after = ReadShapeSnapshots(page, names);
+
+        var result = new PageLayoutResult
+        {
+            Success = true,
+            FilePath = ctx.DocumentPath,
+            PageIndex = pageIndex,
+            PageName = page.Name?.ToString() ?? string.Empty,
+            Scope = scope,
+            ShapeNames = shapeNames
+        };
+
+        foreach ((string name, PageLayoutShapeChange prior) in before)
+        {
+            if (!after.TryGetValue(name, out PageLayoutShapeChange? current))
+            {
+                continue;
+            }
+
+            result.Shapes.Add(new PageLayoutShapeChange
+            {
+                ShapeId = current.ShapeId,
+                Name = name,
+                BeforeLeft = prior.BeforeLeft,
+                BeforeTop = prior.BeforeTop,
+                AfterLeft = current.AfterLeft,
+                AfterTop = current.AfterTop,
+                Width = current.Width,
+                Height = current.Height,
+                Moved = HasMoved(prior.BeforeLeft, prior.BeforeTop, current.AfterLeft, current.AfterTop)
+            });
+        }
+
+        int moved = result.Shapes.Count(s => s.Moved);
+        result.Message = moved == 0
+            ? "Visio completed the layout call but made no visible shape movement for the requested scope."
+            : $"Visio moved {moved} of {result.Shapes.Count} tracked shapes. Auto-layout is destructive and can discard manual placement.";
+        return result;
+    }
+
+    private static Dictionary<string, PageLayoutShapeChange> ReadShapeSnapshots(dynamic page, IReadOnlyCollection<string>? names)
+    {
+        var snapshots = new Dictionary<string, PageLayoutShapeChange>(StringComparer.OrdinalIgnoreCase);
+        if (names is null)
+        {
+            dynamic shapes = page.Shapes;
+            try
+            {
+                int count = Convert.ToInt32(shapes.Count);
+                for (int i = 1; i <= count; i++)
+                {
+                    dynamic shape = shapes.Item(i);
+                    try
+                    {
+                        AddShapeSnapshot(snapshots, shape);
+                    }
+                    finally
+                    {
+                        ComUtilities.Release(ref shape!);
+                    }
+                }
+            }
+            finally
+            {
+                ComUtilities.Release(ref shapes!);
+            }
+
+            return snapshots;
+        }
+
+        dynamic namedShapes = page.Shapes;
+        try
+        {
+            foreach (string name in names)
+            {
+                dynamic shape = namedShapes.Item(name);
+                try
+                {
+                    AddShapeSnapshot(snapshots, shape);
+                }
+                finally
+                {
+                    ComUtilities.Release(ref shape!);
+                }
+            }
+        }
+        finally
+        {
+            ComUtilities.Release(ref namedShapes!);
+        }
+
+        return snapshots;
+    }
+
+    private static void AddShapeSnapshot(Dictionary<string, PageLayoutShapeChange> snapshots, dynamic shape)
+    {
+        string name = shape.Name?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name) || snapshots.ContainsKey(name))
+        {
+            return;
+        }
+
+        float left = ConvertToPoints(ReadCellResultIU(shape, "PinX"));
+        float top = ConvertToPoints(ReadCellResultIU(shape, "PinY"));
+        snapshots.Add(name, new PageLayoutShapeChange
+        {
+            ShapeId = Convert.ToInt32(shape.ID),
+            Name = name,
+            BeforeLeft = left,
+            BeforeTop = top,
+            AfterLeft = left,
+            AfterTop = top,
+            Width = ConvertToPoints(ReadCellResultIU(shape, "Width")),
+            Height = ConvertToPoints(ReadCellResultIU(shape, "Height"))
+        });
+    }
+
+    private static dynamic CreateSelection(dynamic page, IReadOnlyCollection<string> names)
+    {
+        dynamic selection = page.CreateSelection(VisSelTypeEmpty, VisSelModeSkipSuper);
+        dynamic? shapes = null;
+        try
+        {
+            shapes = page.Shapes;
+            foreach (string name in names)
+            {
+                dynamic? shape = null;
+                try
+                {
+                    shape = shapes.Item(name);
+                    selection.Select(shape, VisSelect);
+                }
+                finally
+                {
+                    if (shape != null) ComUtilities.Release(ref shape!);
+                }
+            }
+
+            return selection;
+        }
+        catch
+        {
+            ComUtilities.Release(ref selection!);
+            throw;
+        }
+        finally
+        {
+            if (shapes != null) ComUtilities.Release(ref shapes!);
+        }
+    }
+
+    private static string[] ParseShapeNames(string shapeNames)
+    {
+        string[] names = shapeNames
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (names.Length == 0)
+        {
+            throw new ArgumentException("At least one shape name is required.", nameof(shapeNames));
+        }
+
+        return names;
+    }
+
+    private static void ValidateIncrementalLayoutArguments(
+        int alignOrSpace,
+        int alignHorizontal,
+        int alignVertical,
+        float spaceHorizontal,
+        float spaceVertical)
+    {
+        ValidateRange(alignOrSpace, 1, 3, nameof(alignOrSpace), "align_or_space must be 1 (align), 2 (space), or 3 (align and space).");
+        ValidateRange(alignHorizontal, 0, 4, nameof(alignHorizontal), "align_horizontal must be 0 (none), 1 (default), 2 (left), 3 (center), or 4 (right).");
+        ValidateRange(alignVertical, 0, 4, nameof(alignVertical), "align_vertical must be 0 (none), 1 (default), 2 (top), 3 (middle), or 4 (bottom).");
+        ArgumentOutOfRangeException.ThrowIfNegative(spaceHorizontal);
+        ArgumentOutOfRangeException.ThrowIfNegative(spaceVertical);
+
+        if (alignOrSpace == 1 && alignHorizontal == 0 && alignVertical == 0)
+        {
+            throw new ArgumentException("Incremental alignment needs align_horizontal or align_vertical to be non-zero.");
+        }
+
+        if (alignOrSpace is 2 or 3 && (alignHorizontal == 0 || alignVertical == 0))
+        {
+            throw new ArgumentException("Incremental spacing needs both align_horizontal and align_vertical to be non-zero.");
+        }
+    }
+
+    private static void ValidateRange(int value, int min, int max, string paramName, string message)
+    {
+        if (value < min || value > max)
+        {
+            throw new ArgumentOutOfRangeException(paramName, value, message);
+        }
+    }
+
+    private static bool HasMoved(float beforeLeft, float beforeTop, float afterLeft, float afterTop)
+        => Math.Abs(beforeLeft - afterLeft) > MovementTolerancePoints
+           || Math.Abs(beforeTop - afterTop) > MovementTolerancePoints;
 
     private static void ValidateGuideType(int guideType)
     {
@@ -596,12 +1008,41 @@ public class PageCommands : IPageCommands
         }
     }
 
+    private static bool ReadPageSheetBoolCell(dynamic pageSheet, string cellName)
+        => Math.Abs(ReadPageSheetFloatCell(pageSheet, cellName)) > float.Epsilon;
+
     private static void SetPageSheetIntCell(dynamic pageSheet, string cellName, int value)
     {
         dynamic cell = pageSheet.CellsU(cellName);
         try
         {
             cell.ResultIU = value;
+        }
+        finally
+        {
+            ComUtilities.Release(ref cell!);
+        }
+    }
+
+    private static void SetPageSheetPointCell(dynamic pageSheet, string cellName, float value)
+    {
+        dynamic cell = pageSheet.CellsU(cellName);
+        try
+        {
+            cell.ResultIU = value / PointsPerInch;
+        }
+        finally
+        {
+            ComUtilities.Release(ref cell!);
+        }
+    }
+
+    private static void SetPageSheetBoolCell(dynamic pageSheet, string cellName, bool value)
+    {
+        dynamic cell = pageSheet.CellsU(cellName);
+        try
+        {
+            cell.FormulaU = value ? "TRUE" : "FALSE";
         }
         finally
         {
