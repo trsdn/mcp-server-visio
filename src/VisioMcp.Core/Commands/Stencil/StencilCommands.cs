@@ -6,12 +6,6 @@ namespace VisioMcp.Core.Commands.Stencil;
 
 public class StencilCommands : IStencilCommands
 {
-    private const int VisOpenReadOnly = 0x2;
-    private const int VisOpenDontList = 0x8;
-    private const int VisOpenHidden = 0x40;
-    private const int VisOpenNoWorkspace = 0x100;
-    private const int StencilOpenFlags = VisOpenReadOnly | VisOpenDontList | VisOpenHidden | VisOpenNoWorkspace;
-
     public StencilMasterListResult ListMasters(IVisioBatch batch, string stencilPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stencilPath);
@@ -22,7 +16,7 @@ public class StencilCommands : IStencilCommands
             dynamic? masters = null;
             try
             {
-                stencilDocument = OpenStencilDocument(ctx, stencilPath);
+                stencilDocument = StencilDocumentHelper.OpenStencilDocument(ctx, stencilPath);
                 masters = stencilDocument.Masters;
 
                 var result = new StencilMasterListResult
@@ -59,7 +53,7 @@ public class StencilCommands : IStencilCommands
                     ComUtilities.Release(ref masters!);
                 }
 
-                CloseStencilDocument(ref stencilDocument);
+                StencilDocumentHelper.CloseStencilDocument(ref stencilDocument);
             }
         });
     }
@@ -78,9 +72,9 @@ public class StencilCommands : IStencilCommands
             dynamic? shape = null;
             try
             {
-                stencilDocument = OpenStencilDocument(ctx, stencilPath);
+                stencilDocument = StencilDocumentHelper.OpenStencilDocument(ctx, stencilPath);
                 masters = stencilDocument.Masters;
-                master = FindMasterByName(masters, masterName)
+                master = StencilDocumentHelper.FindMasterByName(masters, masterName)
                     ?? throw new InvalidOperationException($"Master '{masterName}' was not found in stencil '{stencilPath}'.");
 
                 shape = page.Drop(master, ToPageCoordinate(xPosition), ToPageCoordinate(yPosition));
@@ -111,106 +105,10 @@ public class StencilCommands : IStencilCommands
                     ComUtilities.Release(ref masters!);
                 }
 
-                CloseStencilDocument(ref stencilDocument);
+                StencilDocumentHelper.CloseStencilDocument(ref stencilDocument);
                 ComUtilities.Release(ref page!);
             }
         });
-    }
-
-    /// <summary>
-    /// Opens a stencil by path or by name.
-    /// </summary>
-    /// <remarks>
-    /// A bare file name such as <c>BASFLO_M.VSSX</c> is what every piece of guidance naturally
-    /// writes, and Visio resolves it against its own stencil folders. This previously rejected it
-    /// with <c>File.Exists</c> before Visio was ever asked — reporting "not found" for a stencil
-    /// that is installed. Try the literal path first, since an explicit path should win, then let
-    /// Visio resolve the name.
-    /// </remarks>
-    private static dynamic OpenStencilDocument(VisioContext ctx, string stencilPath)
-    {
-        dynamic documents = ((dynamic)ctx.Application).Documents;
-
-        if (System.IO.File.Exists(stencilPath))
-        {
-            return documents.OpenEx(stencilPath, StencilOpenFlags);
-        }
-
-        try
-        {
-            return documents.OpenEx(stencilPath, StencilOpenFlags);
-        }
-        catch (Exception ex)
-        {
-            throw new FileNotFoundException(
-                $"Stencil '{stencilPath}' was not found. Pass a full path, or an installed stencil "
-                + "name such as 'BASFLO_M.VSSX' (Basic Flowchart) or 'BASIC_U.VSSX' (Basic Shapes). "
-                + "Not every stencil ships with every Visio edition.",
-                stencilPath,
-                ex);
-        }
-    }
-
-    private static void CloseStencilDocument(ref dynamic? stencilDocument)
-    {
-        if (stencilDocument == null)
-        {
-            return;
-        }
-
-        try
-        {
-            stencilDocument.Saved = true;
-        }
-        catch
-        {
-        }
-
-        try
-        {
-            stencilDocument.Close();
-        }
-        catch
-        {
-        }
-
-        ComUtilities.Release(ref stencilDocument!);
-    }
-
-    private static dynamic? FindMasterByName(dynamic masters, string masterName)
-    {
-        int count = Convert.ToInt32(masters.Count);
-        for (int i = 1; i <= count; i++)
-        {
-            dynamic? master = null;
-            try
-            {
-                master = masters.Item(i);
-                string? name = TryGetMasterName(master);
-                string? nameU = TryGetMasterNameU(master);
-                if (string.Equals(name, masterName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(nameU, masterName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return master;
-                }
-            }
-            catch
-            {
-                if (master != null)
-                {
-                    ComUtilities.Release(ref master!);
-                }
-
-                throw;
-            }
-
-            if (master != null)
-            {
-                ComUtilities.Release(ref master!);
-            }
-        }
-
-        return null;
     }
 
     private static dynamic GetPage(VisioContext ctx, int pageIndex)
@@ -223,33 +121,9 @@ public class StencilCommands : IStencilCommands
     {
         return new StencilMasterInfo
         {
-            Name = TryGetMasterName(master) ?? $"Master {index}",
-            NameU = TryGetMasterNameU(master)
+            Name = StencilDocumentHelper.TryGetMasterName(master) ?? $"Master {index}",
+            NameU = StencilDocumentHelper.TryGetMasterNameU(master)
         };
-    }
-
-    private static string? TryGetMasterName(dynamic master)
-    {
-        try
-        {
-            return master.Name?.ToString();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? TryGetMasterNameU(dynamic master)
-    {
-        try
-        {
-            return master.NameU?.ToString();
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static float ToPageCoordinate(float points) => points / 72f;

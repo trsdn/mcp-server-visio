@@ -24,6 +24,7 @@ The following domains are implemented and covered by focused validation:
 | Export | Yes | Yes | Via MCP extension | Validated MVP | PDF/XPS document export, page export by file extension, save-copy |
 | Hyperlink | Yes | Yes | Via MCP extension | Validated MVP | List, read, add, update, delete. A shape may carry several, unlike PowerPoint |
 | Comment | Yes | Yes | Via MCP extension | Validated MVP | List, add, delete, clear reviewer comments on pages and shapes; separate from the ShapeSheet alt-text cell |
+| Container | Yes | Yes | Via MCP extension | Validated MVP | Drop Visio containers and list containers; manage members; list memberships; drop and inspect callouts |
 | Style | Yes | Yes | Via MCP extension | Validated MVP | List, read, create, rename, delete, apply; set a style's own ShapeSheet cells |
 | Design guidance | Yes | Yes | Via MCP extension | Validated MVP | Nine diagram archetypes with their stencils and masters, the stencil catalog, cross-archetype patterns, colour palettes |
 | Visible live mode | Yes | Yes | Via MCP extension | Validated | Watch Visio while automation runs |
@@ -95,7 +96,7 @@ each row now names the actions that exist:
 | ShapeSheet section and row access | **Shipped** | `cell`: `list-sections`, `list-rows`, `add-row`, `delete-row`, `read-src`, `write-src`, addressing shape, page or document via `sheet_target` ([#33](https://github.com/trsdn/mcp-server-visio/issues/33)) |
 | Styles | **Shipped** | `style`: `list`, `read`, `create`, `rename`, `delete`, `read-formula`, `set-formula`, `apply` ([#36](https://github.com/trsdn/mcp-server-visio/issues/36)) |
 | Themes | Not implemented | `Document.Theme` does not exist; themes are `DocumentSheet` cells (`ThemeIndex`, `VariationColorIndex`) and are reachable today through `cell` with `sheet_target='document'`, but there is no dedicated action |
-| Containers, lists and callouts | Not implemented | Needs the Visio container API rather than a rename of anything inherited |
+| Containers, lists and callouts | **Shipped** | `container`: `list`, `read`, `drop`, `drop-list`, `add-member`, `remove-member`, `list-members`, `containers-of`, `fit-to-contents`, `insert-list-member`, `drop-callout`, `list-callouts`, `read-callout`, `callouts-of` ([#123](https://github.com/trsdn/mcp-server-visio/issues/123)) |
 | Data graphics / data recordsets | Redesign | Visio Professional only; needs a deliberate Visio-first model |
 
 ## Cleanup rules
