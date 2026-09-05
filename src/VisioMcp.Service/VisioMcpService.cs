@@ -5,6 +5,7 @@ using VisioMcp.ComInterop.Session;
 using VisioMcp.Core.Commands.Cell;
 using VisioMcp.Core.Commands.Comment;
 using VisioMcp.Core.Commands.Container;
+using VisioMcp.Core.Commands.DataRecordset;
 using VisioMcp.Core.Commands.Design;
 using VisioMcp.Core.Commands.DocumentProperty;
 using VisioMcp.Core.Commands.Export;
@@ -21,6 +22,7 @@ using VisioMcp.Core.Commands.ShapeAlign;
 using VisioMcp.Core.Commands.Stencil;
 using VisioMcp.Core.Commands.Style;
 using VisioMcp.Core.Commands.Text;
+using VisioMcp.Core.Commands.Validation;
 using VisioMcp.Core.Commands.Vba;
 using VisioMcp.Core.Commands.Window;
 using VisioMcp.Service.Rpc;
@@ -54,6 +56,7 @@ public sealed class VisioMcpService : IDisposable
     private readonly CellCommands _cellCommands = new();
     private readonly CommentCommands _commentCommands = new();
     private readonly ContainerCommands _containerCommands = new();
+    private readonly DataRecordsetCommands _dataRecordsetCommands = new();
     private readonly StencilCommands _stencilCommands = new();
     private readonly TextCommands _textCommands = new();
     private readonly MasterCommands _masterCommands = new();
@@ -67,6 +70,7 @@ public sealed class VisioMcpService : IDisposable
     private readonly HeaderFooterCommands _headerFooterCommands = new();
     private readonly PrintOptionsCommands _printOptionsCommands = new();
     private readonly StyleCommands _styleCommands = new();
+    private readonly ValidationCommands _validationCommands = new();
 
     public VisioMcpService()
     {
@@ -233,6 +237,9 @@ public sealed class VisioMcpService : IDisposable
                 "container" => await DispatchSimpleAsync<ContainerAction>(action, request,
                     ServiceRegistry.Container.TryParseAction,
                     (a, batch) => ServiceRegistry.Container.DispatchToCore(_containerCommands, a, batch, request.Args)),
+                "datarecordset" => await DispatchSimpleAsync<DataRecordsetAction>(action, request,
+                    ServiceRegistry.DataRecordset.TryParseAction,
+                    (a, batch) => ServiceRegistry.DataRecordset.DispatchToCore(_dataRecordsetCommands, a, batch, request.Args)),
                 "stencil" => await DispatchSimpleAsync<StencilAction>(action, request,
                     ServiceRegistry.Stencil.TryParseAction,
                     (a, batch) => ServiceRegistry.Stencil.DispatchToCore(_stencilCommands, a, batch, request.Args)),
@@ -275,6 +282,9 @@ public sealed class VisioMcpService : IDisposable
                 "style" => await DispatchSimpleAsync<StyleAction>(action, request,
                     ServiceRegistry.Style.TryParseAction,
                     (a, batch) => ServiceRegistry.Style.DispatchToCore(_styleCommands, a, batch, request.Args)),
+                "validation" => await DispatchSimpleAsync<ValidationAction>(action, request,
+                    ServiceRegistry.Validation.TryParseAction,
+                    (a, batch) => ServiceRegistry.Validation.DispatchToCore(_validationCommands, a, batch, request.Args)),
                 _ => new ServiceResponse { Success = false, ErrorMessage = $"Unknown command category: {category}" }
             };
         }

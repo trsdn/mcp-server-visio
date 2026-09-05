@@ -3,13 +3,14 @@ name: visio-mcp
 description: >
   Automate Microsoft Visio on Windows via COM interop. Use when creating, reading,
   or modifying Visio diagrams. Best current support covers sessions, pages,
-  auto-layout, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters.
-  Triggers: Visio, vsdx, diagram, page, shape, container, callout, stencil, ShapeSheet.
+  auto-layout, shapes, containers, callouts, text, ShapeSheet cells, data recordsets,
+  validation, and stencil masters.
+  Triggers: Visio, vsdx, diagram, page, shape, container, callout, stencil, ShapeSheet, validation.
 ---
 
 # Visio MCP Server Skill
 
-Provides {{ operationcount }} generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, auto-layout, shapes, containers, callouts, text, ShapeSheet cells, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
+Provides {{ operationcount }} generated operations via Model Context Protocol. The current Visio MVP is centered on document sessions, pages, auto-layout, shapes, containers, callouts, text, ShapeSheet cells, data recordsets, validation, and stencil masters. The MCP Server forwards all requests to the shared VisioMcp Service, enabling session sharing with CLI.
 
 ## Workflow Checklist
 
@@ -23,7 +24,8 @@ Provides {{ operationcount }} generated operations via Model Context Protocol. T
 | 6. Tidy only if requested | `page` | `layout-selection`, `layout-page` | Auto-layout moves shapes; prefer selection scope |
 | 7. Edit text | `text` | `get`, `set`, `find`, `replace` | Update labels |
 | 8. Edit cells | `cell` | `read`, `write`, `set-formula` | Adjust ShapeSheet-backed geometry |
-| 9. Save & close | `file` | `close` with `save: true` | Always last |
+| 9. Link data or validate | `data_recordset`, `validation` | `link-shape`, `validate` | When checking or data-linking a finished diagram |
+| 10. Save & close | `file` | `close` with `save: true` | Always last |
 
 ## Preconditions
 
