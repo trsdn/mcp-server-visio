@@ -8,6 +8,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **NuGet package metadata pointed at a GitHub user that does not exist** (#145).
+  `Directory.Build.props` set both `PackageProjectUrl` and `RepositoryUrl` to
+  `github.com/torstenmahr/mcp-server-visio`. Verified against the API: the repository returns 404,
+  and so does the **user** `torstenmahr`. The repository is `trsdn/mcp-server-visio`.
+
+  `Directory.Build.props` applies to every project, so both published packages would have carried it,
+  and those two properties become the "Project website" and "Source repository" links on nuget.org.
+  **NuGet package metadata cannot be edited after publication** — only a new version can carry a
+  correction, and the broken version stays listed. Nothing has been published yet, so this cost one
+  line now and would have been permanent otherwise.
+
+  This is the third dead URL to reach a user-facing surface from the same mechanical rename, after
+  `pptmcpserver.dev` and `VisioMcpserver.dev` (#121). It was found by a pre-release audit rather than
+  by a test, because each existing guard had been scoped to the file where the previous instance
+  happened to be found: markdown under `.github/`, then workflow YAML, then an explicit six-file
+  list. None covered build properties.
+
+  Also corrected two suppression comments in the same file that described "Excel COM" — residue from
+  an ancestor further back than the PowerPoint one.
+
+### Added
+
+- **`PackageMetadataUrlTests`** (#145) — asserts every GitHub URL in shipped package metadata points
+  at `trsdn/mcp-server-visio`, covering `Directory.Build.props`, `mcpb/manifest.json`, the VS Code
+  extension manifest, the agent manifest and both npm skill packages.
+
+  It fails if it scans fewer than four files or finds no URLs at all, so it cannot pass vacuously if
+  the files are moved or renamed — the same contract as `FeaturesDocumentAccuracyTests` and
+  `CliSkillCoverageTests`. Verified RED against the real defect, then verified it also catches a
+  *different* bad owner injected into a *different* file, so it guards the class rather than the one
+  instance.
+
+### Fixed
+
 - **The `dependency-review` licence check blocked a security fix** (#141). `@github/copilot` and its
   eight platform binaries declare `LicenseRef-bad-see-license-in-license.md`, which is a scancode
   *classification artifact* — the terms could not be parsed because the package points at its own
