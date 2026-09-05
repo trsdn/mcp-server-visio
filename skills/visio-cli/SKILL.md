@@ -209,6 +209,25 @@ Visio containers, list containers, and callouts for structural membership while 
 
 
 
+### datarecordset
+
+Read Visio data recordsets, import ADO XML data, and link rows to shapes.
+
+**Actions:** `list`, `add-from-xml`, `read-rows`, `link-shape`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--name` | Display name for the new data recordset (required for: add-from-xml) |
+| `--xml` | ADO classic XML rowset payload. Use xmlFile in CLI/MCP to read it from a file. (required for: add-from-xml) |
+| `--add-options` | 0=default, 1=hide External Data UI, 4=hide advanced configuration UI, 16=do not copy shape-data links |
+| `--data-recordset-id` | ID of the data recordset returned by list or add-from-xml (required for: read-rows, link-shape) |
+| `--page-index` | 1-based page index containing the shape (required for: link-shape) |
+| `--shape-name` | Existing shape name to link to data (required for: link-shape) |
+| `--row-id` | Row ID returned by read-rows or add-from-xml (required for: link-shape) |
+| `--auto-apply-data-graphics` | True to let Visio auto-apply the current data graphic; false only links the row |
+
+
+
 ### design
 
 Diagram design guidance: which diagram to draw, which stencil and masters to drop, and the Visio techniques that separate a usable drawing from a plausible-looking one.
@@ -590,6 +609,19 @@ Text operations within shapes: get, set, format, find, replace.
 | `--case-type` | 1=Sentence, 2=Lower, 3=Upper, 4=Title, 5=Toggle (required for: change-case) |
 | `--char-number` | Unicode/character code of the symbol (required for: insert-symbol) |
 | `--date-time-format` | Date/time format selector (1-13) (required for: insert-datetime) |
+
+
+
+### validation
+
+Read Visio validation rule sets and run diagram validation to report issues.
+
+**Actions:** `list-rule-sets`, `validate`
+
+| Parameter | Description |
+|-----------|-------------|
+| `--rule-set-name-u` | Optional universal name of a single rule set to run; omit for all active rule sets |
+| `--flags` | 0=Visio default and may open the Issues window, 1=validate without opening the Issues window |
 
 
 

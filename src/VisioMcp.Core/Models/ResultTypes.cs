@@ -329,6 +329,96 @@ public class CalloutInfo
     public int? TargetShapeId { get; set; }
 }
 
+// ── Data recordsets ─────────────────────────────────────────
+
+public class DataRecordsetListResult : ResultBase
+{
+    public List<DataRecordsetInfo> DataRecordsets { get; set; } = [];
+}
+
+public class DataRecordsetDetailResult : ResultBase
+{
+    public DataRecordsetInfo? DataRecordset { get; set; }
+}
+
+public class DataRecordsetRowsResult : ResultBase
+{
+    public int DataRecordsetId { get; set; }
+    public List<DataRecordsetRowInfo> Rows { get; set; } = [];
+}
+
+public class DataRecordsetLinkResult : ResultBase
+{
+    public int PageIndex { get; set; }
+    public string ShapeName { get; set; } = string.Empty;
+    public int ShapeId { get; set; }
+    public int DataRecordsetId { get; set; }
+    public int RowId { get; set; }
+}
+
+public class DataRecordsetInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int RowCount { get; set; }
+    public List<int> RowIds { get; set; } = [];
+}
+
+public class DataRecordsetRowInfo
+{
+    public int RowId { get; set; }
+    public List<string> Values { get; set; } = [];
+}
+
+// ── Validation ──────────────────────────────────────────────
+
+public class ValidationRuleSetListResult : ResultBase
+{
+    public List<ValidationRuleSetInfo> RuleSets { get; set; } = [];
+}
+
+public class ValidationResult : ResultBase
+{
+    public int RuleSetCount { get; set; }
+    public int IssueCount { get; set; }
+    public List<ValidationIssueInfo> Issues { get; set; } = [];
+}
+
+public class ValidationRuleSetInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string NameU { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public int RuleCount { get; set; }
+}
+
+public class ValidationIssueInfo
+{
+    public int Id { get; set; }
+    public bool Ignored { get; set; }
+    public int TargetPageId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TargetPageName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TargetShapeId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TargetShapeName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RuleId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RuleNameU { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RuleDescription { get; set; }
+}
+
 // ── Shape ─────────────────────────────────────────────────
 
 public class ShapeListResult : ResultBase

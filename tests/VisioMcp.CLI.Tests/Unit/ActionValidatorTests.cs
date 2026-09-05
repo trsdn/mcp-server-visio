@@ -29,6 +29,7 @@ public sealed class ActionValidatorTests
         "cell",
         "comment",
         "container",
+        "datarecordset",
         "design",
         "docproperty",
         "export",
@@ -45,6 +46,7 @@ public sealed class ActionValidatorTests
         "stencil",
         "style",
         "text",
+        "validation",
         "window"
     ];
 

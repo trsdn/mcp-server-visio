@@ -28,8 +28,8 @@ public class PublicSurfaceNamingTests
 {
     private static readonly string[] PublicDomains =
     [
-        "Cell", "Comment", "Container", "Design", "DocumentProperty", "Export", "File", "Hyperlink", "Image", "Layer",
-        "Master", "Page", "Shape", "ShapeAlign", "Stencil", "Style", "Text", "Window"
+        "Cell", "Comment", "Container", "DataRecordset", "Design", "DocumentProperty", "Export", "File", "Hyperlink",
+        "Image", "Layer", "Master", "Page", "Shape", "ShapeAlign", "Stencil", "Style", "Text", "Validation", "Window"
     ];
 
     private static readonly Regex ActionPattern = new(

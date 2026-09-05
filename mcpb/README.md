@@ -11,13 +11,14 @@ format:
 - **Build diagrams** — drop stencil masters, connect them, lay out pages
 - **Connect properly** — real Visio connectors that stay attached when shapes move
 - **Read and write the ShapeSheet** — cells and formulas on shapes, pages and the document
-- **Structure drawings** — multiple pages, layers, containers, callouts, background pages, shape data
+- **Structure drawings** — multiple pages, layers, containers, callouts, background pages, shape data, data-linked shapes
+- **Check diagrams** — run Visio validation rule sets and read issues without opening Visio's Issues window
 - **Format consistently** — named styles, colour palettes, fills and lines
 - **Guided design** — a catalogue of diagram archetypes, each naming stencils and masters that are
   installed on your machine
 - **Watch it work** — ask to see Visio and follow along side by side with Claude
 
-**20 tools with 212 actions**.
+**22 tools with 218 actions**.
 
 ## Requirements
 

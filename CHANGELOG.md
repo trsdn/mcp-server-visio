@@ -25,6 +25,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`datarecordset` and `validation` public domains** (#127). Live Visio probes confirmed both
+  edition-dependent COM features work on the available Visio 16.0 install: ADO XML import created a
+  data recordset, `LinkToData` linked a shape to a row, and a generated validation rule set produced
+  a readable issue.
+
+  The shipped scope is intentionally conservative: `datarecordset` can list recordsets, import ADO
+  XML, read rows, and link existing shapes to rows; `validation` can list rule sets and run
+  validation without opening the Issues window. Broader data graphics authoring is left out until it
+  has a tested Visio-first model.
+
 - **`page` auto-layout and routing controls** (#126). Added page-scoped actions for destructive
   full-page layout, safer selection-scoped layout, incremental layout, layout direction changes,
   passive routing, line route extension, spacing, placement depth, and resize-page settings.
